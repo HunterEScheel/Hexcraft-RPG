@@ -1,8 +1,11 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { supabase } from './lib/supabase';
+import { useUser } from './lib/useUser';
 
 /** The Hexcraft chrome: its own nav, plus the way back to the portfolio. */
 export function Layout() {
   const { pathname } = useLocation();
+  const user = useUser();
 
   return (
     <div className="min-h-screen text-zinc-100">
@@ -30,6 +33,20 @@ export function Layout() {
             >
               New
             </Link>
+            {user ? (
+              <button
+                type="button"
+                onClick={() => void supabase.auth.signOut()}
+                title={user.email ?? undefined}
+                className="text-zinc-500 hover:text-zinc-300"
+              >
+                Sign out
+              </button>
+            ) : (
+              <Link to="/sign-in" className="text-zinc-500 hover:text-zinc-300">
+                Sign in
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -68,5 +85,6 @@ function sectionName(pathname: string): string {
   if (pathname.startsWith('/sheet')) return 'Sheet';
   if (pathname.startsWith('/running-the-game')) return 'GM guide';
   if (pathname.startsWith('/monster-maker')) return 'Monster maker';
+  if (pathname.startsWith('/sign-in')) return 'Sign in';
   return 'Roster';
 }

@@ -6,11 +6,14 @@ import {
   type SavedCharacterRow,
 } from '../lib/characters'
 import { supabaseConfigured } from '../lib/supabase'
+import { useUser } from '../lib/useUser'
 import { bpBreakdown } from '../system/character'
 
 export function Home() {
   const [rows, setRows] = useState<SavedCharacterRow[]>([])
   const [loading, setLoading] = useState(true)
+  // Anyone can build and edit; deleting takes an account.
+  const user = useUser()
 
   useEffect(() => {
     if (!supabaseConfigured) {
@@ -96,14 +99,16 @@ export function Home() {
                 >
                   Edit
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(row.id)}
-                  className="rounded bg-zinc-800 hover:bg-rose-900/60 px-3 py-1.5 text-sm text-zinc-400 hover:text-rose-300"
-                  aria-label="Delete"
-                >
-                  ✕
-                </button>
+                {user && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(row.id)}
+                    className="rounded bg-zinc-800 hover:bg-rose-900/60 px-3 py-1.5 text-sm text-zinc-400 hover:text-rose-300"
+                    aria-label="Delete"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </li>
           ))}

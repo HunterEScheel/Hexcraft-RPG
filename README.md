@@ -24,9 +24,11 @@ VITE_SUPABASE_ANON_KEY=YOUR-ANON-KEY
 The client throws at load without them. The same two variables go in Vercel under
 **Project Settings → Environment Variables**.
 
-Sign-in (GitHub, Discord or an email link) returns to the page it started from,
-so `https://rpg.jaeg.click/*` must be in the Supabase project's allowed redirect
-URLs.
+No account is needed: anyone can browse, create and edit every character. Signing
+in (GitHub, Discord or an email link, at `/sign-in`) only unlocks deleting them.
+Sign-in returns to `https://rpg.jaeg.click/`, which must be in the Supabase
+project's allowed redirect URLs. The policies behind this are
+`supabase/migrations/hexcraft_0002_public_characters.sql` in the jaeg.click repo.
 
 ## Commands
 

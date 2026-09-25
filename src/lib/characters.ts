@@ -14,12 +14,12 @@ export async function saveCharacter(c: Character): Promise<string | null> {
     console.warn('supabase not configured — character not saved')
     return null
   }
-  // RLS ties a character to its owner; the column is set here so the insert
-  // satisfies the policy rather than being rejected by it.
+  // Characters are open to everyone. When someone signed in makes one, it
+  // records who; otherwise user_id stays empty, which RLS allows.
   const { data: auth } = await supabase.auth.getUser()
   const { data, error } = await supabase
     .from('hexcraft_characters')
-    .insert({ name: c.name || 'Unnamed', data: c, user_id: auth.user?.id })
+    .insert({ name: c.name || 'Unnamed', data: c, user_id: auth.user?.id ?? null })
     .select('id')
     .single()
   if (error) {

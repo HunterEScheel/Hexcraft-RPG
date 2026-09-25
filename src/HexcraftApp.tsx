@@ -5,10 +5,12 @@ import { Builder } from './pages/Builder';
 import { Sheet } from './pages/Sheet';
 import { RunningTheGame } from './pages/RunningTheGame';
 import { MonsterMaker } from './pages/MonsterMaker';
+import { SignIn } from './pages/SignIn';
 
 /**
  * Hexcraft's routes, at the root of the site. It once used a hash router; real
- * URLs instead mean its pages are shareable and refreshable.
+ * URLs instead mean its pages are shareable and refreshable. Every page is open
+ * to anyone; `/sign-in` is only for those who want to delete characters.
  */
 export function HexcraftApp() {
   return (
@@ -20,6 +22,7 @@ export function HexcraftApp() {
         <Route path="sheet/:id" element={<Sheet />} />
         <Route path="running-the-game" element={<RunningTheGame />} />
         <Route path="monster-maker" element={<MonsterMaker />} />
+        <Route path="sign-in" element={<SignIn />} />
       </Route>
     </Routes>
   );
