@@ -16,3 +16,27 @@ export function useUser(): User | null {
 
   return user;
 }
+
+/**
+ * Whether the signed-in account is the site admin (site_admins), who can open
+ * every character and see its passcode. Only a UI hint: the database decides.
+ */
+export function useIsAdmin(user: User | null): boolean {
+  const [admin, setAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setAdmin(false);
+      return;
+    }
+    let cancelled = false;
+    supabase.rpc('is_site_admin').then(({ data }) => {
+      if (!cancelled) setAdmin(data === true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  return admin;
+}

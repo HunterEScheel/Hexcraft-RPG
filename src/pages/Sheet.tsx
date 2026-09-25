@@ -17,6 +17,7 @@ import { MAGIC_MEDIUMS, MAGIC_SCHOOLS } from '../system/magicSchools'
 import { TETHER_TIERS } from '../system/tethers'
 import { FLAW_SEVERITIES } from '../system/flaws'
 import { getCharacter, updateCharacter } from '../lib/characters'
+import { UnlockForm } from '../components/UnlockForm'
 import { supabaseConfigured } from '../lib/supabase'
 import { BodyDiagramEditor } from '../components/BodyDiagramEditor'
 import { InventoryEditor } from '../components/InventoryEditor'
@@ -47,6 +48,8 @@ export function Sheet() {
   const [character, setCharacter] = useState<Character | null>(null)
   const [loading, setLoading] = useState(true)
   const [missing, setMissing] = useState(false)
+  // Set to the character's name while it is locked and not yet opened here.
+  const [lockedName, setLockedName] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('combat')
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved'>(
     'idle',
@@ -60,7 +63,8 @@ export function Sheet() {
     let cancelled = false
     getCharacter(id).then((row) => {
       if (cancelled) return
-      if (row) setCharacter(ensureCombatSkills(row.data))
+      if (row?.data) setCharacter(ensureCombatSkills(row.data))
+      else if (row?.locked) setLockedName(row.name)
       else setMissing(true)
       setLoading(false)
     })
@@ -104,6 +108,18 @@ export function Sheet() {
   }, [character])
 
   if (loading) return <p className="text-sm text-zinc-500">Loading…</p>
+  if (lockedName !== null && id) {
+    return (
+      <UnlockForm
+        id={id}
+        name={lockedName}
+        onUnlock={(row) => {
+          setCharacter(ensureCombatSkills(row.data!))
+          setLockedName(null)
+        }}
+      />
+    )
+  }
   if (missing || !character) {
     return (
       <div className="space-y-3">

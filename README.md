@@ -24,11 +24,16 @@ VITE_SUPABASE_ANON_KEY=YOUR-ANON-KEY
 The client throws at load without them. The same two variables go in Vercel under
 **Project Settings → Environment Variables**.
 
-No account is needed: anyone can browse, create and edit every character. Signing
-in (GitHub, Discord or an email link, at `/sign-in`) only unlocks deleting them.
+No account is needed. A character can be locked with an optional passcode when
+it is made: then only someone who enters that passcode (remembered in their
+browser afterwards) can view, edit or delete it. Open characters are anyone's to
+view and edit, and any signed-in account can delete them. The site admin
+(`site_admins`) can open, edit and delete every character and sees each
+passcode on the roster. Signing in (GitHub, Discord or an email link, at
+`/sign-in`) is only needed to delete open characters or to act as the admin.
 Sign-in returns to `https://rpg.jaeg.click/`, which must be in the Supabase
-project's allowed redirect URLs. The policies behind this are
-`supabase/migrations/hexcraft_0002_public_characters.sql` in the jaeg.click repo.
+project's allowed redirect URLs. The rules live in the database functions of
+`supabase/migrations/hexcraft_0003_character_passcodes.sql` in the jaeg.click repo.
 
 ## Commands
 

@@ -29,8 +29,12 @@ import { BPBar } from '../components/BPBar'
 import {
   getCharacter,
   saveCharacter,
+  setPasscode as savePasscode,
   updateCharacter,
+  type SavedCharacterRow,
 } from '../lib/characters'
+import { useIsAdmin, useUser } from '../lib/useUser'
+import { UnlockForm } from '../components/UnlockForm'
 import { supabaseConfigured } from '../lib/supabase'
 
 const STEPS = [
@@ -57,19 +61,38 @@ export function Builder() {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [customBpInput, setCustomBpInput] = useState('')
+  // Optional passcode. On edit it is shown (and changeable) only to whoever
+  // already holds it, or to the admin; an open character can't be locked by
+  // someone who happens upon it.
+  const [passcode, setPasscode] = useState('')
+  const [originalPasscode, setOriginalPasscode] = useState<string | null>(null)
+  const [lockedName, setLockedName] = useState<string | null>(null)
+  const isAdmin = useIsAdmin(useUser())
+  const canSetPasscode = !isEdit || isAdmin || originalPasscode !== null
 
   useEffect(() => {
     if (!id) return
     let cancelled = false
     getCharacter(id).then((row) => {
       if (cancelled) return
-      if (row) setCharacter(ensureCombatSkills(row.data))
+      if (row) openRow(row)
       setLoading(false)
     })
     return () => {
       cancelled = true
     }
   }, [id])
+
+  function openRow(row: SavedCharacterRow) {
+    if (!row.data) {
+      setLockedName(row.name)
+      return
+    }
+    setCharacter(ensureCombatSkills(row.data))
+    setOriginalPasscode(row.passcode)
+    setPasscode(row.passcode ?? '')
+    setLockedName(null)
+  }
 
   const breakdown = useMemo(() => bpBreakdown(character), [character])
 
@@ -80,11 +103,14 @@ export function Builder() {
     setSaving(true)
     const normalized = restoreToMax(character)
     if (isEdit && id) {
-      const ok = await updateCharacter(id, normalized)
+      let ok = await updateCharacter(id, normalized)
+      if (ok && canSetPasscode && passcode !== (originalPasscode ?? '')) {
+        ok = await savePasscode(id, passcode || null)
+      }
       setSaving(false)
       if (ok) navigate(`/sheet/${id}`)
     } else {
-      const newId = await saveCharacter(normalized)
+      const newId = await saveCharacter(normalized, passcode || null)
       setSaving(false)
       if (newId) navigate(`/sheet/${newId}`)
     }
@@ -92,6 +118,9 @@ export function Builder() {
 
   if (loading) {
     return <p className="text-sm text-zinc-500">Loading character…</p>
+  }
+  if (lockedName !== null && id) {
+    return <UnlockForm id={id} name={lockedName} onUnlock={openRow} />
   }
 
   const currentStep = STEPS[step]
@@ -123,6 +152,25 @@ export function Builder() {
                 className="bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-zinc-100"
               />
             </label>
+            {canSetPasscode && (
+              <label className="mt-4 flex flex-col gap-1 max-w-md">
+                <span className="text-xs text-zinc-500">
+                  Passcode (optional)
+                </span>
+                <input
+                  type="text"
+                  value={passcode}
+                  onChange={(e) => setPasscode(e.target.value)}
+                  placeholder="Leave empty to keep the character open"
+                  autoComplete="off"
+                  className="bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-zinc-100"
+                />
+                <span className="text-xs text-zinc-500">
+                  With a passcode, only someone who knows it can view, edit or
+                  delete this character.
+                </span>
+              </label>
+            )}
           </StepBlock>
         )}
 
