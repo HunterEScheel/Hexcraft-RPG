@@ -23,11 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# env
-.env
 .env.local
-.env.*.local
+.env
 
-# Embedding generation input (may contain proprietary skill list)
-scripts/skills.txt
-
+# Embedding input (may contain a proprietary skill list)
+scripts/hexcraft-skills.txt

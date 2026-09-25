@@ -1,8 +1,18 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+const url = import.meta.env.VITE_SUPABASE_URL as string;
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-export const supabaseConfigured = Boolean(url && key)
+if (!url || !anonKey) {
+  throw new Error('Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY — see .env.example');
+}
 
-export const supabase = supabaseConfigured ? createClient(url, key) : null
+export const supabase = createClient(url, anonKey);
+
+/**
+ * The Hexcraft code was written against a possibly-absent client plus this flag.
+ * The client above throws on a missing key rather than returning null, so the flag
+ * is always true; the checks it guards (custom skills still work without a
+ * database) are kept in case that ever changes.
+ */
+export const supabaseConfigured = true;
