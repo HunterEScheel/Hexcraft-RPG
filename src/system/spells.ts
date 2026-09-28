@@ -1,6 +1,7 @@
 // Spell scaling criteria from the Hexcraft RPG sheet.
 // Each criterion is split into one or more "modes" (e.g. AOE: splash/line/targets).
-// Each mode contains options whose tier drives the EP cost.
+// Each mode contains options whose tier drives the EP cost. The per-tier rates
+// are half the sheet's; damage dice keep their full EP_PER_DAMAGE_DIE.
 
 export type CriterionKey =
   | 'range'
@@ -33,7 +34,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
   {
     key: 'range',
     label: 'Range',
-    epPerTier: 8,
+    epPerTier: 4,
     options: [
       { label: 'touch / 30 ft', tier: 0 },
       { label: '120 ft', tier: 1 },
@@ -46,7 +47,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
   {
     key: 'aoe',
     label: 'AOE / Targets',
-    epPerTier: 10,
+    epPerTier: 5,
     modes: [
       {
         key: 'targets',
@@ -85,7 +86,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
   {
     key: 'duration',
     label: 'Duration',
-    epPerTier: 8,
+    epPerTier: 4,
     modes: [
       {
         key: 'standard',
@@ -113,7 +114,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
   {
     key: 'buffDebuff',
     label: 'Buff / Debuff',
-    epPerTier: 10,
+    epPerTier: 5,
     modes: [
       {
         key: 'none',
@@ -122,7 +123,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
       },
       {
         key: 't1',
-        label: 'Tier I (10 EP)',
+        label: 'Tier I (5 EP)',
         options: [
           { label: 'darkvision', tier: 1 },
           { label: 'magic detection', tier: 1 },
@@ -140,7 +141,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
       },
       {
         key: 't2',
-        label: 'Tier II (20 EP)',
+        label: 'Tier II (10 EP)',
         options: [
           { label: 'tremorsense', tier: 2 },
           { label: 'see invisibility', tier: 2 },
@@ -157,7 +158,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
       },
       {
         key: 't3',
-        label: 'Tier III (30 EP)',
+        label: 'Tier III (15 EP)',
         options: [
           { label: 'truesight', tier: 3 },
           { label: 'total evasion', tier: 3 },
@@ -172,7 +173,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
       },
       {
         key: 't4',
-        label: 'Tier IV (40 EP)',
+        label: 'Tier IV (20 EP)',
         options: [
           { label: 'stunned', tier: 4 },
           { label: 'paralyzed', tier: 4 },
@@ -186,7 +187,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
       },
       {
         key: 't5',
-        label: 'Tier V (50 EP)',
+        label: 'Tier V (25 EP)',
         options: [
           { label: 'petrification', tier: 5 },
           { label: 'soul-bound', tier: 5 },
@@ -199,7 +200,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
   {
     key: 'challenge',
     label: 'Challenge',
-    epPerTier: 15,
+    epPerTier: 7.5,
     options: [
       { label: 'none', tier: 0 },
       { label: '150 BP', tier: 0 },

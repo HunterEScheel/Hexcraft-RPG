@@ -345,9 +345,10 @@ const SECTIONS: Section[] = [
           <p>
             Devon (Destroy 3, Elemental 3) prepares <em>Cinder Lance</em> — a
             single-target, 120 ft fireball doing 4d6, resolved as a hit roll.
-            Base cost 30 EP; saved cost 23 EP. His hit bonus on this spell is
-            <span className="font-mono"> +6</span>. He could pay 28 EP to push
-            it to +7 if he really needs the hit.
+            Cast in 2 actions, that&apos;s 4 EP for the range plus 8 EP for
+            the dice: base cost 12 EP; saved cost 9 EP. His hit bonus on this
+            spell is<span className="font-mono"> +6</span>. He could pay 14 EP
+            to push it to +7 if he really needs the hit.
           </p>
         </Example>
       </>
