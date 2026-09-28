@@ -13,9 +13,8 @@ interface CorrelationDef {
   key: Correlation
   label: string
   mod: string
-  // If multiplier is undefined, this correlation adds `add` to base DC instead.
+  // Undefined leaves the DC unchanged.
   multiplier?: number
-  add?: number
 }
 
 const DIFFICULTIES: readonly DifficultyDef[] = [
@@ -26,7 +25,7 @@ const DIFFICULTIES: readonly DifficultyDef[] = [
 ] as const
 
 const CORRELATIONS: readonly CorrelationDef[] = [
-  { key: 'negative', label: 'Negative', mod: '+10', add: 10 },
+  { key: 'negative', label: 'Negative', mod: '+50%', multiplier: 1.5 },
   { key: 'none', label: 'None', mod: '±0' },
   { key: 'relevant', label: 'Relevant', mod: '−10%', multiplier: 0.9 },
   { key: 'adjacent', label: 'Adjacent', mod: '−25%', multiplier: 0.75 },
@@ -34,7 +33,6 @@ const CORRELATIONS: readonly CorrelationDef[] = [
 ] as const
 
 function computeDC(diff: DifficultyDef, corr: CorrelationDef): number {
-  if (corr.add !== undefined) return diff.base + corr.add
   if (corr.multiplier !== undefined)
     return Math.floor(diff.base * corr.multiplier)
   return diff.base

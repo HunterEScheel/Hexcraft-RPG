@@ -105,7 +105,7 @@ const SECTIONS: Section[] = [
         <ul className="list-disc pl-5 mt-1 space-y-1">
           <li>
             <strong>Negative</strong> — DC&nbsp;
-            <span className="font-mono">+ 10</span>. The invoked skill actively
+            <span className="font-mono">× 1.5</span>. The invoked skill actively
             misleads — its training points the wrong direction.
           </li>
           <li>
@@ -141,8 +141,8 @@ const SECTIONS: Section[] = [
           </p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li>
-              <strong>Cooking</strong> — Negative. DC&nbsp;30&nbsp;+&nbsp;10 ={' '}
-              <span className="font-mono">40</span>.
+              <strong>Cooking</strong> — Negative, +50%. DC{' '}
+              <span className="font-mono">45</span>.
             </li>
             <li>
               <strong>No skill</strong> — None. DC stays at{' '}
