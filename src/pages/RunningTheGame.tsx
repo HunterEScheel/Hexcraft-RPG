@@ -83,9 +83,9 @@ const SECTIONS: Section[] = [
           d20 + relevant attribute + relevant skill vs DC
         </blockquote>
         <p>
-          The GM picks the attribute and skill (or save) that fits the action.
-          DC is set by the GM, or by an opposing roll when one creature pushes
-          against another.
+          The GM picks the attribute that fits the action. The player then
+          says which of their skills they&apos;re using for it. The GM decides
+          how relevant that skill is to the task and sets the DC accordingly.
         </p>
         <p className="mt-2">
           Standard DCs:{' '}
