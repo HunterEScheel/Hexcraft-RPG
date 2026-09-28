@@ -194,19 +194,17 @@ const SECTIONS: Section[] = [
         </p>
         <ul className="mt-2 space-y-1">
           <li>
-            <strong className="text-amber-300">Dodge</strong> — leaping out of
-            the way, avoiding traps, weaving through gunfire. Pairs naturally
-            with Agility.
+            <strong className="text-amber-300">Dodge</strong> — avoiding:
+            leaping out of the way, dodging traps, weaving through gunfire.
           </li>
           <li>
-            <strong className="text-amber-300">Grit</strong> — shaking off
-            poison, withstanding a knockdown, gritting your teeth through fear
-            of pain. Pairs naturally with Power.
+            <strong className="text-amber-300">Grit</strong> — powering
+            through: shaking off poison, withstanding a knockdown, gritting
+            your teeth through pain.
           </li>
           <li>
-            <strong className="text-amber-300">Resolve</strong> — resisting
-            charm, mental intrusion, illusions, fear. Pairs naturally with
-            Influence or Sense.
+            <strong className="text-amber-300">Resolve</strong> — mental
+            resistance: resisting charm, mental intrusion, illusions, fear.
           </li>
         </ul>
         <p className="mt-2">
