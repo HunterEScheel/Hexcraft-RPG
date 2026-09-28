@@ -107,6 +107,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
           { label: '1 round', tier: 1 },
           { label: '1 minute', tier: 2 },
           { label: '1 hour', tier: 3 },
+          { label: '8 hours', tier: 4 },
         ],
       },
     ],

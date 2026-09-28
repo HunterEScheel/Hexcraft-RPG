@@ -43,7 +43,7 @@ AOE = {'Targeted': [('none / self', 0), ('single target', 0), ('split damage', 1
        'Splash': [('20 ft', 1), ('60 ft', 2), ('120 ft', 3), ('300 ft', 4)],
        'Line': [('60 ft', 1), ('300 ft', 2), ('600 ft', 3), ('1 mile', 4)]}
 DURATION = {'No concentration': [('instantaneous', 0), ('1 minute', 1), ('1 hour', 2), ('1 day', 3), ('1 year', 4), ('permanent', 5)],
-            'Concentration': [('1 round', 1), ('1 minute', 2), ('1 hour', 3)]}
+            'Concentration': [('1 round', 1), ('1 minute', 2), ('1 hour', 3), ('8 hours', 4)]}
 BUFFS = {1: 'darkvision, magic detection, languages, 1-sense illusions, +2 skill, cursory knowledge, inconvenience, poisoned, deafened, grappled, slowed, reincarnation',
          2: 'tremorsense, see invisibility, detect lies, multi-sense illusions, +5 skill, fundamental knowledge, prone, frightened, illness, undeath, exhaustion',
          3: 'truesight, total evasion, detailed knowledge, disability, restrained, blinded, silenced, charmed, resurrection',
