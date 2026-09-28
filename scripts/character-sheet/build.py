@@ -50,7 +50,7 @@ page1 = f'''
 <header class="top">
   <div class="brand"><b>⬡ Hexcraft</b><span>Character Sheet</span></div>
   <div class="idrow">{field('Character name', 'w3')}{field('Player')}{field('Power tier')}</div>
-  <div class="idrow">{field('Base BP')}{field('Bonus BP')}{field('BP spent')}{field('BP unspent')}</div>
+  <div class="idrow">{field('Total BP spent')}{field('Total BP remaining')}</div>
 </header>
 
 <div class="stats">
