@@ -100,10 +100,15 @@ interface ItemRowProps {
 }
 
 function ItemRow({ item, onOpen }: ItemRowProps) {
+  // Equipped armor shows only what it does in play: the damage it reduces and
+  // the types it covers.
+  const equippedArmor = item.armor && item.equipped
   const typeBadge = item.weaponCategory
     ? weaponCategoryLabel(item.weaponCategory)
     : item.armor
-      ? `${ARMOR_CLASS_STATS[item.armor.class].label} armor 1${armorReductionDie(item.armor)}`
+      ? equippedArmor
+        ? `1${armorReductionDie(item.armor)}${item.armor.extraProtective ? `+${item.armor.extraProtective}` : ''} ${item.armor.reductionTypes.join(', ')}`
+        : `${ARMOR_CLASS_STATS[item.armor.class].label} armor 1${armorReductionDie(item.armor)}`
       : null
   return (
     <button
@@ -125,7 +130,7 @@ function ItemRow({ item, onOpen }: ItemRowProps) {
                   : 'border-zinc-700 bg-zinc-950 text-zinc-400')
               }
             >
-              {item.equipped ? 'Equipped · ' : ''}
+              {item.equipped && !equippedArmor ? 'Equipped · ' : ''}
               {typeBadge}
             </span>
           )}
