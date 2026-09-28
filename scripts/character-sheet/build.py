@@ -23,6 +23,12 @@ def box(label, big=False, sub=''):
             f'<span>{label}</span>{f"<em>{sub}</em>" if sub else ""}</div>')
 
 
+def pool(label):
+    # Current over max in one box: write current on the left, max on the right.
+    return (f'<div class="box pool"><div class="val"><i>/</i></div>'
+            f'<span>{label}</span><em>current / max</em></div>')
+
+
 def rows(head, n, widths, cls=''):
     cols = ''.join(f'<col style="width:{w}">' for w in widths)
     h = ''.join(f'<th>{c}</th>' for c in head)
@@ -54,8 +60,7 @@ page1 = f'''
 </header>
 
 <div class="stats">
-  {box('HP', True, 'max')}{box('Current HP', True)}{box('Temp HP', True)}
-  {box('EP', True, 'max')}{box('Current EP', True)}
+  {pool('HP')}{box('Temp HP', True)}{pool('EP')}
   {box('Speed', True, 'ft')}{box('Evasion', True, '10 + AGI + Dodge − armor')}
 </div>
 
@@ -111,7 +116,9 @@ body { margin:0; font-family:'DejaVu Sans','Liberation Sans',sans-serif; color:v
 .field { flex:1; } .field.w3 { flex:3; }
 .field .line { border-bottom:1px solid var(--ink); height:0.24in; }
 .field span, .box span, th { font-size:6.5pt; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); }
-.stats { display:grid; grid-template-columns:repeat(7, 1fr); gap:0.08in; }
+.stats { display:grid; grid-template-columns:1.6fr 1fr 1.6fr 1fr 1fr; gap:0.08in; }
+.pool .val { display:flex; align-items:center; justify-content:center; }
+.pool .val i { font-style:normal; font-size:22pt; color:var(--rule); font-weight:200; }
 .box { border:1.5px solid var(--ink); border-radius:6px; padding:0.03in 0.05in; text-align:center; }
 .box .val { height:0.36in; }
 .box em { display:block; font-style:normal; font-size:5.5pt; color:var(--muted); }
