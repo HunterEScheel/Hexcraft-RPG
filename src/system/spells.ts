@@ -200,7 +200,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
   {
     key: 'challenge',
     label: 'Challenge',
-    epPerTier: 7.5,
+    epPerTier: 8,
     options: [
       { label: 'none', tier: 0 },
       { label: '150 BP', tier: 0 },

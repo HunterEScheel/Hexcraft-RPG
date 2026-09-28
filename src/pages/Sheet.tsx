@@ -10,7 +10,7 @@ import {
   type BodyPart,
   type Character,
 } from '../system/character'
-import { skillCost } from '../system/costs'
+import { magicSchoolCost, skillCost } from '../system/costs'
 import { ATTRIBUTES } from '../system/attributes'
 import { COMBAT_SKILLS, isCombatSkillId } from '../system/combatSkills'
 import { MAGIC_MEDIUMS, MAGIC_SCHOOLS } from '../system/magicSchools'
@@ -106,6 +106,23 @@ export function Sheet() {
       .sort((a, b) => b.level - a.level)
     return { combatSkills: combat, otherSkills: other }
   }, [character])
+
+  // Each known spell school also reads as a skill, "<School> Magic", at the
+  // school's level. Its BP is the school's, already counted under magic.
+  const schoolSkills = useMemo(
+    () =>
+      character
+        ? MAGIC_SCHOOLS.filter((s) => character.magicSchools[s] > 0).map(
+            (s) => ({
+              id: `school:${s}`,
+              name: `${s} Magic`,
+              level: character.magicSchools[s],
+              bp: magicSchoolCost(character.magicSchools[s]),
+            }),
+          )
+        : [],
+    [character],
+  )
 
   if (loading) return <p className="text-sm text-zinc-500">Loading…</p>
   if (lockedName !== null && id) {
@@ -507,10 +524,10 @@ export function Sheet() {
           </ReadOnlySection>
 
           <ReadOnlySection title="Skills">
-            {otherSkills.length === 0 ? (
+            {otherSkills.length === 0 && schoolSkills.length === 0 ? (
               <p className="text-sm text-zinc-500 italic">No other skills.</p>
             ) : (
-              <SkillList skills={otherSkills} />
+              <SkillList skills={[...schoolSkills, ...otherSkills]} />
             )}
           </ReadOnlySection>
 
@@ -730,7 +747,8 @@ function fmt(n: number): string {
 }
 
 interface SkillListProps {
-  skills: { id: string; name: string; level: number }[]
+  /** `bp` overrides the skill cost, for entries priced another way. */
+  skills: { id: string; name: string; level: number; bp?: number }[]
 }
 
 function SkillList({ skills }: SkillListProps) {
@@ -744,7 +762,7 @@ function SkillList({ skills }: SkillListProps) {
           <span className="text-sm text-zinc-100">{s.name}</span>
           <div className="flex items-center gap-4 text-xs">
             <span className="text-zinc-500 font-mono">
-              {skillCost(s.level)} BP
+              {s.bp ?? skillCost(s.level)} BP
             </span>
             <span className="text-amber-300 font-mono">Lv {s.level}</span>
           </div>
