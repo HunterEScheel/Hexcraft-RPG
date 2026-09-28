@@ -37,4 +37,16 @@ export const MAGIC_MEDIUM_DESCRIPTIONS: Record<
 }
 
 export type MagicSchool = (typeof MAGIC_SCHOOLS)[number]
+
+// What each school is called as a discipline, e.g. on the sheet's skill list:
+// "Destruction Magic" rather than "Destroy Magic".
+export const MAGIC_SCHOOL_DISCIPLINES: Record<MagicSchool, string> = {
+  Destroy: 'Destruction',
+  Create: 'Creation',
+  Alter: 'Alteration',
+  Restore: 'Restoration',
+  Divine: 'Divination',
+  Control: 'Control',
+  Summon: 'Summoning',
+}
 export type MagicMedium = (typeof MAGIC_MEDIUMS)[number]

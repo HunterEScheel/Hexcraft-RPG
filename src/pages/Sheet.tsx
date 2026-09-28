@@ -13,7 +13,11 @@ import {
 import { magicSchoolCost, skillCost } from '../system/costs'
 import { ATTRIBUTES } from '../system/attributes'
 import { COMBAT_SKILLS, isCombatSkillId } from '../system/combatSkills'
-import { MAGIC_MEDIUMS, MAGIC_SCHOOLS } from '../system/magicSchools'
+import {
+  MAGIC_MEDIUMS,
+  MAGIC_SCHOOLS,
+  MAGIC_SCHOOL_DISCIPLINES,
+} from '../system/magicSchools'
 import { TETHER_TIERS } from '../system/tethers'
 import { FLAW_SEVERITIES } from '../system/flaws'
 import { getCharacter, updateCharacter } from '../lib/characters'
@@ -107,7 +111,7 @@ export function Sheet() {
     return { combatSkills: combat, otherSkills: other }
   }, [character])
 
-  // Each known spell school also reads as a skill, "<School> Magic", at the
+  // Each known spell school also reads as a skill, e.g. "Destruction Magic", at the
   // school's level. Its BP is the school's, already counted under magic.
   const schoolSkills = useMemo(
     () =>
@@ -115,7 +119,7 @@ export function Sheet() {
         ? MAGIC_SCHOOLS.filter((s) => character.magicSchools[s] > 0).map(
             (s) => ({
               id: `school:${s}`,
-              name: `${s} Magic`,
+              name: `${MAGIC_SCHOOL_DISCIPLINES[s]} Magic`,
               level: character.magicSchools[s],
               bp: magicSchoolCost(character.magicSchools[s]),
             }),
