@@ -282,7 +282,6 @@ export function Builder() {
                 value={character.hp}
                 onChange={(hp) => patch({ hp })}
                 min={0}
-                max={300}
                 step={3}
               />
             </Subsection>
@@ -306,7 +305,6 @@ export function Builder() {
                 value={character.speed ?? DEFAULT_SPEED}
                 onChange={(speed) => patch({ speed })}
                 min={0}
-                max={40}
                 step={SPEED_STEP}
               />
             </Subsection>
