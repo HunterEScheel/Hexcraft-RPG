@@ -88,3 +88,15 @@ every path rewritten to `index.html` so deep links like `/sheet/<id>` load the a
 | Magic medium              | the skill ladder from an offset of 3                  |
 
 Power tier budgets range from 150 BP (Peasants) to 2000 BP (World Savior).
+
+## Player's Guide
+
+The rules are published as `public/hexcraft-players-guide.pdf`, which the
+Running the game page offers as a download. It is generated, not written by
+hand: edit `scripts/players-guide/build.py` (its numbers are copied from
+`src/system`, so update them there when a rule changes), then rebuild it:
+
+```bash
+npm i --no-save playwright   # if Playwright isn't installed
+python3 scripts/players-guide/build.py && node scripts/players-guide/pdf.mjs
+```
