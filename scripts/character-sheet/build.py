@@ -52,6 +52,9 @@ def panel(title, html, cls=''):
     return f'<section class="panel {cls}"><h3>{title}</h3>{html}</section>'
 
 
+WEAPON_ROWS = 13
+INVENTORY_ROWS = 40
+
 page1 = f'''
 <header class="top">
   <div class="brand"><b>⬡ Hexcraft</b><span>Character Sheet</span></div>
@@ -75,12 +78,11 @@ page1 = f'''
        ['40%', '10%', '14%', '20%', '16%']))}
 
 <div class="grid2">
-  {panel('Weapons', rows(['Weapon', 'Type', 'Damage', 'Damage types'], 4, ['34%', '18%', '18%', '30%']))}
-  {panel('Armor', rows(['Armor', 'Die', 'Reduces', 'Thr', 'Dur', 'Eva', 'On'], 4, ['27%', '9%', '28%', '9%', '11%', '8%', '8%']) +
+  {panel('Weapons', rows(['Weapon', 'Type', 'Damage', 'Damage types'], WEAPON_ROWS, ['34%', '18%', '18%', '30%']))}
+  {panel('Armor', rows(['Armor', 'Die', 'Reduces', 'Thr', 'Dur', 'Eva', 'On'], WEAPON_ROWS, ['27%', '9%', '28%', '9%', '11%', '8%', '8%']) +
          '<p class="hint">Die: light d6 · medium d8 · heavy d10. Damage over the threshold costs damage ÷ threshold durability.</p>')}
 </div>
 
-{panel('Inventory', '<div class="grid2 tight">' + rows(['Item', 'Qty', 'Notes'], 5, ['50%', '14%', '36%']) + rows(['Item', 'Qty', 'Notes'], 5, ['50%', '14%', '36%']) + '</div><div class="inline">' + field('Gold') + '<div class="field w3"></div></div>')}
 '''
 
 page2 = f'''
@@ -100,6 +102,10 @@ page2 = f'''
 {panel('Saved spells', rows(['Spell', 'School', 'Medium', 'Range', 'AOE', 'Duration', 'Buff/Debuff', 'Chall.', 'Dice', 'Cast', 'Resolved by', 'EP'], 18,
        ['13%', '8%', '8%', '8%', '8%', '8%', '10%', '6%', '6%', '7%', '11%', '7%'], 'compact'))}
 
+'''
+
+page3 = f'''
+{panel('Inventory', '<div class="grid2 tight">' + rows(['Item', 'Qty', 'Notes'], INVENTORY_ROWS, ['50%', '14%', '36%']) + rows(['Item', 'Qty', 'Notes'], INVENTORY_ROWS, ['50%', '14%', '36%']) + '</div><div class="inline">' + field('Gold') + '<div class="field w3"></div></div>')}
 '''
 
 CSS = '''
@@ -144,5 +150,5 @@ td small { color:var(--muted); font-size:6pt; margin-left:3px; }
 '''
 
 OUT.write_text(f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Hexcraft Character Sheet</title><style>{CSS}</style></head><body>
-<div class="page">{page1}</div><div class="page">{page2}</div></body></html>''')
+<div class="page">{page1}</div><div class="page">{page2}</div><div class="page">{page3}</div></body></html>''')
 print('wrote', OUT)
