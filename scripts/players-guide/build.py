@@ -235,21 +235,6 @@ section('growing', 'Growing Your Character', f'''
 <p>Add awarded BP in the builder's <b>BP Management</b> step, then spend it anywhere in your build. Your power tier never changes.</p>
 ''')
 
-section('gm', 'For the GM', f'''
-<p>The DC calculator on the site's <b>Running the game</b> page does the fit arithmetic for you.</p>
-<ul>
-<li><b>Let players pitch their skill.</b> Name the attribute, let the player say which skill they're bringing, then judge the fit honestly. A clever pitch deserves an Adjacent or Exact; a stretch is Relevant at best.</li>
-<li><b>Call for the right save.</b> A cognitive trap is Resolve. A collapsing wall of flame is Dodge. A marathon climb up an icy cliff is Grit. Lean on the three saves rather than inventing new mechanics.</li>
-<li><b>Use damage types.</b> Most characters armor up against Physical and Fire. Now and then, field a foe that deals Psychic, Acid or Force.</li>
-<li><b>Track armor durability.</b> When armor breaks mid-fight, the stakes spike. The sheet does the math; make sure the player notices.</li>
-<li><b>Reward smart spell building.</b> A caster who pays 5 EP to amp the DC is reading the odds. Tell them when it mattered.</li>
-<li><b>Hold players to their tethers and flaws.</b> They were paid for in BP. If they never bite, bring them into the story.</li>
-<li><b>Pace BP awards steadily.</b> 5–25 BP per session: the high end for a hard-won fight or a quest beat, the low end for quiet downtime. A new skill rank or attribute step should take a few sessions to earn.</li>
-<li><b>Keep the tier fixed.</b> Grow characters with BP awards, never by raising the power tier mid-campaign.</li>
-</ul>
-''')
-
-
 section('app', 'Using rpg.jaeg.click', f'''
 <ul>
 <li><b>No account needed.</b> Anyone can create a character, open its sheet and edit it.</li>
@@ -282,7 +267,7 @@ Saved spell −25% &middot; Amp: +1 per 5 EP</p>
 ''')
 
 toc = ''.join(f'<li><a href="#{i}">{t}</a></li>' for i, t, _ in sections)
-FLOW = {'tethers', 'saves', 'gm', 'app'}  # short sections run on from the previous one
+FLOW = {'tethers', 'saves', 'app'}  # short sections run on from the previous one
 body = ''.join(f'<section id="{i}" class="{"flow" if i in FLOW else ""}"><h2>{t}</h2>{h}</section>' for i, t, h in sections)
 
 CSS = '''

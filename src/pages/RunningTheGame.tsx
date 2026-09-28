@@ -13,7 +13,7 @@ export function RunningTheGame() {
             Running the game
           </h2>
           <p className="text-sm text-zinc-500">
-            GM tools for the table. The full rules, with examples and GM tips,
+            GM tools for the table. The full rules, with examples,
             are in the Player&apos;s Guide.
           </p>
         </div>
