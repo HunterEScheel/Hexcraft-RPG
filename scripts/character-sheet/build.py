@@ -92,11 +92,9 @@ page2 = f'''
   </div>
 </div>
 
-{panel('Saved spells', rows(['Spell', 'School', 'Medium', 'Range', 'AOE', 'Duration', 'Buff/Debuff', 'Chall.', 'Dice', 'Cast', 'Resolved by', 'EP'], 5,
+{panel('Saved spells', rows(['Spell', 'School', 'Medium', 'Range', 'AOE', 'Duration', 'Buff/Debuff', 'Chall.', 'Dice', 'Cast', 'Resolved by', 'EP'], 18,
        ['13%', '8%', '8%', '8%', '8%', '8%', '10%', '6%', '6%', '7%', '11%', '7%'], 'compact'))}
 
-{panel('Description', '<div class="grid2 tight">' + ''.join(f'<div class="notes"><b>{p}</b><div class="lines-blank"></div></div>' for p in ['Head', 'Torso', 'Arms', 'Legs']) +
-       '</div><div class="notes"><b>Notes</b><div class="lines-blank tall"></div></div>')}
 '''
 
 CSS = '''
