@@ -132,6 +132,8 @@ section('tethers', 'Tethers & Flaws', f'''
 </div>
 <p>The GM sets an <b>obligation threshold</b>: your tethers' weights must add up to at least that number. Flaws carry no weight.</p>
 <p>This is a contract. When a tether or flaw costs you time, money, allies or HP, it's working as intended. If yours never come up, expect the GM to bring them in.</p>
+<div class="callout"><b>For the GM: setting the threshold.</b> If you're not sure what obligation threshold to set, start at <b>3</b>. That all but guarantees every character carries obligations that matter, and that their choices will run into them.<br><br>
+When a player turns their back on an obligation, make it cost them. If they abandon an alliance, the people they were allied with should strike back at the most opportune moment. The consequences should land within <b>one or two sessions</b>, while the choice is still fresh.</div>
 ''')
 
 section('rolls', 'Making a Roll', f'''
