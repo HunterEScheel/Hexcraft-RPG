@@ -100,3 +100,10 @@ hand: edit `scripts/players-guide/build.py` (its numbers are copied from
 npm i --no-save playwright   # if Playwright isn't installed
 python3 scripts/players-guide/build.py && node scripts/players-guide/pdf.mjs
 ```
+
+The blank, printable character sheet (`public/hexcraft-character-sheet.pdf`) is
+built the same way from `scripts/character-sheet/`:
+
+```bash
+python3 scripts/character-sheet/build.py && node scripts/character-sheet/pdf.mjs
+```

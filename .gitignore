@@ -29,3 +29,4 @@ dist-ssr
 # Embedding input (may contain a proprietary skill list)
 scripts/hexcraft-skills.txt
 scripts/players-guide/guide.html
+scripts/character-sheet/sheet.html
