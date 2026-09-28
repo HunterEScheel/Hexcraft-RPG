@@ -295,7 +295,6 @@ export function Builder() {
                 value={character.ep}
                 onChange={(ep) => patch({ ep })}
                 min={0}
-                max={100}
               />
             </Subsection>
             <Subsection
