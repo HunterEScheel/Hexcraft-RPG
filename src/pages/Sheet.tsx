@@ -26,6 +26,8 @@ import { supabaseConfigured } from '../lib/supabase'
 import { BodyDiagramEditor } from '../components/BodyDiagramEditor'
 import { InventoryEditor } from '../components/InventoryEditor'
 import { QuickCast } from '../components/QuickCast'
+import { QuickManeuver } from '../components/QuickManeuver'
+import { SavedManeuvers } from '../components/SavedManeuvers'
 import { SavedSpells } from '../components/SavedSpells'
 import { TakeDamagePanel } from '../components/TakeDamagePanel'
 import { DeathSavePanel } from '../components/DeathSavePanel'
@@ -155,6 +157,11 @@ export function Sheet() {
   const adjustHp = (delta: number) =>
     setCharacter((c) =>
       c ? normalizeCurrentValues({ ...c, currentHp: c.currentHp + delta }) : c,
+    )
+  // Using a spell or maneuver spends its EP.
+  const spendEp = (cost: number) =>
+    setCharacter((c) =>
+      c ? normalizeCurrentValues({ ...c, currentEp: c.currentEp - cost }) : c,
     )
   const adjustEp = (delta: number) =>
     setCharacter((c) =>
@@ -365,13 +372,52 @@ export function Sheet() {
       </nav>
 
       {tab === 'combat' && (
-        <CombatTab
-          character={character}
-          combatSkills={combatSkills}
-          onTakeDamage={(next) =>
-            setCharacter((c) => (c ? normalizeCurrentValues(next) : c))
-          }
-        />
+        <div className="space-y-3">
+          <CombatTab
+            character={character}
+            combatSkills={combatSkills}
+            onTakeDamage={(next) =>
+              setCharacter((c) => (c ? normalizeCurrentValues(next) : c))
+            }
+          />
+          <ReadOnlySection title="Quick maneuver" collapsible defaultOpen={false}>
+            <QuickManeuver
+              character={character}
+              onUse={spendEp}
+              onSave={(maneuver) =>
+                setCharacter((c) =>
+                  c
+                    ? {
+                        ...c,
+                        savedManeuvers: [
+                          ...(c.savedManeuvers ?? []),
+                          { id: crypto.randomUUID(), ...maneuver },
+                        ],
+                      }
+                    : c,
+                )
+              }
+            />
+          </ReadOnlySection>
+          <ReadOnlySection title="Saved maneuvers">
+            <SavedManeuvers
+              character={character}
+              onUse={spendEp}
+              onRemove={(id) =>
+                setCharacter((c) =>
+                  c
+                    ? {
+                        ...c,
+                        savedManeuvers: (c.savedManeuvers ?? []).filter(
+                          (m) => m.id !== id,
+                        ),
+                      }
+                    : c,
+                )
+              }
+            />
+          </ReadOnlySection>
+        </div>
       )}
 
       {tab === 'spellcasting' && (

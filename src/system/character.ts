@@ -34,6 +34,7 @@ import {
   tetherRefundTotal,
   type Tether,
 } from './tethers'
+import type { SavedManeuver } from './maneuvers'
 import type { SavedSpell } from './spells'
 
 export interface CharacterSkill {
@@ -94,6 +95,7 @@ export interface Character {
   inventory: InventoryItem[]
   armorModifier: number
   savedSpells: SavedSpell[]
+  savedManeuvers: SavedManeuver[]
   deathSaves: DeathSaves
   tempHp: number
   bodyDescriptions: Partial<Record<BodyPart, string>>
@@ -156,6 +158,7 @@ export function emptyCharacter(tierName: string, bpBudget: number): Character {
     inventory: [],
     armorModifier: 0,
     savedSpells: [],
+    savedManeuvers: [],
     deathSaves: { ...EMPTY_DEATH_SAVES },
     tempHp: 0,
     bodyDescriptions: {},
@@ -379,6 +382,7 @@ export function ensureCombatSkills(c: Character): Character {
           ? s.medium
           : (LEGACY_MEDIUM_MIGRATION[s.medium] ?? s.medium),
     })),
+    savedManeuvers: c.savedManeuvers ?? [],
     deathSaves: c.deathSaves ?? { ...EMPTY_DEATH_SAVES },
     tempHp: c.tempHp ?? 0,
     bodyDescriptions: migrateBodyDescriptions(c.bodyDescriptions),
@@ -391,6 +395,13 @@ export function ensureCombatSkills(c: Character): Character {
 
 export function combatSkillLevel(c: Character, id: string): number {
   return c.skills.find((s) => s.id === id)?.level ?? 0
+}
+
+/** A maneuver's hit bonus: its combat skill plus that skill's attribute. */
+export function maneuverBonus(c: Character, skillId: string): number {
+  const def = COMBAT_SKILLS.find((s) => s.id === skillId)
+  const attribute = def?.attribute ? (c.attributes[def.attribute] ?? 0) : 0
+  return combatSkillLevel(c, skillId) + attribute
 }
 
 // Migrate legacy armor (flat reductionDie / damageThreshold / durability /

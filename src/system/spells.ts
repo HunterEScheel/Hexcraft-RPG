@@ -261,6 +261,10 @@ export interface SpellDraft {
   targeting: SpellTargeting
 }
 
+export function targetingName(t: SpellTargeting): string {
+  return t === 'dodge' ? 'Dodge' : t === 'grit' ? 'Grit' : t === 'resolve' ? 'Resolve' : 'Hit'
+}
+
 export function emptySpellDraft(): SpellDraft {
   return {
     selections: {

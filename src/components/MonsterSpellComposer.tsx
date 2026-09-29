@@ -11,7 +11,7 @@ import {
   type SpellTargeting,
 } from '../system/spells'
 import { spellTargetingLabel, type MonsterSpell } from '../system/monster'
-import { CriterionRow } from './QuickCast'
+import { CriterionRow } from './EffectBuilder'
 
 interface Props {
   spellBonus: number

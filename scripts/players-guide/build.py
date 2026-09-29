@@ -232,6 +232,18 @@ section('spellbuilding', 'Building a Spell', f'''
 <div class="example"><b>Example: Cinder Lance.</b> Devon (Destroy 3, Elemental 3) builds a single-target, 120 ft fire bolt doing 4d6, resolved as a hit roll and cast in 2 actions. Range 120 ft is 4 EP; four damage dice are 8 EP. Base cost <b>12 EP</b>; saved, <b>9 EP</b>. His hit bonus is +6; for 5 more EP (14 total) he can push it to +7.</div>
 ''')
 
+section('maneuvers', 'Maneuvers', f'''
+<p>Maneuvers are the martial side of the same system: signature strikes, sweeps, trips, disarms and feints. A maneuver is <b>built exactly like a spell</b>, from the same parts (timing, range, targets and AOE, duration, effects, challenge and damage dice), and it costs the same EP.</p>
+<p>The difference is where the bonus comes from. Instead of a school and a medium, a maneuver draws on one of your <b>attack combat skills</b> (1-handed melee, 2-handed fired, Unarmed, Grapple, Tackle and so on) and that skill's attribute.</p>
+<ul>
+<li><b>Roll to hit</b>: d20 + combat skill + attribute vs the target's Evasion.</li>
+<li><b>Save</b>: the target saves against DC 10 + combat skill + attribute.</li>
+<li><b>Signature moves</b>: save as many maneuvers per combat skill as your level in it. A saved maneuver costs 25% less EP.</li>
+<li><b>Amping</b> works the same: 5 more EP for +1 to hit or +1 DC.</li>
+</ul>
+<div class="example"><b>Example: Hamstring.</b> Mira (1-handed melee 3, Agility 3) builds a two-action cut at a single target within reach that leaves it <i>slowed</i> for a minute and adds 1d6. Slowed is a Tier I effect (5 EP), a 1-minute duration is Tier I (4 EP) and the die is 2 EP: <b>11 EP</b>, or <b>8 EP</b> saved. She rolls d20 + 6 against the target's Evasion.</div>
+''')
+
 section('growing', 'Growing Your Character', f'''
 <p>The GM awards bonus BP at meaningful moments: surviving a session, finishing a quest beat, uncovering a secret. The usual pace is <b>5–25 BP per session</b>. That's enough to grow steadily over a campaign; no single session is a level-up.</p>
 <p>Add awarded BP in the builder's <b>BP Management</b> step, then spend it anywhere in your build. Your power tier never changes.</p>
@@ -257,7 +269,7 @@ section('app', 'Using rpg.jaeg.click', f'''
 <li><b>No account needed.</b> Anyone can create a character, open its sheet and edit it.</li>
 <li><b>Builder</b>: steps through name, BP, HP/EP/speed, tethers and flaws, attributes, skills and magic, with a BP bar that warns when you're over budget.</li>
 <li><b>Passcode</b>: when you create a character you can give it an optional passcode. Then only someone who enters it can view, edit or delete the character. Your browser remembers it after the first time.</li>
-<li><b>Sheet</b>: tracks current HP, EP and temporary HP, takes typed damage and applies armor, runs death saves and long rests, holds your inventory and saved spells, and has a quick-cast spell builder.</li>
+<li><b>Sheet</b>: tracks current HP, EP and temporary HP, takes typed damage and applies armor, runs death saves and long rests, holds your inventory, saved spells and saved maneuvers, and builds spells and maneuvers on the fly.</li>
 <li><b>Deleting</b> a character without a passcode needs a signed-in account.</li>
 </ul>
 ''')
@@ -266,7 +278,7 @@ section('reference', 'Quick Reference', f'''
 <div class="two">
 <div>
 <h3>Rolls</h3>
-<p>Check: d20 + attribute + skill vs DC<br>Attack: d20 + weapon skill + attribute vs Evasion<br>Spell attack: d20 + school + medium vs Evasion<br>Spell save DC: 10 + school + medium<br>Evasion: 10 + Agility + Dodge − armor</p>
+<p>Check: d20 + attribute + skill vs DC<br>Attack: d20 + weapon skill + attribute vs Evasion<br>Spell attack: d20 + school + medium vs Evasion<br>Spell save DC: 10 + school + medium<br>Maneuver: d20 + skill + attribute; DC 10 + skill + attribute<br>Evasion: 10 + Agility + Dodge − armor</p>
 <h3>DCs</h3><p>Easy 12 &middot; Medium 20 &middot; Hard 30 &middot; Near-impossible 40</p>
 <p>Fit: Negative ×1.5 &middot; Relevant ×0.9 &middot; Adjacent ×0.75 &middot; Exact ×0.6</p>
 <h3>Criticals</h3><p>Nat 20: +10 &middot; Nat 1: −10<br>Crit success: beat DC by 10+<br>Crit failure: under 25% of DC</p>
@@ -284,7 +296,7 @@ Saved spell −25% &middot; Amp: +1 per 5 EP</p>
 ''')
 
 toc = ''.join(f'<li><a href="#{i}">{t}</a></li>' for i, t, _ in sections)
-FLOW = {'tethers', 'saves', 'gm', 'app'}  # short sections run on from the previous one
+FLOW = {'tethers', 'saves', 'maneuvers', 'gm', 'app'}  # short sections run on from the previous one
 body = ''.join(f'<section id="{i}" class="{"flow" if i in FLOW else ""}"><h2>{t}</h2>{h}</section>' for i, t, h in sections)
 
 CSS = '''

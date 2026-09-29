@@ -99,8 +99,11 @@ page2 = f'''
   </div>
 </div>
 
-{panel('Saved spells', rows(['Spell', 'School', 'Medium', 'Range', 'AOE', 'Duration', 'Effect', 'Bonus/DC', 'EP'], 18,
+{panel('Saved spells', rows(['Spell', 'School', 'Medium', 'Range', 'AOE', 'Duration', 'Effect', 'Bonus/DC', 'EP'], 8,
        ['18%', '9%', '9%', '9%', '9%', '9%', '22%', '9%', '6%'], 'compact'))}
+
+{panel('Saved maneuvers', rows(['Maneuver', 'Combat skill', 'Range', 'AOE', 'Duration', 'Effect', 'Bonus/DC', 'EP'], 7,
+       ['18%', '18%', '9%', '9%', '9%', '22%', '9%', '6%'], 'compact'))}
 
 '''
 
