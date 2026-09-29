@@ -238,7 +238,7 @@ section('growing', 'Growing Your Character', f'''
 ''')
 
 section('gm', 'For the GM', f'''
-<p>The DC calculator on the site's <b>Running the game</b> page does the fit arithmetic for you.</p>
+<p>The <b>Tools</b> page on the site has a DC calculator for the fit arithmetic and a spell calculator for on-the-fly casting.</p>
 <ul>
 <li><b>Let players pitch their skill.</b> Name the attribute, let the player say which skill they're bringing, then judge the fit honestly. A clever pitch deserves an Adjacent or Exact; a stretch is Relevant at best.</li>
 <li><b>Call for the right save.</b> A cognitive trap is Resolve. A collapsing wall of flame is Dodge. A marathon climb up an icy cliff is Grit. Lean on the three saves rather than inventing new mechanics.</li>

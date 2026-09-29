@@ -1,17 +1,18 @@
 import { DCCalculator } from '../components/DCCalculator'
+import { SpellCalculator } from '../components/SpellCalculator'
 
 // The rules live in the Player's Guide PDF (built by scripts/players-guide);
 // this page keeps only the tools a GM uses at the table.
 const GUIDE_URL = '/hexcraft-players-guide.pdf'
 const SHEET_URL = '/hexcraft-character-sheet.pdf'
 
-export function RunningTheGame() {
+export function Tools() {
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-semibold text-zinc-100">
-            Running the game
+            Tools
           </h2>
           <p className="text-sm text-zinc-500">
             GM tools for the table. The full rules, with examples and GM tips,
@@ -36,6 +37,7 @@ export function RunningTheGame() {
         </div>
       </div>
       <DCCalculator />
+      <SpellCalculator />
     </div>
   )
 }

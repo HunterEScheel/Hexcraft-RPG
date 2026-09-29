@@ -25,7 +25,7 @@ export function Layout() {
             <Tab to="/" end>
               Characters
             </Tab>
-            <Tab to="/running-the-game">Running the game</Tab>
+            <Tab to="/tools">Tools</Tab>
             <Tab to="/monster-maker">Monsters</Tab>
             <Link
               to="/builder"
@@ -83,7 +83,7 @@ function Tab({
 function sectionName(pathname: string): string {
   if (pathname.startsWith('/builder')) return 'Builder';
   if (pathname.startsWith('/sheet')) return 'Sheet';
-  if (pathname.startsWith('/running-the-game')) return 'GM guide';
+  if (pathname.startsWith('/tools')) return 'Tools';
   if (pathname.startsWith('/monster-maker')) return 'Monster maker';
   if (pathname.startsWith('/sign-in')) return 'Sign in';
   return 'Roster';

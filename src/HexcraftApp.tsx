@@ -3,7 +3,7 @@ import { Layout } from './Layout';
 import { Home } from './pages/Home';
 import { Builder } from './pages/Builder';
 import { Sheet } from './pages/Sheet';
-import { RunningTheGame } from './pages/RunningTheGame';
+import { Tools } from './pages/Tools';
 import { MonsterMaker } from './pages/MonsterMaker';
 import { SignIn } from './pages/SignIn';
 
@@ -20,7 +20,7 @@ export function HexcraftApp() {
         <Route path="builder" element={<Builder />} />
         <Route path="builder/:id" element={<Builder />} />
         <Route path="sheet/:id" element={<Sheet />} />
-        <Route path="running-the-game" element={<RunningTheGame />} />
+        <Route path="tools" element={<Tools />} />
         <Route path="monster-maker" element={<MonsterMaker />} />
         <Route path="sign-in" element={<SignIn />} />
       </Route>

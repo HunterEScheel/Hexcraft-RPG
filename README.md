@@ -92,7 +92,7 @@ Power tier budgets range from 150 BP (Peasants) to 2000 BP (World Savior).
 ## Player's Guide
 
 The rules are published as `public/hexcraft-players-guide.pdf`, which the
-Running the game page offers as a download. It is generated, not written by
+Tools page offers as a download. It is generated, not written by
 hand: edit `scripts/players-guide/build.py` (its numbers are copied from
 `src/system`, so update them there when a rule changes), then rebuild it:
 
