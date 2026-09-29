@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { maneuverBonus, combatSkillLevel, type Character } from '../system/character'
-import { MANEUVER_SKILLS } from '../system/maneuvers'
+import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from '../system/maneuvers'
 import type { SpellDraft } from '../system/spells'
 import { PickerSelect } from './EffectBuilder'
 import { QuickEffect } from './QuickEffect'
@@ -33,6 +33,8 @@ export function QuickManeuver({
       noun="maneuver"
       verb="Use"
       timingLabel="Timing"
+      criteria={MANEUVER_CRITERIA}
+      damageLabel="Extra damage (d6, on top of the weapon's)"
       pickers={
         <PickerSelect
           label="Combat skill"

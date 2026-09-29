@@ -1,5 +1,5 @@
 import { combatSkillLevel, maneuverBonus, type Character } from '../system/character'
-import { MANEUVER_SKILLS } from '../system/maneuvers'
+import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from '../system/maneuvers'
 import { SavedEffects } from './SavedEffects'
 
 export function SavedManeuvers({
@@ -24,6 +24,8 @@ export function SavedManeuvers({
   return (
     <SavedEffects
       verb="Use"
+      criteria={MANEUVER_CRITERIA}
+      extraDice
       currentEp={character.currentEp}
       onUse={onUse}
       onRemove={onRemove}

@@ -5,6 +5,7 @@ import {
   savedSpellCost,
   selectedOption,
   targetingName,
+  type SpellCriterion,
   type SpellDraft,
 } from '../system/spells'
 
@@ -27,12 +28,17 @@ export interface SavedEffectGroup {
 export function SavedEffects({
   groups,
   verb,
+  criteria = SPELL_CRITERIA,
+  extraDice = false,
   currentEp,
   onUse,
   onRemove,
 }: {
   groups: SavedEffectGroup[]
   verb: string
+  criteria?: readonly SpellCriterion[]
+  /** Maneuver dice add to the weapon's damage, shown as "+2d6". */
+  extraDice?: boolean
   currentEp: number
   onUse: (epCost: number) => void
   onRemove: (id: string) => void
@@ -53,14 +59,15 @@ export function SavedEffects({
             </div>
             <ul className="space-y-1">
               {group.items.map((item) => {
-                const cost = savedSpellCost(item.draft).totalEp
+                const cost = savedSpellCost(item.draft, criteria).totalEp
                 const canUse = cost > 0 && cost <= currentEp
                 const factors: string[] = []
-                for (const c of SPELL_CRITERIA) {
+                for (const c of criteria) {
                   const opt = selectedOption(c, item.draft.selections[c.key])
                   if (opt) factors.push(opt.label)
                 }
-                if (item.draft.damageDice > 0) factors.push(`${item.draft.damageDice}d6`)
+                if (item.draft.damageDice > 0)
+                  factors.push(`${extraDice ? '+' : ''}${item.draft.damageDice}d6`)
                 const time = CASTING_TIMES.find((t) => t.key === item.draft.castingTime)
                 if (time) factors.push(`${time.label} (×${time.multiplier})`)
                 const targeting = item.draft.targeting ?? 'hit'

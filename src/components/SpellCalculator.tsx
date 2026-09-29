@@ -5,6 +5,7 @@ import {
   savedSpellCost,
   spellCost,
 } from '../system/spells'
+import { MANEUVER_CRITERIA } from '../system/maneuvers'
 import { EffectBuilder } from './EffectBuilder'
 import { NumberStepper } from './NumberStepper'
 
@@ -21,8 +22,9 @@ export function SpellCalculator() {
   const [school, setSchool] = useState(0)
   const [medium, setMedium] = useState(0)
 
-  const cost = useMemo(() => spellCost(draft), [draft])
-  const saved = useMemo(() => savedSpellCost(draft), [draft])
+  const criteria = maneuver ? MANEUVER_CRITERIA : undefined
+  const cost = useMemo(() => spellCost(draft, criteria), [draft, criteria])
+  const saved = useMemo(() => savedSpellCost(draft, criteria), [draft, criteria])
   const bonus = school + medium
   const targeting = SPELL_TARGETING_OPTIONS.find((t) => t.key === draft.targeting)
 
@@ -38,7 +40,11 @@ export function SpellCalculator() {
               <button
                 key={kind}
                 type="button"
-                onClick={() => setManeuver(kind === 'Maneuver')}
+                onClick={() => {
+                  // The two use different option lists, so start the build over.
+                  setManeuver(kind === 'Maneuver')
+                  setDraft(emptySpellDraft())
+                }}
                 className={
                   'rounded px-2 py-0.5 text-[10px] uppercase tracking-wider border ' +
                   (maneuver === (kind === 'Maneuver')
@@ -80,6 +86,8 @@ export function SpellCalculator() {
           draft={draft}
           onChange={setDraft}
           timingLabel={maneuver ? 'Timing' : 'Casting time'}
+          criteria={criteria}
+          damageLabel={maneuver ? "Extra damage (d6, on top of the weapon's)" : undefined}
         />
 
         <div className="grid grid-cols-3 gap-3 rounded border border-zinc-800 bg-zinc-950 p-3 text-center">

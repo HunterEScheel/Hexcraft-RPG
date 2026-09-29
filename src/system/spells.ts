@@ -311,8 +311,13 @@ export interface SpellCost {
   totalEp: number
 }
 
-export function spellCost(draft: SpellDraft): SpellCost {
-  const criteriaEp = SPELL_CRITERIA.reduce(
+// Maneuvers price a shorter list of criteria (see maneuvers.ts); anything
+// not in `criteria` costs nothing.
+export function spellCost(
+  draft: SpellDraft,
+  criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
+): SpellCost {
+  const criteriaEp = criteria.reduce(
     (sum, c) => sum + criterionEp(c, draft.selections[c.key]),
     0,
   )
@@ -327,8 +332,11 @@ export function spellCost(draft: SpellDraft): SpellCost {
 // Saved (prepared) spells cost 25% less to cast.
 export const SAVED_SPELL_DISCOUNT = 0.25
 
-export function savedSpellCost(draft: SpellDraft): SpellCost {
-  const base = spellCost(draft)
+export function savedSpellCost(
+  draft: SpellDraft,
+  criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
+): SpellCost {
+  const base = spellCost(draft, criteria)
   return {
     ...base,
     totalEp: Math.max(0, Math.round(base.totalEp * (1 - SAVED_SPELL_DISCOUNT))),

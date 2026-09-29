@@ -23,10 +23,15 @@ export function EffectBuilder({
   draft,
   onChange,
   timingLabel = 'Casting time',
+  criteria = SPELL_CRITERIA,
+  damageLabel = 'Damage dice (d6)',
 }: {
   draft: SpellDraft
   onChange: (update: (d: SpellDraft) => SpellDraft) => void
   timingLabel?: string
+  /** Maneuvers offer a shorter list than spells. */
+  criteria?: readonly SpellCriterion[]
+  damageLabel?: string
 }) {
   const setMode = (key: CriterionKey, modeIndex: number) =>
     onChange((d) => ({
@@ -50,7 +55,7 @@ export function EffectBuilder({
 
   return (
     <>
-      {SPELL_CRITERIA.map((c) => (
+      {criteria.map((c) => (
         <CriterionRow
           key={c.key}
           criterion={c}
@@ -64,7 +69,7 @@ export function EffectBuilder({
         <div>
           <div className="flex items-baseline justify-between mb-1">
             <span className="text-xs uppercase tracking-wide text-zinc-400">
-              Damage dice (d6)
+              {damageLabel}
             </span>
             <span className="text-xs text-zinc-500 font-mono">
               {EP_PER_DAMAGE_DIE} EP per die

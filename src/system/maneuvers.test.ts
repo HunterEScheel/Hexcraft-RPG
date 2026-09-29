@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { emptyCharacter, ensureCombatSkills, maneuverBonus } from './character'
-import { MANEUVER_SKILLS } from './maneuvers'
+import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from './maneuvers'
+import { emptySpellDraft, savedSpellCost, spellCost } from './spells'
 
 describe('maneuvers', () => {
   it('are drawn only from attack skills', () => {
@@ -23,5 +24,23 @@ describe('maneuvers', () => {
     const legacy = { ...emptyCharacter('Peasants', 150), savedManeuvers: undefined }
     // @ts-expect-error older saved characters have no savedManeuvers
     expect(ensureCombatSkills(legacy).savedManeuvers).toEqual([])
+  })
+
+  it('price only their own criteria', () => {
+    // Hamstring: slowed for 1 minute, +1d6, two actions.
+    const draft = emptySpellDraft()
+    draft.selections.buffDebuff = { modeIndex: 1, optionIndex: 5 } // slowed, Tier I
+    draft.selections.duration = { modeIndex: 0, optionIndex: 2 } // 1 minute, tier 2
+    draft.selections.challenge = { modeIndex: 0, optionIndex: 6 } // not a maneuver criterion
+    draft.damageDice = 1
+    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(5 + 8 + 2)
+    expect(savedSpellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(11)
+  })
+
+  it('have no concentration or Challenge', () => {
+    expect(MANEUVER_CRITERIA.map((c) => c.key)).not.toContain('challenge')
+    const duration = MANEUVER_CRITERIA.find((c) => c.key === 'duration')!
+    expect(duration.modes).toBeUndefined()
+    expect(duration.options?.map((o) => o.label)).toEqual(['instantaneous', '1 round', '1 minute'])
   })
 })

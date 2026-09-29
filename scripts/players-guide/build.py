@@ -232,16 +232,34 @@ section('spellbuilding', 'Building a Spell', f'''
 <div class="example"><b>Example: Cinder Lance.</b> Devon (Destroy 3, Elemental 3) builds a single-target, 120 ft fire bolt doing 4d6, resolved as a hit roll and cast in 2 actions. Range 120 ft is 4 EP; four damage dice are 8 EP. Base cost <b>12 EP</b>; saved, <b>9 EP</b>. His hit bonus is +6; for 5 more EP (14 total) he can push it to +7.</div>
 ''')
 
+MAN_DURATION = [('instantaneous', 0), ('1 round', 1), ('1 minute', 2)]
+MAN_EFFECTS = {1: 'advantage on attack, +2 to a check, push 10 ft, disarmed, grappled, slowed',
+               2: 'damage resistance, sneak attack, +5 to a check, prone, frightened, bleeding',
+               3: 'extra action, restrained, blinded',
+               4: 'stunned, incapacitated'}
+
 section('maneuvers', 'Maneuvers', f'''
-<p>Maneuvers are the martial side of the same system: signature strikes, sweeps, trips, disarms and feints. A maneuver is <b>built exactly like a spell</b>, from the same parts (timing, range, targets and AOE, duration, effects, challenge and damage dice), and it costs the same EP.</p>
-<p>The difference is where the bonus comes from. Instead of a school and a medium, a maneuver draws on one of your <b>attack combat skills</b> (1-handed melee, 2-handed fired, Unarmed, Grapple, Tackle and so on) and that skill's attribute.</p>
+<p>Maneuvers are the martial side of the same system: signature strikes, sweeps, trips, disarms and feints. You build one the way you build a spell and pay for it in EP, but from a shorter list of parts:</p>
+<ul>
+<li><b>Range</b> and <b>AOE / targets</b>: the same options and EP as spells.</li>
+<li><b>Duration</b>: instantaneous, 1 round or 1 minute. There's no concentration.</li>
+<li><b>Effect</b>: non-magical effects only, listed below. There's no Challenge.</li>
+<li><b>Extra damage</b>: d6s added to the weapon's own damage, 2 EP per die.</li>
+<li><b>Timing</b>: the same multipliers as a spell's casting time.</li>
+</ul>
+<div class="two">
+<div><h3>Duration &middot; {EP['duration']} EP per tier</h3>{opts(MAN_DURATION, EP['duration'])}</div>
+<div><h3>Effect &middot; {EP['buff']} EP per tier</h3>
+{table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], e) for t, e in MAN_EFFECTS.items()], 'compact')}</div>
+</div>
+<p>Instead of a school and a medium, a maneuver draws on one of your <b>attack combat skills</b> (1-handed melee, 2-handed fired, Unarmed, Grapple, Tackle and so on) and that skill's attribute.</p>
 <ul>
 <li><b>Roll to hit</b>: d20 + combat skill + attribute vs the target's Evasion.</li>
 <li><b>Save</b>: the target saves against DC 10 + combat skill + attribute.</li>
 <li><b>Signature moves</b>: save as many maneuvers per combat skill as your level in it. A saved maneuver costs 25% less EP.</li>
 <li><b>Amping</b> works the same: 5 more EP for +1 to hit or +1 DC.</li>
 </ul>
-<div class="example"><b>Example: Hamstring.</b> Mira (1-handed melee 3, Agility 3) builds a two-action cut at a single target within reach that leaves it <i>slowed</i> for a minute and adds 1d6. Slowed is a Tier I effect (5 EP), a 1-minute duration is Tier I (4 EP) and the die is 2 EP: <b>11 EP</b>, or <b>8 EP</b> saved. She rolls d20 + 6 against the target's Evasion.</div>
+<div class="example"><b>Example: Hamstring.</b> Mira (1-handed melee 3, Agility 3) builds a two-action cut at a single target within reach that leaves it <i>slowed</i> for 1 minute and deals her sword's damage +1d6. Slowed is a Tier I effect (5 EP), 1 minute is duration tier 2 (8 EP) and the extra die is 2 EP: <b>15 EP</b>, or <b>11 EP</b> saved. She rolls d20 + 6 against the target's Evasion.</div>
 ''')
 
 section('growing', 'Growing Your Character', f'''
@@ -296,7 +314,7 @@ Saved spell −25% &middot; Amp: +1 per 5 EP</p>
 ''')
 
 toc = ''.join(f'<li><a href="#{i}">{t}</a></li>' for i, t, _ in sections)
-FLOW = {'tethers', 'saves', 'maneuvers', 'gm', 'app'}  # short sections run on from the previous one
+FLOW = {'tethers', 'saves', 'gm', 'app'}  # short sections run on from the previous one
 body = ''.join(f'<section id="{i}" class="{"flow" if i in FLOW else ""}"><h2>{t}</h2>{h}</section>' for i, t, h in sections)
 
 CSS = '''

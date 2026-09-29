@@ -4,7 +4,7 @@
 // as a weapon attack's is, and a character can save as many per skill as their
 // level in it.
 import { COMBAT_SKILLS } from './combatSkills'
-import type { SpellDraft } from './spells'
+import { SPELL_CRITERIA, type SpellCriterion, type SpellDraft } from './spells'
 
 export interface SavedManeuver {
   id: string
@@ -16,3 +16,71 @@ export interface SavedManeuver {
 
 /** The combat skills a maneuver can be drawn from: the attacks. */
 export const MANEUVER_SKILLS = COMBAT_SKILLS.filter((s) => s.category === 'action')
+
+// A maneuver prices range and targets the way a spell does, but its duration
+// is short and its effects are the non-magical kind a fighter can pull off.
+// There is no concentration and no Challenge. The keys match the spell
+// criteria, so a maneuver is still a SpellDraft.
+export const MANEUVER_CRITERIA: readonly SpellCriterion[] = [
+  SPELL_CRITERIA.find((c) => c.key === 'range')!,
+  SPELL_CRITERIA.find((c) => c.key === 'aoe')!,
+  {
+    key: 'duration',
+    label: 'Duration',
+    epPerTier: 4,
+    options: [
+      { label: 'instantaneous', tier: 0 },
+      { label: '1 round', tier: 1 },
+      { label: '1 minute', tier: 2 },
+    ],
+  },
+  {
+    key: 'buffDebuff',
+    label: 'Effect',
+    epPerTier: 5,
+    modes: [
+      { key: 'none', label: 'None', options: [{ label: 'none', tier: 0 }] },
+      {
+        key: 't1',
+        label: 'Tier I (5 EP)',
+        options: [
+          { label: 'advantage on attack', tier: 1 },
+          { label: '+2 to a check', tier: 1 },
+          { label: 'push 10 ft', tier: 1 },
+          { label: 'disarmed', tier: 1 },
+          { label: 'grappled', tier: 1 },
+          { label: 'slowed', tier: 1 },
+        ],
+      },
+      {
+        key: 't2',
+        label: 'Tier II (10 EP)',
+        options: [
+          { label: 'damage resistance', tier: 2 },
+          { label: 'sneak attack', tier: 2 },
+          { label: '+5 to a check', tier: 2 },
+          { label: 'prone', tier: 2 },
+          { label: 'frightened', tier: 2 },
+          { label: 'bleeding', tier: 2 },
+        ],
+      },
+      {
+        key: 't3',
+        label: 'Tier III (15 EP)',
+        options: [
+          { label: 'extra action', tier: 3 },
+          { label: 'restrained', tier: 3 },
+          { label: 'blinded', tier: 3 },
+        ],
+      },
+      {
+        key: 't4',
+        label: 'Tier IV (20 EP)',
+        options: [
+          { label: 'stunned', tier: 4 },
+          { label: 'incapacitated', tier: 4 },
+        ],
+      },
+    ],
+  },
+]

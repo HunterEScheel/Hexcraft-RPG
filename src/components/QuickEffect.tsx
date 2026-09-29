@@ -3,6 +3,7 @@ import {
   emptySpellDraft,
   spellCost,
   targetingName,
+  type SpellCriterion,
   type SpellDraft,
 } from '../system/spells'
 import { EffectBuilder } from './EffectBuilder'
@@ -16,6 +17,8 @@ export function QuickEffect({
   noun,
   verb,
   timingLabel,
+  criteria,
+  damageLabel,
   pickers,
   pickerHint,
   bonus,
@@ -27,6 +30,8 @@ export function QuickEffect({
   noun: string
   verb: string
   timingLabel?: string
+  criteria?: readonly SpellCriterion[]
+  damageLabel?: string
   pickers: ReactNode
   /** Why the effect can't be used yet (e.g. "Pick a school"), or null. */
   pickerHint: string | null
@@ -40,7 +45,7 @@ export function QuickEffect({
 }) {
   const [draft, setDraft] = useState(emptySpellDraft)
   const [name, setName] = useState('')
-  const cost = useMemo(() => spellCost(draft), [draft])
+  const cost = useMemo(() => spellCost(draft, criteria), [draft, criteria])
   const reset = () => setDraft(emptySpellDraft())
 
   const canUse = pickerHint === null && cost.totalEp > 0 && cost.totalEp <= currentEp
@@ -51,7 +56,13 @@ export function QuickEffect({
   return (
     <div className="space-y-4">
       {pickers}
-      <EffectBuilder draft={draft} onChange={setDraft} timingLabel={timingLabel} />
+      <EffectBuilder
+        draft={draft}
+        onChange={setDraft}
+        timingLabel={timingLabel}
+        criteria={criteria}
+        damageLabel={damageLabel}
+      />
 
       <div className="rounded border border-zinc-800 bg-zinc-950 p-3 space-y-2">
         <div className="flex items-center justify-between gap-3 flex-wrap">
