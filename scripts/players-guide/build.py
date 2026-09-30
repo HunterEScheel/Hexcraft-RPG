@@ -133,7 +133,7 @@ section('tethers', 'Tethers & Flaws', f'''
 <p>The GM sets an <b>obligation threshold</b>: your tethers' weights must add up to at least that number. Flaws carry no weight.</p>
 <h3>Tether examples</h3>
 {table(['Tether', 'Example', 'How it bites'], [
-    ('Minor', '<i>Owes the innkeeper at Brackwater a favor.</i>', 'Now and then she calls it in: a message to carry, a guest to keep an eye on, a night the party loses to her errand.'),
+    ('Minor', '<i>Keeper of the shrine in his home village, Brackwater.</i>', 'He is who they send for. Each season he must go back for the rites, and when trouble reaches Brackwater, a sickness, a raid, a bad omen, it becomes his problem, wherever the party happens to be.'),
     ('Major', '<i>Sworn to the Lantern Watch.</i>', 'The order sends orders and expects them followed, even mid-quest. Ignoring a summons costs rank, pay and allies inside the Watch.'),
     ('Binding', '<i>Must protect his younger sister, Wren.</i>', 'Wren travels with the party or sends for help when she needs it, and anyone who wants leverage over him goes after her. Walking away is not an option.'),
 ])}
