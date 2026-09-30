@@ -285,6 +285,13 @@ CONDITIONS = [
     ('Exhaustion', 'Per level: your HP, EP and movement speed maximums drop by 10, and all your skills, attributes and saving throws drop by 2.'),
     ('Blinded', "You can't see."),
     ('Restrained', 'You are off-balance, rooted and exposed.'),
+    ('Slowed', 'Your movement speed is halved.'),
+    ('Grappled', 'Your movement speed is 5 ft, and you have −5 to attack rolls.'),
+    ('Frightened', "You can't move toward the source, attack it, or cast spells targeting it."),
+    ('Bleeding', 'You lose 1d6 HP each round.'),
+    ('Charmed', "You're under the effects of Cognition magic."),
+    ('Paralyzed', 'Treated as stunned.'),
+    ('Petrified', 'Treated as stunned.'),
 ]
 
 section('conditions', 'Conditions', f'''

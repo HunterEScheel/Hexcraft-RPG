@@ -12,6 +12,16 @@ export const CONDITIONS: Record<string, string> = {
     'Per level: your HP, EP and movement speed maximums drop by 10, and all your skills, attributes and saving throws drop by 2.',
   blinded: "You can't see.",
   restrained: 'You are off-balance, rooted and exposed.',
+  slowed: 'Your movement speed is halved.',
+  grappled: 'Your movement speed is 5 ft, and you have −5 to attack rolls.',
+  frightened: "You can't move toward the source, attack it, or cast spells targeting it.",
+  bleeding: 'You lose 1d6 HP each round.',
+  charmed: "You're under the effects of Cognition magic.",
+  // Petrification and paralysis are filed under stunned (which absorbed
+  // incapacitated).
+  paralyzed: 'Treated as stunned.',
+  petrified: 'Treated as stunned.',
+  petrification: 'Treated as stunned.',
 }
 
 export function conditionDescription(label: string): string | undefined {
