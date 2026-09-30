@@ -222,6 +222,7 @@ export type CastingTimeKey =
   | 'reaction'
   | 'action'
   | '2actions'
+  | '1round'
   | '1minute'
   | '1hour'
 
@@ -235,6 +236,7 @@ export const CASTING_TIMES: readonly CastingTimeOption[] = [
   { key: 'reaction', label: 'Reaction', multiplier: 4 },
   { key: 'action', label: 'Action', multiplier: 2 },
   { key: '2actions', label: '2 Actions', multiplier: 1 },
+  { key: '1round', label: '1 Round', multiplier: 0.75 },
   { key: '1minute', label: '1 Minute', multiplier: 0.5 },
   { key: '1hour', label: '1 Hour', multiplier: 0.25 },
 ] as const

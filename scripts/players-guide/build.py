@@ -51,7 +51,7 @@ BUFFS = {1: 'darkvision, magic detection, languages, 1-sense illusions, +2 skill
          5: 'soul-bound, death, True Resurrection (greater)'}
 CHALLENGE = [('none / 150 BP', 0), ('400 BP', 1), ('1,000 BP', 2), ('2,500 BP', 3), ('5,000 BP', 4), ('10,000 BP', 5)]
 EP = {'range': 4, 'aoe': 5, 'duration': 4, 'buff': 5, 'challenge': 8}
-CAST = [('Reaction', 4), ('Action', 2), ('2 Actions', 1), ('1 Minute', 0.5), ('1 Hour', 0.25)]
+CAST = [('Reaction', 4), ('Action', 2), ('2 Actions', 1), ('1 Round', 0.75), ('1 Minute', 0.5), ('1 Hour', 0.25)]
 DAMAGE_TYPES = 'Physical, Fire, Cold, Lightning, Acid, Poison, Psychic, Magical, Force, Sonic'
 ROMAN = {1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V'}
 
@@ -343,7 +343,7 @@ section('reference', 'Quick Reference', f'''
 {table(['Lv', 'Skill', 'Attr/School', 'Medium'], [(n, skill(n), attr(n), medium(n)) for n in range(1, 7)], 'num compact')}
 <h3>Spell EP per tier</h3>
 <p>Range 4 &middot; AOE 5 &middot; Duration 4 &middot; Buff/Debuff 5 &middot; Challenge 8 &middot; Damage die 2<br>
-Reaction ×4 &middot; Action ×2 &middot; 2 Actions ×1 &middot; 1 Minute ×0.5 &middot; 1 Hour ×0.25<br>
+Reaction ×4 &middot; Action ×2 &middot; 2 Actions ×1 &middot; 1 Round ×0.75 &middot; 1 Minute ×0.5 &middot; 1 Hour ×0.25<br>
 Saved spell −25% &middot; Amp: +1 per 5 EP</p>
 </div>
 </div>
