@@ -137,6 +137,12 @@ section('tethers', 'Tethers & Flaws', f'''
     ('Major', '<i>Sworn to the Lantern Watch.</i>', 'The order sends orders and expects them followed, even mid-quest. Ignoring a summons costs rank, pay and allies inside the Watch.'),
     ('Binding', '<i>Must protect his younger sister, Wren.</i>', 'Wren travels with the party or sends for help when she needs it, and anyone who wants leverage over him goes after her. Walking away is not an option.'),
 ])}
+<p>A good tether says what it demands. More examples:</p>
+{table(['Tether', 'Example'], [
+    ('Minor', '<i>Sends half of every reward home to keep the family farm afloat.</i>'),
+    ('Major', '<i>Must carry out one job a month for the Ashen Hand until his debt is paid.</i>'),
+    ('Binding', '<i>Has sworn to kill the warlord Veyr, and puts that before everything else.</i>'),
+])}
 <p>This is a contract. When a tether or flaw costs you time, money, allies or HP, it's working as intended. If yours never come up, expect the GM to bring them in.</p>
 <div class="callout"><b>For the GM: setting the threshold.</b> If you're not sure what obligation threshold to set, start at <b>3</b>. That all but guarantees every character carries obligations that matter, and that their choices will run into them.<br><br>
 When a player turns their back on an obligation, make it cost them. If they abandon an alliance, the people they were allied with should strike back at the most opportune moment. The consequences should land within <b>one or two sessions</b>, while the choice is still fresh.</div>
@@ -388,7 +394,7 @@ table.narrow { width: 60%; }
 table.compact { font-size: 8.8pt; } table.compact td { padding: 2.5px 6px; }
 .formula { background: var(--accent-soft); border: 1px solid #fcd34d; border-radius: 6px; padding: 0.08in 0.14in; font-weight: bold; margin: 0.08in 0 0.12in; text-align: center; font-size: 11pt; }
 .example { border-left: 4px solid var(--accent); background: #fafaf9; padding: 0.08in 0.14in; margin: 0.1in 0 0.14in; font-size: 9.8pt; page-break-inside: avoid; }
-.callout { border: 1px solid var(--rule); border-radius: 6px; padding: 0.1in 0.14in; margin-top: 0.14in; background: #fafaf9; }
+.callout { border: 1px solid var(--rule); border-radius: 6px; padding: 0.1in 0.14in; margin-top: 0.14in; background: #fafaf9; break-inside: avoid; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0.25in; align-items: start; }
 .two > table { margin-top: 0; }
 '''
