@@ -61,7 +61,7 @@ describe('maneuvers', () => {
     draft.damageDice = 1 // 2 EP
     draft.selections.selfDuration = { modeIndex: 0, optionIndex: 3 } // until a long rest
     expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(2)
-    draft.selections.selfDebuff = { modeIndex: 4, optionIndex: 0 } // stunned, −20 EP
+    draft.selections.selfDebuff = { modeIndex: 4, optionIndex: 0 } // debilitated, −20 EP
     expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(0)
   })
 
@@ -72,15 +72,15 @@ describe('maneuvers', () => {
     expect(spellCost(draft).totalEp).toBe(6)
   })
 
-  it('describe every self-debuff but the ones still awaiting a definition', () => {
+  it('describe every self-debuff', () => {
     const self = MANEUVER_CRITERIA.find((c) => c.key === 'selfDebuff')!
     const labels = self.modes!.flatMap((m) => m.options.map((o) => o.label)).filter((l) => l !== 'none')
     const undefinedYet = labels.filter((l) => !conditionDescription(l))
-    expect(undefinedYet).toEqual(['stunned'])
+    expect(undefinedYet).toEqual([])
     expect(selectedOption(self, { modeIndex: 1, optionIndex: 1 })?.label).toBe('exposed')
   })
 
-  it('fold incapacitated into stunned on older characters, once', () => {
+  it('fold incapacitated into debilitated on older characters, once', () => {
     const pick = (modeIndex: number, optionIndex: number) => {
       const d = emptySpellDraft()
       d.selections.buffDebuff = { modeIndex, optionIndex }

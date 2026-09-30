@@ -360,8 +360,8 @@ function migrateSchools(
 // to migrateRules. Each step runs once per character.
 const RULES_VERSION = 2
 
-// Version 2: "incapacitated" was folded into "stunned" and dropped from the
-// Tier IV effect lists (it sat at index 2 of the spell list and last in the
+// Version 2: "incapacitated" was folded into "stunned" (since renamed
+// debilitated) and dropped from the Tier IV effect lists (it sat at index 2 of the spell list and last in the
 // maneuver lists), so saved picks after it move up one.
 function migrateRules(c: Character): Character {
   if ((c.rulesVersion ?? 1) >= RULES_VERSION) return c
@@ -371,7 +371,7 @@ function migrateRules(c: Character): Character {
     removedAt: number,
   ): SpellSelection | undefined => {
     if (!sel || sel.modeIndex !== TIER_IV) return sel
-    if (sel.optionIndex === removedAt) return { ...sel, optionIndex: 0 } // stunned
+    if (sel.optionIndex === removedAt) return { ...sel, optionIndex: 0 } // stunned, now debilitated
     if (sel.optionIndex > removedAt) return { ...sel, optionIndex: sel.optionIndex - 1 }
     return sel
   }

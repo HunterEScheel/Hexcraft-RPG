@@ -183,7 +183,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
         key: 't4',
         label: 'Tier IV (20 EP)',
         options: [
-          { label: 'stunned', tier: 4 },
+          { label: 'debilitated', tier: 4 },
           { label: 'paralyzed', tier: 4 },
           { label: 'banished', tier: 4 },
           { label: 'dominated', tier: 4 },
