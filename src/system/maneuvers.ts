@@ -83,4 +83,63 @@ export const MANEUVER_CRITERIA: readonly SpellCriterion[] = [
       },
     ],
   },
+  // The price a fighter pays for going all in: a drawback on themselves that
+  // takes EP off the maneuver, more for a worse one and for longer.
+  {
+    key: 'selfDebuff',
+    label: 'Self-debuff',
+    epPerTier: 5,
+    refund: true,
+    modes: [
+      { key: 'none', label: 'None', options: [{ label: 'none', tier: 0 }] },
+      {
+        key: 't1',
+        label: 'Tier I (−5 EP)',
+        options: [
+          { label: 'rooted', tier: 1 },
+          { label: 'flanked', tier: 1 },
+          { label: 'off-balance', tier: 1 },
+        ],
+      },
+      {
+        key: 't2',
+        label: 'Tier II (−10 EP)',
+        options: [
+          { label: 'poisoned', tier: 2 },
+          { label: 'burned', tier: 2 },
+          { label: 'prone', tier: 2 },
+          { label: 'exhaustion', tier: 2 },
+        ],
+      },
+      {
+        key: 't3',
+        label: 'Tier III (−15 EP)',
+        options: [
+          { label: 'blinded', tier: 3 },
+          { label: 'restrained', tier: 3 },
+        ],
+      },
+      {
+        key: 't4',
+        label: 'Tier IV (−20 EP)',
+        options: [
+          { label: 'stunned', tier: 4 },
+          { label: 'incapacitated', tier: 4 },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'selfDuration',
+    label: 'Self-debuff duration',
+    epPerTier: 4,
+    refund: true,
+    onlyWith: 'selfDebuff',
+    options: [
+      { label: '1 round', tier: 0 },
+      { label: '1 minute', tier: 1 },
+      { label: '1 hour', tier: 2 },
+      { label: 'until a long rest', tier: 3 },
+    ],
+  },
 ]

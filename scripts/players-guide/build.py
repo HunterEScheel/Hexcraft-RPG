@@ -237,6 +237,11 @@ MAN_EFFECTS = {1: 'advantage on attack, +2 to a check, push 10 ft, disarmed, gra
                2: 'damage resistance, sneak attack, +5 to a check, prone, frightened, bleeding',
                3: 'extra action, restrained, blinded',
                4: 'stunned, incapacitated'}
+MAN_SELF = {1: 'rooted, flanked, off-balance',
+            2: 'poisoned, burned, prone, exhaustion',
+            3: 'blinded, restrained',
+            4: 'stunned, incapacitated'}
+MAN_SELF_DURATION = [('1 round', 0), ('1 minute', 1), ('1 hour', 2), ('until a long rest', 3)]
 
 section('maneuvers', 'Maneuvers', f'''
 <p>Maneuvers are the martial side of the same system: signature strikes, sweeps, trips, disarms and feints. You build one the way you build a spell and pay for it in EP, but from a shorter list of parts:</p>
@@ -245,12 +250,19 @@ section('maneuvers', 'Maneuvers', f'''
 <li><b>Duration</b>: instantaneous, 1 round or 1 minute. There's no concentration.</li>
 <li><b>Effect</b>: non-magical effects only, listed below. There's no Challenge.</li>
 <li><b>Extra damage</b>: d6s added to the weapon's own damage, 2 EP per die.</li>
+<li><b>Self-debuff</b> (optional): a drawback you take on to pay for the move, which <b>takes EP off</b> its cost.</li>
 <li><b>Timing</b>: the same multipliers as a spell's casting time.</li>
 </ul>
 <div class="two">
 <div><h3>Duration &middot; {EP['duration']} EP per tier</h3>{opts(MAN_DURATION, EP['duration'])}</div>
 <div><h3>Effect &middot; {EP['buff']} EP per tier</h3>
 {table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], e) for t, e in MAN_EFFECTS.items()], 'compact')}</div>
+</div>
+<h3>Self-debuffs</h3>
+<p>Going all in has a price. A self-debuff refunds 5 EP per tier, and the longer it lasts the more it refunds (4 EP per tier of its own duration). The refund comes off before the timing multiplier, and a maneuver never costs less than 0.</p>
+<div class="two">
+<div>{table(['Tier', 'Refund', 'Self-debuffs'], [(ROMAN[t], f'−{t * 5}', e) for t, e in MAN_SELF.items()], 'compact')}</div>
+<div>{table(['Lasts', 'Tier', 'Refund'], [(l, t, f'−{t * 4}' if t else '0') for l, t in MAN_SELF_DURATION], 'compact')}</div>
 </div>
 <p>Instead of a school and a medium, a maneuver draws on one of your <b>attack combat skills</b> (1-handed melee, 2-handed fired, Unarmed, Grapple, Tackle and so on) and that skill's attribute.</p>
 <ul>
@@ -260,6 +272,7 @@ section('maneuvers', 'Maneuvers', f'''
 <li><b>Amping</b> works the same: 5 more EP for +1 to hit or +1 DC.</li>
 </ul>
 <div class="example"><b>Example: Hamstring.</b> Mira (1-handed melee 3, Agility 3) builds a two-action cut at a single target within reach that leaves it <i>slowed</i> for 1 minute and deals her sword's damage +1d6. Slowed is a Tier I effect (5 EP), 1 minute is duration tier 2 (8 EP) and the extra die is 2 EP: <b>15 EP</b>, or <b>11 EP</b> saved. She rolls d20 + 6 against the target's Evasion.</div>
+<div class="example"><b>Example: Reckless Strike.</b> Mira throws everything into one blow: advantage on the attack (5 EP) and +4d6 (8 EP), 13 EP. She plants her feet to do it and is <i>rooted</i> (−5 EP) for 1 minute (−4 EP), bringing it down to <b>4 EP</b>.</div>
 ''')
 
 section('growing', 'Growing Your Character', f'''

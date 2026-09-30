@@ -102,8 +102,8 @@ page2 = f'''
 {panel('Saved spells', rows(['Spell', 'School', 'Medium', 'Range', 'AOE', 'Duration', 'Effect', 'Bonus/DC', 'EP'], 8,
        ['18%', '9%', '9%', '9%', '9%', '9%', '22%', '9%', '6%'], 'compact'))}
 
-{panel('Saved maneuvers', rows(['Maneuver', 'Combat skill', 'Range', 'AOE', 'Duration', 'Effect', 'Bonus/DC', 'EP'], 7,
-       ['18%', '18%', '9%', '9%', '9%', '22%', '9%', '6%'], 'compact'))}
+{panel('Saved maneuvers', rows(['Maneuver', 'Combat skill', 'Range', 'AOE', 'Duration', 'Effect', 'Self-debuff', 'Bonus/DC', 'EP'], 7,
+       ['16%', '14%', '8%', '8%', '8%', '17%', '15%', '8%', '6%'], 'compact'))}
 
 '''
 

@@ -3,8 +3,10 @@ import {
   EP_PER_DAMAGE_DIE,
   SPELL_CRITERIA,
   SPELL_TARGETING_OPTIONS,
+  criterionApplies,
   criterionEp,
   criterionOptions,
+  selectionFor,
   selectedOption,
   type CastingTimeKey,
   type CriterionKey,
@@ -55,11 +57,11 @@ export function EffectBuilder({
 
   return (
     <>
-      {criteria.map((c) => (
+      {criteria.filter((c) => criterionApplies(c, draft, criteria)).map((c) => (
         <CriterionRow
           key={c.key}
           criterion={c}
-          selection={draft.selections[c.key]}
+          selection={selectionFor(draft, c.key)}
           onModeChange={(idx) => setMode(c.key, idx)}
           onOptionChange={(idx) => setOption(c.key, idx)}
         />
@@ -208,7 +210,7 @@ export function CriterionRow({
           {criterion.label}
         </span>
         <span className="text-xs text-zinc-500 font-mono">
-          {currentOption ? currentOption.label : '—'} · {ep} EP
+          {currentOption ? currentOption.label : '—'} · {formatEp(ep)}
         </span>
       </div>
       {hasModes && criterion.modes && (
@@ -236,7 +238,7 @@ export function CriterionRow({
       <div className="flex flex-wrap gap-1">
         {options.map((opt, i) => {
           const active = i === selection.optionIndex
-          const optionEp = opt.tier * criterion.epPerTier
+          const optionEp = (criterion.refund ? -1 : 1) * opt.tier * criterion.epPerTier
           return (
             <button
               key={i}
@@ -251,7 +253,7 @@ export function CriterionRow({
             >
               <span>{opt.label}</span>
               <span className="ml-1 text-[10px] text-zinc-500 font-mono">
-                {optionEp} EP
+                {formatEp(optionEp)}
               </span>
             </button>
           )
@@ -259,4 +261,9 @@ export function CriterionRow({
       </div>
     </div>
   )
+}
+
+// Refunds read as "−5 EP".
+function formatEp(ep: number): string {
+  return ep < 0 ? `−${-ep} EP` : `${ep} EP`
 }

@@ -43,4 +43,31 @@ describe('maneuvers', () => {
     expect(duration.modes).toBeUndefined()
     expect(duration.options?.map((o) => o.label)).toEqual(['instantaneous', '1 round', '1 minute'])
   })
+
+  it('refund EP for a self-debuff, and more the longer it lasts', () => {
+    // Reckless Strike: advantage on the attack and +4d6, leaving you rooted.
+    const draft = emptySpellDraft()
+    draft.selections.buffDebuff = { modeIndex: 1, optionIndex: 0 } // advantage, 5 EP
+    draft.damageDice = 4 // 8 EP
+    draft.selections.selfDebuff = { modeIndex: 1, optionIndex: 0 } // rooted, −5 EP
+    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(8) // 1 round: no extra refund
+    draft.selections.selfDuration = { modeIndex: 0, optionIndex: 1 } // 1 minute, −4 EP
+    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(4)
+  })
+
+  it('ignore a self-debuff duration without a self-debuff, and never go below 0', () => {
+    const draft = emptySpellDraft()
+    draft.damageDice = 1 // 2 EP
+    draft.selections.selfDuration = { modeIndex: 0, optionIndex: 3 } // until a long rest
+    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(2)
+    draft.selections.selfDebuff = { modeIndex: 4, optionIndex: 0 } // stunned, −20 EP
+    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(0)
+  })
+
+  it('leave spells untouched by the self-debuff picks', () => {
+    const draft = emptySpellDraft()
+    draft.damageDice = 3
+    draft.selections.selfDebuff = { modeIndex: 4, optionIndex: 0 }
+    expect(spellCost(draft).totalEp).toBe(6)
+  })
 })

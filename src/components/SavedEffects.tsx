@@ -2,8 +2,10 @@ import type { ReactNode } from 'react'
 import {
   CASTING_TIMES,
   SPELL_CRITERIA,
+  criterionApplies,
   savedSpellCost,
   selectedOption,
+  selectionFor,
   targetingName,
   type SpellCriterion,
   type SpellDraft,
@@ -60,11 +62,13 @@ export function SavedEffects({
             <ul className="space-y-1">
               {group.items.map((item) => {
                 const cost = savedSpellCost(item.draft, criteria).totalEp
-                const canUse = cost > 0 && cost <= currentEp
+                const canUse = cost <= currentEp
                 const factors: string[] = []
                 for (const c of criteria) {
-                  const opt = selectedOption(c, item.draft.selections[c.key])
-                  if (opt) factors.push(opt.label)
+                  if (!criterionApplies(c, item.draft, criteria)) continue
+                  const opt = selectedOption(c, selectionFor(item.draft, c.key))
+                  if (!opt || (c.refund && c.key === 'selfDebuff' && opt.tier === 0)) continue
+                  factors.push(c.key === 'selfDebuff' ? `self: ${opt.label}` : opt.label)
                 }
                 if (item.draft.damageDice > 0)
                   factors.push(`${extraDice ? '+' : ''}${item.draft.damageDice}d6`)

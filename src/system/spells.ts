@@ -9,6 +9,9 @@ export type CriterionKey =
   | 'duration'
   | 'buffDebuff'
   | 'challenge'
+  // Maneuvers only: a drawback the user takes on, and for how long.
+  | 'selfDebuff'
+  | 'selfDuration'
 
 export interface SpellOption {
   label: string
@@ -28,6 +31,10 @@ export interface SpellCriterion {
   epPerTier: number
   options?: readonly SpellOption[]
   modes?: readonly SpellMode[]
+  /** Takes EP off the cost instead of adding it (a maneuver's self-debuff). */
+  refund?: boolean
+  /** Counts only when this other criterion is above tier 0. */
+  onlyWith?: CriterionKey
 }
 
 export const SPELL_CRITERIA: readonly SpellCriterion[] = [
@@ -273,6 +280,8 @@ export function emptySpellDraft(): SpellDraft {
       duration: { modeIndex: 0, optionIndex: 0 },
       buffDebuff: { modeIndex: 0, optionIndex: 0 },
       challenge: { modeIndex: 0, optionIndex: 0 },
+      selfDebuff: { modeIndex: 0, optionIndex: 0 },
+      selfDuration: { modeIndex: 0, optionIndex: 0 },
     },
     damageDice: 0,
     castingTime: '2actions',
@@ -297,12 +306,39 @@ export function selectedOption(
   ]
 }
 
+/** Nothing picked yet: every criterion at its first option and no dice. */
+export function isEmptyDraft(draft: SpellDraft): boolean {
+  return (
+    draft.damageDice === 0 &&
+    Object.values(draft.selections).every((s) => s.modeIndex === 0 && s.optionIndex === 0)
+  )
+}
+
+/** A draft's pick for a criterion; drafts saved before it existed pick option 0. */
+export function selectionFor(draft: SpellDraft, key: CriterionKey): SpellSelection {
+  return draft.selections[key] ?? { modeIndex: 0, optionIndex: 0 }
+}
+
+/** EP a pick adds, or takes off (negative) for a refund criterion. */
 export function criterionEp(
   criterion: SpellCriterion,
   selection: SpellSelection,
 ): number {
   const opt = selectedOption(criterion, selection)
-  return opt ? opt.tier * criterion.epPerTier : 0
+  const ep = opt ? opt.tier * criterion.epPerTier : 0
+  return criterion.refund ? -ep : ep
+}
+
+/** Whether a criterion applies to a draft: an `onlyWith` one needs its partner picked. */
+export function criterionApplies(
+  criterion: SpellCriterion,
+  draft: SpellDraft,
+  criteria: readonly SpellCriterion[],
+): boolean {
+  if (!criterion.onlyWith) return true
+  const partner = criteria.find((c) => c.key === criterion.onlyWith)
+  if (!partner) return false
+  return (selectedOption(partner, selectionFor(draft, partner.key))?.tier ?? 0) > 0
 }
 
 export interface SpellCost {
@@ -318,11 +354,15 @@ export function spellCost(
   criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
 ): SpellCost {
   const criteriaEp = criteria.reduce(
-    (sum, c) => sum + criterionEp(c, draft.selections[c.key]),
+    (sum, c) =>
+      criterionApplies(c, draft, criteria)
+        ? sum + criterionEp(c, selectionFor(draft, c.key))
+        : sum,
     0,
   )
   const damageEp = draft.damageDice * EP_PER_DAMAGE_DIE
-  const baseEp = criteriaEp + damageEp
+  // Refunds can bring a maneuver down to free, never below.
+  const baseEp = Math.max(0, criteriaEp + damageEp)
   const time =
     CASTING_TIMES.find((t) => t.key === draft.castingTime) ?? CASTING_TIMES[2]
   const totalEp = Math.ceil(baseEp * time.multiplier)

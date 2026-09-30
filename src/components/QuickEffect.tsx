@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import {
   emptySpellDraft,
+  isEmptyDraft,
   spellCost,
   targetingName,
   type SpellCriterion,
@@ -48,10 +49,13 @@ export function QuickEffect({
   const cost = useMemo(() => spellCost(draft, criteria), [draft, criteria])
   const reset = () => setDraft(emptySpellDraft())
 
-  const canUse = pickerHint === null && cost.totalEp > 0 && cost.totalEp <= currentEp
+  // A maneuver whose drawbacks cover its whole price is free, but still has to
+  // be something.
+  const built = !isEmptyDraft(draft)
+  const canUse = pickerHint === null && built && cost.totalEp <= currentEp
   const slotsLeft = slots ? Math.max(0, slots.limit - slots.used) : 0
   const canSave =
-    pickerHint === null && name.trim().length > 0 && cost.totalEp > 0 && slotsLeft > 0
+    pickerHint === null && name.trim().length > 0 && built && slotsLeft > 0
 
   return (
     <div className="space-y-4">
@@ -96,7 +100,7 @@ export function QuickEffect({
               }}
               disabled={!canUse}
               title={
-                cost.totalEp === 0
+                !built
                   ? 'Set at least one criterion or damage die'
                   : cost.totalEp > currentEp
                     ? `Not enough EP (need ${cost.totalEp}, have ${currentEp})`
@@ -134,7 +138,7 @@ export function QuickEffect({
               pickerHint ??
               (name.trim().length === 0
                 ? `Give the ${noun} a name`
-                : cost.totalEp === 0
+                : !built
                   ? 'Set at least one criterion or damage die'
                   : slotsLeft === 0 && slots
                     ? `No save slots left for ${slots.label} (level ${slots.limit})`
