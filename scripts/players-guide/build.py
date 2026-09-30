@@ -237,7 +237,7 @@ MAN_EFFECTS = {1: 'advantage on attack, +2 to a check, push 10 ft, disarmed, gra
                2: 'damage resistance, sneak attack, +5 to a check, prone, frightened, bleeding',
                3: 'extra action, restrained, blinded',
                4: 'stunned, incapacitated'}
-MAN_SELF = {1: 'rooted, flanked, off-balance',
+MAN_SELF = {1: 'rooted, exposed, off-balance',
             2: 'poisoned, burned, prone, exhaustion',
             3: 'blinded, restrained',
             4: 'stunned, incapacitated'}
@@ -273,6 +273,23 @@ section('maneuvers', 'Maneuvers', f'''
 </ul>
 <div class="example"><b>Example: Hamstring.</b> Mira (1-handed melee 3, Agility 3) builds a two-action cut at a single target within reach that leaves it <i>slowed</i> for 1 minute and deals her sword's damage +1d6. Slowed is a Tier I effect (5 EP), 1 minute is duration tier 2 (8 EP) and the extra die is 2 EP: <b>15 EP</b>, or <b>11 EP</b> saved. She rolls d20 + 6 against the target's Evasion.</div>
 <div class="example"><b>Example: Reckless Strike.</b> Mira throws everything into one blow: advantage on the attack (5 EP) and +4d6 (8 EP), 13 EP. She plants her feet to do it and is <i>rooted</i> (−5 EP) for 1 minute (−4 EP), bringing it down to <b>4 EP</b>.</div>
+''')
+
+CONDITIONS = [
+    ('Exposed', 'Anything attacking you has +5.'),
+    ('Off-balance', 'Your movement speed is halved, and you add no bonuses to the rolls you make.'),
+    ('Rooted', 'Your movement speed is 0.'),
+    ('Poisoned', 'You take 1d6 poison damage each round.'),
+    ('Burned', 'You take 1d6 fire damage each round.'),
+    ('Prone', 'You fall over.'),
+    ('Exhaustion', 'Per level: your HP, EP and movement speed maximums drop by 10, and all your skills, attributes and saving throws drop by 2.'),
+    ('Blinded', "You can't see."),
+    ('Restrained', 'You are off-balance, rooted and exposed.'),
+]
+
+section('conditions', 'Conditions', f'''
+<p>What the conditions mean when a spell, a maneuver or a self-debuff puts them on someone.</p>
+{table(['Condition', 'Effect'], CONDITIONS)}
 ''')
 
 section('growing', 'Growing Your Character', f'''
@@ -327,7 +344,7 @@ Saved spell −25% &middot; Amp: +1 per 5 EP</p>
 ''')
 
 toc = ''.join(f'<li><a href="#{i}">{t}</a></li>' for i, t, _ in sections)
-FLOW = {'tethers', 'saves', 'gm', 'app'}  # short sections run on from the previous one
+FLOW = {'tethers', 'saves', 'conditions', 'gm', 'app'}  # short sections run on from the previous one
 body = ''.join(f'<section id="{i}" class="{"flow" if i in FLOW else ""}"><h2>{t}</h2>{h}</section>' for i, t, h in sections)
 
 CSS = '''

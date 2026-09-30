@@ -97,7 +97,7 @@ export const MANEUVER_CRITERIA: readonly SpellCriterion[] = [
         label: 'Tier I (−5 EP)',
         options: [
           { label: 'rooted', tier: 1 },
-          { label: 'flanked', tier: 1 },
+          { label: 'exposed', tier: 1 },
           { label: 'off-balance', tier: 1 },
         ],
       },

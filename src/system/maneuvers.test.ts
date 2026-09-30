@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { emptyCharacter, ensureCombatSkills, maneuverBonus } from './character'
 import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from './maneuvers'
-import { emptySpellDraft, savedSpellCost, spellCost } from './spells'
+import { emptySpellDraft, savedSpellCost, selectedOption, spellCost } from './spells'
+import { conditionDescription } from './conditions'
 
 describe('maneuvers', () => {
   it('are drawn only from attack skills', () => {
@@ -69,5 +70,13 @@ describe('maneuvers', () => {
     draft.damageDice = 3
     draft.selections.selfDebuff = { modeIndex: 4, optionIndex: 0 }
     expect(spellCost(draft).totalEp).toBe(6)
+  })
+
+  it('describe every self-debuff but the ones still awaiting a definition', () => {
+    const self = MANEUVER_CRITERIA.find((c) => c.key === 'selfDebuff')!
+    const labels = self.modes!.flatMap((m) => m.options.map((o) => o.label)).filter((l) => l !== 'none')
+    const undefinedYet = labels.filter((l) => !conditionDescription(l))
+    expect(undefinedYet).toEqual(['stunned', 'incapacitated'])
+    expect(selectedOption(self, { modeIndex: 1, optionIndex: 1 })?.label).toBe('exposed')
   })
 })

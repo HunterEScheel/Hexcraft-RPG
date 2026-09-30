@@ -15,6 +15,7 @@ import {
   type SpellSelection,
   type SpellTargeting,
 } from '../system/spells'
+import { conditionDescription } from '../system/conditions'
 
 /**
  * The parts every spell and maneuver is built from: the scaling criteria,
@@ -244,6 +245,7 @@ export function CriterionRow({
               key={i}
               type="button"
               onClick={() => onOptionChange(i)}
+              title={conditionDescription(opt.label)}
               className={
                 'rounded px-2 py-1 text-xs border ' +
                 (active
@@ -259,6 +261,12 @@ export function CriterionRow({
           )
         })}
       </div>
+      {currentOption && conditionDescription(currentOption.label) && (
+        <p className="mt-1 text-xs text-zinc-400">
+          <span className="text-zinc-300">{currentOption.label}:</span>{' '}
+          {conditionDescription(currentOption.label)}
+        </p>
+      )}
     </div>
   )
 }
