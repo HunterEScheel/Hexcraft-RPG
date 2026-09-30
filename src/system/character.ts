@@ -356,38 +356,76 @@ function migrateSchools(
   return result
 }
 
-// Bump when a rules change needs saved characters rewritten, and add the step
-// to migrateRules. Each step runs once per character.
-const RULES_VERSION = 2
+// Bump when a rules change needs saved characters rewritten, and add a step
+// to RULE_STEPS. Each step runs once per character, in order.
+const RULES_VERSION = 3
 
-// Version 2: "incapacitated" was folded into "stunned" (since renamed
-// debilitated) and dropped from the Tier IV effect lists (it sat at index 2 of the spell list and last in the
-// maneuver lists), so saved picks after it move up one.
+// An effect option that was removed: picks of it become `into`, and picks
+// after it in the same list move up one so they keep their effect.
+interface Removal {
+  key: CriterionKey
+  modeIndex: number
+  optionIndex: number
+  into: SpellSelection
+}
+
+const DEBILITATED: SpellSelection = { modeIndex: 4, optionIndex: 0 }
+
+const RULE_STEPS: { version: number; spells: Removal[]; maneuvers: Removal[] }[] = [
+  {
+    // "incapacitated" folded into "stunned" (since renamed debilitated). It sat
+    // at index 2 of the spell Tier IV list and last in the maneuver lists.
+    version: 2,
+    spells: [{ key: 'buffDebuff', modeIndex: 4, optionIndex: 2, into: DEBILITATED }],
+    maneuvers: [
+      { key: 'buffDebuff', modeIndex: 4, optionIndex: 1, into: DEBILITATED },
+      { key: 'selfDebuff', modeIndex: 4, optionIndex: 1, into: DEBILITATED },
+    ],
+  },
+  {
+    // Paralyzed (spell Tier IV, index 1) and petrification (Tier V, index 0)
+    // dropped; both become debilitated.
+    version: 3,
+    spells: [
+      { key: 'buffDebuff', modeIndex: 4, optionIndex: 1, into: DEBILITATED },
+      { key: 'buffDebuff', modeIndex: 5, optionIndex: 0, into: DEBILITATED },
+    ],
+    maneuvers: [],
+  },
+]
+
+function applyRemovals(draft: SpellDraft, removals: Removal[]): SpellDraft {
+  const selections = { ...draft.selections }
+  const moved = new Set<CriterionKey>()
+  for (const r of removals) {
+    const sel = selections[r.key]
+    if (!sel || moved.has(r.key) || sel.modeIndex !== r.modeIndex) continue
+    if (sel.optionIndex === r.optionIndex) {
+      selections[r.key] = r.into
+      moved.add(r.key)
+    } else if (sel.optionIndex > r.optionIndex) {
+      selections[r.key] = { ...sel, optionIndex: sel.optionIndex - 1 }
+    }
+  }
+  return { ...draft, selections }
+}
+
 function migrateRules(c: Character): Character {
-  if ((c.rulesVersion ?? 1) >= RULES_VERSION) return c
-  const TIER_IV = 4
-  const fold = (
-    sel: SpellSelection | undefined,
-    removedAt: number,
-  ): SpellSelection | undefined => {
-    if (!sel || sel.modeIndex !== TIER_IV) return sel
-    if (sel.optionIndex === removedAt) return { ...sel, optionIndex: 0 } // stunned, now debilitated
-    if (sel.optionIndex > removedAt) return { ...sel, optionIndex: sel.optionIndex - 1 }
-    return sel
+  const from = c.rulesVersion ?? 1
+  if (from >= RULES_VERSION) return c
+  let next = c
+  for (const step of RULE_STEPS) {
+    if (step.version <= from) continue
+    next = {
+      ...next,
+      savedSpells: (next.savedSpells ?? []).map((s) => ({ ...s, draft: applyRemovals(s.draft, step.spells) })),
+      savedManeuvers: (next.savedManeuvers ?? []).map((m) => ({
+        ...m,
+        draft: applyRemovals(m.draft, step.maneuvers),
+      })),
+    }
   }
-  const withSel = (d: SpellDraft, key: CriterionKey, removedAt: number): SpellDraft => {
-    const sel = fold(d.selections[key], removedAt)
-    return sel ? { ...d, selections: { ...d.selections, [key]: sel } } : d
-  }
-  return {
-    ...c,
-    rulesVersion: RULES_VERSION,
-    savedSpells: (c.savedSpells ?? []).map((s) => ({ ...s, draft: withSel(s.draft, 'buffDebuff', 2) })),
-    savedManeuvers: (c.savedManeuvers ?? []).map((m) => ({
-      ...m,
-      draft: withSel(withSel(m.draft, 'buffDebuff', 1), 'selfDebuff', 1),
-    })),
-  }
+  return { ...next, rulesVersion: RULES_VERSION }
 }
 
 export function ensureCombatSkills(raw: Character): Character {

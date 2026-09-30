@@ -184,7 +184,6 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
         label: 'Tier IV (20 EP)',
         options: [
           { label: 'debilitated', tier: 4 },
-          { label: 'paralyzed', tier: 4 },
           { label: 'banished', tier: 4 },
           { label: 'dominated', tier: 4 },
           { label: 'polymorphed', tier: 4 },
@@ -196,7 +195,6 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
         key: 't5',
         label: 'Tier V (25 EP)',
         options: [
-          { label: 'petrification', tier: 5 },
           { label: 'soul-bound', tier: 5 },
           { label: 'death', tier: 5 },
           { label: 'True Resurrection (greater)', tier: 5 },

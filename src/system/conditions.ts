@@ -18,11 +18,6 @@ export const CONDITIONS: Record<string, string> = {
   frightened: "You can't move toward the source, attack it, or cast spells targeting it.",
   bleeding: 'You lose 1d6 HP each round.',
   charmed: "You're under the effects of Cognition magic.",
-  // Petrification and paralysis are filed under debilitated (which absorbed
-  // incapacitated).
-  paralyzed: 'Treated as debilitated.',
-  petrified: 'Treated as debilitated.',
-  petrification: 'Treated as debilitated.',
 }
 
 export function conditionDescription(label: string): string | undefined {

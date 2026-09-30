@@ -47,8 +47,8 @@ DURATION = {'No concentration': [('instantaneous', 0), ('1 minute', 1), ('1 hour
 BUFFS = {1: 'darkvision, magic detection, languages, 1-sense illusions, +2 skill, cursory knowledge, inconvenience, poisoned, deafened, grappled, slowed, reincarnation',
          2: 'tremorsense, see invisibility, detect lies, multi-sense illusions, +5 skill, fundamental knowledge, prone, frightened, illness, undeath, exhaustion',
          3: 'truesight, total evasion, detailed knowledge, disability, restrained, blinded, silenced, charmed, resurrection',
-         4: 'debilitated, paralyzed, banished, dominated, polymorphed, total knowledge, true resurrection',
-         5: 'petrification, soul-bound, death, True Resurrection (greater)'}
+         4: 'debilitated, banished, dominated, polymorphed, total knowledge, true resurrection',
+         5: 'soul-bound, death, True Resurrection (greater)'}
 CHALLENGE = [('none / 150 BP', 0), ('400 BP', 1), ('1,000 BP', 2), ('2,500 BP', 3), ('5,000 BP', 4), ('10,000 BP', 5)]
 EP = {'range': 4, 'aoe': 5, 'duration': 4, 'buff': 5, 'challenge': 8}
 CAST = [('Reaction', 4), ('Action', 2), ('2 Actions', 1), ('1 Minute', 0.5), ('1 Hour', 0.25)]
@@ -291,8 +291,6 @@ CONDITIONS = [
     ('Frightened', "You can't move toward the source, attack it, or cast spells targeting it."),
     ('Bleeding', 'You lose 1d6 HP each round.'),
     ('Charmed', "You're under the effects of Cognition magic."),
-    ('Paralyzed', 'Treated as debilitated.'),
-    ('Petrified', 'Treated as debilitated.'),
 ]
 
 section('conditions', 'Conditions', f'''

@@ -80,26 +80,35 @@ describe('maneuvers', () => {
     expect(selectedOption(self, { modeIndex: 1, optionIndex: 1 })?.label).toBe('exposed')
   })
 
-  it('fold incapacitated into debilitated on older characters, once', () => {
+  it('rewrite removed effects on older characters, once', () => {
     const pick = (modeIndex: number, optionIndex: number) => {
       const d = emptySpellDraft()
       d.selections.buffDebuff = { modeIndex, optionIndex }
       return d
     }
+    const spell = (id: string, draft: ReturnType<typeof pick>) => ({
+      id, name: id, school: 'Control', medium: 'Cognition', draft,
+    })
+    // Picks as saved before any removal: Tier IV was stunned, paralyzed,
+    // incapacitated, banished, ...; Tier V was petrification, soul-bound, death.
     const old = {
       ...emptyCharacter('Peasants', 150),
       rulesVersion: undefined,
       savedSpells: [
-        { id: 'a', name: 'Incapacitate', school: 'Control', medium: 'Cognition', draft: pick(4, 2) },
-        { id: 'b', name: 'Banish', school: 'Control', medium: 'Space', draft: pick(4, 3) },
-        { id: 'c', name: 'Paralyze', school: 'Control', medium: 'Vitality', draft: pick(4, 1) },
+        spell('incapacitate', pick(4, 2)),
+        spell('banish', pick(4, 3)),
+        spell('paralyze', pick(4, 1)),
+        spell('petrify', pick(5, 0)),
+        spell('kill', pick(5, 2)),
       ],
-      savedManeuvers: [{ id: 'd', name: 'Knockout', skillId: 'combat-unarmed', draft: pick(4, 1) }],
+      savedManeuvers: [{ id: 'k', name: 'Knockout', skillId: 'combat-unarmed', draft: pick(4, 1) }],
     }
+    const sels = (c: ReturnType<typeof ensureCombatSkills>) =>
+      c.savedSpells.map((s) => [s.draft.selections.buffDebuff.modeIndex, s.draft.selections.buffDebuff.optionIndex])
     const once = ensureCombatSkills(old)
-    expect(once.savedSpells.map((s) => s.draft.selections.buffDebuff.optionIndex)).toEqual([0, 2, 1])
-    expect(once.savedManeuvers[0].draft.selections.buffDebuff.optionIndex).toBe(0)
-    const twice = ensureCombatSkills(once)
-    expect(twice.savedSpells.map((s) => s.draft.selections.buffDebuff.optionIndex)).toEqual([0, 2, 1])
+    // debilitated, banished, debilitated, debilitated, death
+    expect(sels(once)).toEqual([[4, 0], [4, 1], [4, 0], [4, 0], [5, 1]])
+    expect(once.savedManeuvers[0].draft.selections.buffDebuff).toEqual({ modeIndex: 4, optionIndex: 0 })
+    expect(sels(ensureCombatSkills(once))).toEqual(sels(once))
   })
 })
