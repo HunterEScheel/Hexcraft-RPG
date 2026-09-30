@@ -131,6 +131,12 @@ section('tethers', 'Tethers & Flaws', f'''
 {table(['Flaw', 'BP refund'], [('Quirk', '+5'), ('Flaw', '+15'), ('Vice', '+40')], 'num')}
 </div>
 <p>The GM sets an <b>obligation threshold</b>: your tethers' weights must add up to at least that number. Flaws carry no weight.</p>
+<h3>Tether examples</h3>
+{table(['Tether', 'Example', 'How it bites'], [
+    ('Minor', '<i>Owes the innkeeper at Brackwater a favor.</i>', 'Now and then she calls it in: a message to carry, a guest to keep an eye on, a night the party loses to her errand.'),
+    ('Major', '<i>Sworn to the Lantern Watch.</i>', 'The order sends orders and expects them followed, even mid-quest. Ignoring a summons costs rank, pay and allies inside the Watch.'),
+    ('Binding', '<i>Must protect his younger sister, Wren.</i>', 'Wren travels with the party or sends for help when she needs it, and anyone who wants leverage over him goes after her. Walking away is not an option.'),
+])}
 <p>This is a contract. When a tether or flaw costs you time, money, allies or HP, it's working as intended. If yours never come up, expect the GM to bring them in.</p>
 <div class="callout"><b>For the GM: setting the threshold.</b> If you're not sure what obligation threshold to set, start at <b>3</b>. That all but guarantees every character carries obligations that matter, and that their choices will run into them.<br><br>
 When a player turns their back on an obligation, make it cost them. If they abandon an alliance, the people they were allied with should strike back at the most opportune moment. The consequences should land within <b>one or two sessions</b>, while the choice is still fresh.</div>
