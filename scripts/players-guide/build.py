@@ -139,9 +139,9 @@ section('tethers', 'Tethers & Flaws', f'''
 ])}
 <p>A good tether says what it demands. More examples:</p>
 {table(['Tether', 'Example'], [
-    ('Minor', '<i>Sends half of every reward home to keep the family farm afloat.</i>'),
-    ('Major', '<i>Must carry out one job a month for the Ashen Hand until his debt is paid.</i>'),
-    ('Binding', '<i>Has sworn to kill the warlord Veyr, and puts that before everything else.</i>'),
+    ('Minor', '<i>Supports family farm.</i>'),
+    ('Major', '<i>Owes the Hand.</i>'),
+    ('Binding', '<i>Must kill Veyr.</i>'),
 ])}
 <p>This is a contract. When a tether or flaw costs you time, money, allies or HP, it's working as intended. If yours never come up, expect the GM to bring them in.</p>
 <div class="callout"><b>For the GM: setting the threshold.</b> If you're not sure what obligation threshold to set, start at <b>3</b>. That all but guarantees every character carries obligations that matter, and that their choices will run into them.<br><br>
