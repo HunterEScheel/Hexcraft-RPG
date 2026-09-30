@@ -78,7 +78,6 @@ export const MANEUVER_CRITERIA: readonly SpellCriterion[] = [
         label: 'Tier IV (20 EP)',
         options: [
           { label: 'stunned', tier: 4 },
-          { label: 'incapacitated', tier: 4 },
         ],
       },
     ],
@@ -124,7 +123,6 @@ export const MANEUVER_CRITERIA: readonly SpellCriterion[] = [
         label: 'Tier IV (−20 EP)',
         options: [
           { label: 'stunned', tier: 4 },
-          { label: 'incapacitated', tier: 4 },
         ],
       },
     ],

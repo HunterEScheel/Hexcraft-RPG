@@ -185,7 +185,6 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
         options: [
           { label: 'stunned', tier: 4 },
           { label: 'paralyzed', tier: 4 },
-          { label: 'incapacitated', tier: 4 },
           { label: 'banished', tier: 4 },
           { label: 'dominated', tier: 4 },
           { label: 'polymorphed', tier: 4 },

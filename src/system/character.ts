@@ -35,7 +35,7 @@ import {
   type Tether,
 } from './tethers'
 import type { SavedManeuver } from './maneuvers'
-import type { SavedSpell } from './spells'
+import type { CriterionKey, SavedSpell, SpellDraft, SpellSelection } from './spells'
 
 export interface CharacterSkill {
   id: string
@@ -99,6 +99,8 @@ export interface Character {
   deathSaves: DeathSaves
   tempHp: number
   bodyDescriptions: Partial<Record<BodyPart, string>>
+  /** Which one-off data migrations have run; see migrateRules. */
+  rulesVersion?: number
 }
 
 export interface DeathSaves {
@@ -159,6 +161,7 @@ export function emptyCharacter(tierName: string, bpBudget: number): Character {
     armorModifier: 0,
     savedSpells: [],
     savedManeuvers: [],
+    rulesVersion: RULES_VERSION,
     deathSaves: { ...EMPTY_DEATH_SAVES },
     tempHp: 0,
     bodyDescriptions: {},
@@ -353,7 +356,42 @@ function migrateSchools(
   return result
 }
 
-export function ensureCombatSkills(c: Character): Character {
+// Bump when a rules change needs saved characters rewritten, and add the step
+// to migrateRules. Each step runs once per character.
+const RULES_VERSION = 2
+
+// Version 2: "incapacitated" was folded into "stunned" and dropped from the
+// Tier IV effect lists (it sat at index 2 of the spell list and last in the
+// maneuver lists), so saved picks after it move up one.
+function migrateRules(c: Character): Character {
+  if ((c.rulesVersion ?? 1) >= RULES_VERSION) return c
+  const TIER_IV = 4
+  const fold = (
+    sel: SpellSelection | undefined,
+    removedAt: number,
+  ): SpellSelection | undefined => {
+    if (!sel || sel.modeIndex !== TIER_IV) return sel
+    if (sel.optionIndex === removedAt) return { ...sel, optionIndex: 0 } // stunned
+    if (sel.optionIndex > removedAt) return { ...sel, optionIndex: sel.optionIndex - 1 }
+    return sel
+  }
+  const withSel = (d: SpellDraft, key: CriterionKey, removedAt: number): SpellDraft => {
+    const sel = fold(d.selections[key], removedAt)
+    return sel ? { ...d, selections: { ...d.selections, [key]: sel } } : d
+  }
+  return {
+    ...c,
+    rulesVersion: RULES_VERSION,
+    savedSpells: (c.savedSpells ?? []).map((s) => ({ ...s, draft: withSel(s.draft, 'buffDebuff', 2) })),
+    savedManeuvers: (c.savedManeuvers ?? []).map((m) => ({
+      ...m,
+      draft: withSel(withSel(m.draft, 'buffDebuff', 1), 'selfDebuff', 1),
+    })),
+  }
+}
+
+export function ensureCombatSkills(raw: Character): Character {
+  const c = migrateRules(raw)
   const existing = new Map(c.skills.map((s) => [s.id, s]))
   const combatRows: CharacterSkill[] = COMBAT_SKILLS.map((def) => {
     const found = existing.get(def.id)

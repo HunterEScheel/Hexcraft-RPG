@@ -47,7 +47,7 @@ DURATION = {'No concentration': [('instantaneous', 0), ('1 minute', 1), ('1 hour
 BUFFS = {1: 'darkvision, magic detection, languages, 1-sense illusions, +2 skill, cursory knowledge, inconvenience, poisoned, deafened, grappled, slowed, reincarnation',
          2: 'tremorsense, see invisibility, detect lies, multi-sense illusions, +5 skill, fundamental knowledge, prone, frightened, illness, undeath, exhaustion',
          3: 'truesight, total evasion, detailed knowledge, disability, restrained, blinded, silenced, charmed, resurrection',
-         4: 'stunned, paralyzed, incapacitated, banished, dominated, polymorphed, total knowledge, true resurrection',
+         4: 'stunned, paralyzed, banished, dominated, polymorphed, total knowledge, true resurrection',
          5: 'petrification, soul-bound, death, True Resurrection (greater)'}
 CHALLENGE = [('none / 150 BP', 0), ('400 BP', 1), ('1,000 BP', 2), ('2,500 BP', 3), ('5,000 BP', 4), ('10,000 BP', 5)]
 EP = {'range': 4, 'aoe': 5, 'duration': 4, 'buff': 5, 'challenge': 8}
@@ -236,11 +236,11 @@ MAN_DURATION = [('instantaneous', 0), ('1 round', 1), ('1 minute', 2)]
 MAN_EFFECTS = {1: 'advantage on attack, +2 to a check, push 10 ft, disarmed, grappled, slowed',
                2: 'damage resistance, sneak attack, +5 to a check, prone, frightened, bleeding',
                3: 'extra action, restrained, blinded',
-               4: 'stunned, incapacitated'}
+               4: 'stunned'}
 MAN_SELF = {1: 'rooted, exposed, off-balance',
             2: 'poisoned, burned, prone, exhaustion',
             3: 'blinded, restrained',
-            4: 'stunned, incapacitated'}
+            4: 'stunned'}
 MAN_SELF_DURATION = [('1 round', 0), ('1 minute', 1), ('1 hour', 2), ('until a long rest', 3)]
 
 section('maneuvers', 'Maneuvers', f'''

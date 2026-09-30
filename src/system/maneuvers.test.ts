@@ -76,7 +76,30 @@ describe('maneuvers', () => {
     const self = MANEUVER_CRITERIA.find((c) => c.key === 'selfDebuff')!
     const labels = self.modes!.flatMap((m) => m.options.map((o) => o.label)).filter((l) => l !== 'none')
     const undefinedYet = labels.filter((l) => !conditionDescription(l))
-    expect(undefinedYet).toEqual(['stunned', 'incapacitated'])
+    expect(undefinedYet).toEqual(['stunned'])
     expect(selectedOption(self, { modeIndex: 1, optionIndex: 1 })?.label).toBe('exposed')
+  })
+
+  it('fold incapacitated into stunned on older characters, once', () => {
+    const pick = (modeIndex: number, optionIndex: number) => {
+      const d = emptySpellDraft()
+      d.selections.buffDebuff = { modeIndex, optionIndex }
+      return d
+    }
+    const old = {
+      ...emptyCharacter('Peasants', 150),
+      rulesVersion: undefined,
+      savedSpells: [
+        { id: 'a', name: 'Incapacitate', school: 'Control', medium: 'Cognition', draft: pick(4, 2) },
+        { id: 'b', name: 'Banish', school: 'Control', medium: 'Space', draft: pick(4, 3) },
+        { id: 'c', name: 'Paralyze', school: 'Control', medium: 'Vitality', draft: pick(4, 1) },
+      ],
+      savedManeuvers: [{ id: 'd', name: 'Knockout', skillId: 'combat-unarmed', draft: pick(4, 1) }],
+    }
+    const once = ensureCombatSkills(old)
+    expect(once.savedSpells.map((s) => s.draft.selections.buffDebuff.optionIndex)).toEqual([0, 2, 1])
+    expect(once.savedManeuvers[0].draft.selections.buffDebuff.optionIndex).toBe(0)
+    const twice = ensureCombatSkills(once)
+    expect(twice.savedSpells.map((s) => s.draft.selections.buffDebuff.optionIndex)).toEqual([0, 2, 1])
   })
 })
