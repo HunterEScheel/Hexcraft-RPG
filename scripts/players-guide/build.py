@@ -125,7 +125,7 @@ section('abilities', 'Attributes & Skills', f'''
 ''')
 
 section('tethers', 'Tethers & Flaws', f'''
-<p><b>Tethers</b> are the relationships and duties that pull your character through the world: a sworn oath, a child to protect, a cult that wants you dead. <b>Flaws</b> are personal failings, physical, mental or social.</p>
+<p><b>Tethers</b> are the relationships and duties that pull your character through the world: a sworn oath, a child to protect, a cult that wants you dead. <b>Flaws</b> are personal failings, physical, mental or social. The test: a tether is something your character owes, has been charged with, or can't escape; something they merely want, however badly, is a flaw.</p>
 <div class="two">
 {table(['Tether', 'BP refund', 'Obligation weight'], [('Minor', '+5', 1), ('Major', '+15', 2), ('Binding', '+40', 3)], 'num')}
 {table(['Flaw', 'BP refund'], [('Quirk', '+5'), ('Flaw', '+15'), ('Vice', '+40')], 'num')}
@@ -137,11 +137,11 @@ section('tethers', 'Tethers & Flaws', f'''
     ('Major', '<i>Sworn to the Lantern Watch.</i>', 'The order sends orders and expects them followed, even mid-quest. Ignoring a summons costs rank, pay and allies inside the Watch.'),
     ('Binding', '<i>Must protect his younger sister, Wren.</i>', 'Wren travels with the party or sends for help when she needs it, and anyone who wants leverage over him goes after her. Walking away is not an option.'),
 ])}
-<p>A good tether says what it demands. More examples:</p>
+<p>A good tether names the obligation, and so what it demands. More examples:</p>
 {table(['Tether', 'Example'], [
-    ('Minor', '<i>Supports family farm.</i>'),
-    ('Major', '<i>Owes the Hand.</i>'),
-    ('Binding', '<i>Must kill Veyr.</i>'),
+    ('Minor', '<i>Pays guild dues.</i>'),
+    ('Major', '<i>Indebted to smugglers.</i>'),
+    ('Binding', '<i>Oathsworn to Crown.</i>'),
 ])}
 <p>This is a contract. When a tether or flaw costs you time, money, allies or HP, it's working as intended. If yours never come up, expect the GM to bring them in.</p>
 <div class="callout"><b>For the GM: setting the threshold.</b> If you're not sure what obligation threshold to set, start at <b>3</b>. That all but guarantees every character carries obligations that matter, and that their choices will run into them.<br><br>
