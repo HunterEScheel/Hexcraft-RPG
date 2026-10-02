@@ -119,6 +119,7 @@ section('abilities', 'Attributes & Skills', f'''
     ('Influence', 'Presence, persuasion, force of personality')])}
 <h3>Skills</h3>
 <p>A skill is anything your character is trained in, named however you like: <i>Lockpicking</i>, <i>Court etiquette</i>, <i>Long-range rifle manufacturing</i>. Narrow skills are cheap to be great at; broad skills help more often but less (see <i>Making a Roll</i>).</p>
+<p>A skill can also have an optional <b>specificity</b>: what exactly it is good at. <i>Animal Handling</i> with the specificity <i>Dogs</i>, <i>Driving</i> with <i>Motorcycle</i>. A task that matches the specificity is the skill's best fit; the same skill can be taken more than once with different specificities.</p>
 <p>Every character also has these <b>combat skills</b>, bought like any other skill:</p>
 {table(['Skill', 'Type', 'Effect', 'Attribute'], COMBAT)}
 <p class="small">Each spell school you know also counts as a skill at the school's level, listed on your sheet by its discipline: Destruction, Creation, Alteration, Restoration, Divination, Control or Summoning Magic.</p>

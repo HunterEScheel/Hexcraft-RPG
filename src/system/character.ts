@@ -41,6 +41,19 @@ export interface CharacterSkill {
   id: string
   name: string
   level: number
+  /** What the skill is good at, e.g. Animal Handling: "Dogs". Optional. */
+  specificity?: string
+}
+
+/** "Animal Handling (Dogs)", or just the name without a specificity. */
+export function skillLabel(s: { name: string; specificity?: string | null }): string {
+  return s.specificity?.trim() ? `${s.name} (${s.specificity.trim()})` : s.name
+}
+
+/** Split typed text like "Animal Handling (Dogs)" into a name and specificity. */
+export function splitSkillName(text: string): { name: string; specificity?: string } {
+  const m = text.trim().match(/^(.*\S)\s*\((.+)\)$/)
+  return m ? { name: m[1], specificity: m[2].trim() } : { name: text.trim() }
 }
 
 export const BODY_PARTS = ['head', 'torso', 'arms', 'legs'] as const
@@ -358,7 +371,7 @@ function migrateSchools(
 
 // Bump when a rules change needs saved characters rewritten, and add a step
 // to RULE_STEPS. Each step runs once per character, in order.
-const RULES_VERSION = 3
+const RULES_VERSION = 4
 
 // An effect option that was removed: picks of it become `into`, and picks
 // after it in the same list move up one so they keep their effect.
@@ -371,7 +384,13 @@ interface Removal {
 
 const DEBILITATED: SpellSelection = { modeIndex: 4, optionIndex: 0 }
 
-const RULE_STEPS: { version: number; spells: Removal[]; maneuvers: Removal[] }[] = [
+const RULE_STEPS: {
+  version: number
+  spells: Removal[]
+  maneuvers: Removal[]
+  /** Any other rewrite of the character for this step. */
+  character?: (c: Character) => Character
+}[] = [
   {
     // "incapacitated" folded into "stunned" (since renamed debilitated). It sat
     // at index 2 of the spell Tier IV list and last in the maneuver lists.
@@ -391,6 +410,19 @@ const RULE_STEPS: { version: number; spells: Removal[]; maneuvers: Removal[] }[]
       { key: 'buffDebuff', modeIndex: 5, optionIndex: 0, into: DEBILITATED },
     ],
     maneuvers: [],
+  },
+  {
+    // Skills gained a specificity field; a typed "Name (Specificity)" splits
+    // into the two.
+    version: 4,
+    spells: [],
+    maneuvers: [],
+    character: (c) => ({
+      ...c,
+      skills: c.skills.map((s) =>
+        isCombatSkillId(s.id) || s.specificity ? s : { ...s, ...splitSkillName(s.name) },
+      ),
+    }),
   },
 ]
 
@@ -424,6 +456,7 @@ function migrateRules(c: Character): Character {
         draft: applyRemovals(m.draft, step.maneuvers),
       })),
     }
+    if (step.character) next = step.character(next)
   }
   return { ...next, rulesVersion: RULES_VERSION }
 }

@@ -7,6 +7,7 @@ import {
   evasion,
   normalizeCurrentValues,
   restoreToMax,
+  skillLabel,
   type BodyPart,
   type Character,
 } from '../system/character'
@@ -798,7 +799,7 @@ function fmt(n: number): string {
 
 interface SkillListProps {
   /** `bp` overrides the skill cost, for entries priced another way. */
-  skills: { id: string; name: string; level: number; bp?: number }[]
+  skills: { id: string; name: string; level: number; specificity?: string; bp?: number }[]
 }
 
 function SkillList({ skills }: SkillListProps) {
@@ -809,7 +810,7 @@ function SkillList({ skills }: SkillListProps) {
           key={s.id}
           className="flex items-center justify-between rounded bg-zinc-900 border border-zinc-800 px-3 py-2"
         >
-          <span className="text-sm text-zinc-100">{s.name}</span>
+          <span className="text-sm text-zinc-100">{skillLabel(s)}</span>
           <div className="flex items-center gap-4 text-xs">
             <span className="text-zinc-500 font-mono">
               {s.bp ?? skillCost(s.level)} BP

@@ -87,7 +87,7 @@ page1 = f'''
 
 page2 = f'''
 <div class="grid2 tall">
-  {panel('Skills', rows(['Skill', 'Level', 'BP'], 23, ['64%', '18%', '18%']))}
+  {panel('Skills', rows(['Skill', 'Specificity', 'Level', 'BP'], 23, ['40%', '32%', '14%', '14%']))}
   <div class="stack">
     {panel('Magic', '<div class="grid2 tight">' +
            named(['School', 'Lv'], [(s,) for s in SCHOOLS], ['72%', '28%'], 'compact') +

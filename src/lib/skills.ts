@@ -1,4 +1,5 @@
 import { supabase, supabaseConfigured } from './supabase'
+import { splitSkillName } from '../system/character'
 
 export interface SkillEmbedding {
   id: number
@@ -10,21 +11,32 @@ export interface SkillEmbedding {
 export interface SkillSearchResult {
   id: number
   name: string
+  /** A suggested specificity, e.g. "Dogs" for Animal Handling. */
+  specificity: string | null
   description: string | null
   similarity?: number
 }
 
+// Matches the name or the specificity, so "dogs" finds Animal Handling (Dogs).
+// "Name (Specificity)" narrows to both.
 export async function searchSkills(
   query: string,
-  limit = 12,
+  limit = 20,
 ): Promise<SkillSearchResult[]> {
   if (!supabaseConfigured || !supabase || !query.trim()) return []
 
-  const { data, error } = await supabase
+  // PostgREST filter syntax uses commas and parentheses.
+  const clean = (t: string) => t.replace(/[,()*%\\]/g, ' ').trim()
+  const { name, specificity } = splitSkillName(query)
+  let request = supabase
     .from('hexcraft_skill_embeddings')
-    .select('id, skill_name, description')
-    .ilike('skill_name', `%${query}%`)
+    .select('id, skill_name, specificity, description')
+  request = specificity
+    ? request.ilike('skill_name', `%${clean(name)}%`).ilike('specificity', `%${clean(specificity)}%`)
+    : request.or(`skill_name.ilike.%${clean(name)}%,specificity.ilike.%${clean(name)}%`)
+  const { data, error } = await request
     .order('skill_name', { ascending: true })
+    .order('specificity', { ascending: true, nullsFirst: true })
     .limit(limit)
 
   if (error) {
@@ -35,6 +47,7 @@ export async function searchSkills(
   return (data ?? []).map((row) => ({
     id: row.id as number,
     name: row.skill_name as string,
+    specificity: (row.specificity as string | null) ?? null,
     description: (row.description as string | null) ?? null,
   }))
 }

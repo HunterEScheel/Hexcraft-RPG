@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { CharacterSkill } from '../system/character'
+import { skillLabel, splitSkillName, type CharacterSkill } from '../system/character'
 import { COMBAT_SKILLS, isCombatSkillId } from '../system/combatSkills'
 import { MAX_SKILL_LEVEL, skillCost } from '../system/costs'
 import { searchSkills, type SkillSearchResult } from '../lib/skills'
@@ -60,21 +60,28 @@ export function SkillsEditor({ value, onChange }: Props) {
     onChange(value.filter((s) => s.id !== id))
   }
 
-  const addSkill = (name: string, externalId?: number) => {
-    const trimmed = name.trim()
-    if (!trimmed) return
+  // Typed text like "Animal Handling (Dogs)" becomes a name and a specificity.
+  // The same skill can be taken more than once with different specificities.
+  const addSkill = (text: string, specificity?: string | null, externalId?: number) => {
+    const typed = specificity == null ? splitSkillName(text) : { name: text.trim(), specificity }
+    if (!typed.name) return
+    const label = skillLabel(typed).toLowerCase()
     if (
-      value.some((s) => s.name.toLowerCase() === trimmed.toLowerCase()) ||
-      COMBAT_SKILLS.some(
-        (c) => c.name.toLowerCase() === trimmed.toLowerCase(),
-      )
+      value.some((s) => skillLabel(s).toLowerCase() === label) ||
+      COMBAT_SKILLS.some((c) => c.name.toLowerCase() === typed.name.toLowerCase())
     )
       return
     const id = externalId ? `sk-${externalId}` : `custom-${crypto.randomUUID()}`
-    onChange([...value, { id, name: trimmed, level: 1 }])
+    onChange([
+      ...value,
+      { id, name: typed.name, level: 1, ...(typed.specificity ? { specificity: typed.specificity } : {}) },
+    ])
     setQuery('')
     setResults([])
   }
+
+  const setSpecificity = (id: string, specificity: string) =>
+    onChange(value.map((s) => (s.id === id ? { ...s, specificity } : s)))
 
   const renderSkillRow = ({
     def,
@@ -152,10 +159,13 @@ export function SkillsEditor({ value, onChange }: Props) {
                 <button
                   key={r.id}
                   type="button"
-                  onClick={() => addSkill(r.name, r.id)}
+                  onClick={() => addSkill(r.name, r.specificity ?? '', r.id)}
                   className="w-full px-3 py-2 text-left hover:bg-zinc-900"
                 >
-                  <div className="text-sm text-zinc-100">{r.name}</div>
+                  <div className="text-sm text-zinc-100">
+                    {r.name}
+                    {r.specificity && <span className="text-zinc-400"> ({r.specificity})</span>}
+                  </div>
                   {r.description && (
                     <div className="text-xs text-zinc-500 line-clamp-1">
                       {r.description}
@@ -166,7 +176,7 @@ export function SkillsEditor({ value, onChange }: Props) {
               {/* Skill names are freeform: whatever is typed can be added as-is,
                   e.g. a listed skill with a tech level or specialty tacked on. */}
               {!searching &&
-                !results.some((r) => r.name.toLowerCase() === query.trim().toLowerCase()) && (
+                !results.some((r) => skillLabel(r).toLowerCase() === query.trim().toLowerCase()) && (
                   <button
                     type="button"
                     onClick={() => addSkill(query)}
@@ -188,9 +198,15 @@ export function SkillsEditor({ value, onChange }: Props) {
                 key={s.id}
                 className="flex items-center justify-between gap-3 rounded border border-zinc-800 bg-zinc-900 px-3 py-2"
               >
-                <span className="text-sm text-zinc-100 flex-1 truncate">
-                  {s.name}
-                </span>
+                <span className="text-sm text-zinc-100 truncate">{s.name}</span>
+                <input
+                  type="text"
+                  value={s.specificity ?? ''}
+                  onChange={(e) => setSpecificity(s.id, e.target.value)}
+                  placeholder="Specificity (optional)"
+                  aria-label={`${s.name} specificity`}
+                  className="flex-1 min-w-0 bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 placeholder:text-zinc-600"
+                />
                 <span className="text-xs text-zinc-500 font-mono w-16 text-right">
                   {skillCost(s.level)} BP
                 </span>
