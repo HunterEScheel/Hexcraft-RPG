@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   applyLongRest,
@@ -728,9 +728,6 @@ function CombatTab({
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-sm text-zinc-100">{a.label}</span>
-          <span className="text-[10px] uppercase tracking-wider text-zinc-500">
-            {a.def.name}
-          </span>
         </div>
         {a.notes && (
           <div className="text-xs text-zinc-300">{a.notes}</div>
@@ -770,31 +767,30 @@ function CombatTab({
               {character.speed ?? 20} ft
             </span>
           </li>
-          {actionDefs.map((def) => {
-            const rows = actions.filter((a) => a.def.id === def.id)
-            const own = maneuvers.filter(
-              (m) => m.skillId === def.id && !isReaction(m),
-            )
-            if (rows.length === 0 && own.length === 0) return null
-            return (
-              <Fragment key={def.id}>
-                {rows.length === 0 && (
-                  <li className="px-1 pt-1 text-[10px] uppercase tracking-wider text-zinc-500">
-                    {def.name} <span className="normal-case tracking-normal">(no weapon equipped)</span>
-                  </li>
-                )}
-                {rows.map(actionRow)}
-                {own.length > 0 && (
-                  <li>
-                    <ul className="ml-4 space-y-1 border-l border-zinc-800 pl-2">
-                      {own.map(maneuverRow)}
-                    </ul>
-                  </li>
-                )}
-              </Fragment>
-            )
-          })}
         </ul>
+        {actionDefs.map((def) => {
+          const rows = actions.filter((a) => a.def.id === def.id)
+          const own = maneuvers.filter(
+            (m) => m.skillId === def.id && !isReaction(m),
+          )
+          if (rows.length === 0 && own.length === 0) return null
+          return (
+            <div key={def.id} className="mt-3">
+              <h4 className="mb-1 flex items-baseline gap-2 text-xs uppercase tracking-wide text-zinc-400">
+                {def.name}
+                {rows.length === 0 && (
+                  <span className="normal-case tracking-normal text-zinc-500">
+                    (no weapon equipped)
+                  </span>
+                )}
+              </h4>
+              <ul className="space-y-1">
+                {rows.map(actionRow)}
+                {own.map(maneuverRow)}
+              </ul>
+            </div>
+          )
+        })}
         {actions.length === 0 && (
           <p className="mt-2 text-sm text-zinc-500 italic">
             Equip a weapon on the General tab to add attack actions.
