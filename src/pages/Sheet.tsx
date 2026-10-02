@@ -322,7 +322,7 @@ export function Sheet() {
         <button
           type="button"
           onClick={() => setResting(true)}
-          title="Long rest: 1d6 HP and 1d4−1 EP per hour slept, clears death saves"
+          title="Long rest: 1d6 HP and 1d4−1 EP per hour slept; clears temp HP and death saves"
           aria-label="Long rest"
           className="ml-auto self-end inline-flex items-center justify-center rounded bg-emerald-700/90 hover:bg-emerald-600 border border-emerald-500/40 h-8 w-8 text-emerald-50 transition"
         >

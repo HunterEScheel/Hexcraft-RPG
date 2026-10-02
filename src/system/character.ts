@@ -238,12 +238,13 @@ export function rollLongRest(
   return { hp, ep }
 }
 
-/** Heal and recover the rolled amounts, up to the maximums, and clear death saves. */
+/** Heal and recover the rolled amounts, up to the maximums; temp HP and death saves clear. */
 export function applyLongRest(c: Character, hp: number, ep: number): Character {
   return normalizeCurrentValues({
     ...c,
     currentHp: c.currentHp + Math.max(0, Math.floor(hp)),
     currentEp: c.currentEp + Math.max(0, Math.floor(ep)),
+    tempHp: 0,
     deathSaves: { ...EMPTY_DEATH_SAVES },
   })
 }

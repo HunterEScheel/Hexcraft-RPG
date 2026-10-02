@@ -217,7 +217,7 @@ section('combat', 'Combat', f'''
 <p>Damage your armor doesn't cover goes straight through. Steel won't stop fire or psychic attacks.</p>
 <h3>Dropping to 0 HP</h3>
 <p>At 0 HP you're down and rolling <b>death saves</b> as the GM directs. <b>Three successes</b>: you're stable (unconscious, no longer dying). <b>Three failures</b>: you die. While dying you can <b>spend all your remaining EP</b> to get back up at 1 HP.</p>
-<p>A <b>long rest</b> heals <b>1d6 HP</b> and recovers <b>1d4−1 EP</b> for every hour you sleep, up to your maximums, and clears death saves.</p>
+<p>A <b>long rest</b> heals <b>1d6 HP</b> and recovers <b>1d4−1 EP</b> for every hour you sleep, up to your maximums. It clears temporary HP and death saves.</p>
 ''')
 
 aoe_rows = ''.join(f'<h4>{mode}</h4>{opts(o, EP["aoe"])}' for mode, o in AOE.items())
