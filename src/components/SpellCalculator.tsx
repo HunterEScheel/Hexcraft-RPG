@@ -5,7 +5,12 @@ import {
   savedSpellCost,
   spellCost,
 } from '../system/spells'
-import { MANEUVER_CRITERIA } from '../system/maneuvers'
+import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from '../system/maneuvers'
+import {
+  MAGIC_MEDIUMS,
+  MAGIC_MEDIUM_DESCRIPTIONS,
+  MAGIC_SCHOOLS,
+} from '../system/magicSchools'
 import { EffectBuilder } from './EffectBuilder'
 import { NumberStepper } from './NumberStepper'
 
@@ -21,6 +26,12 @@ export function SpellCalculator() {
   const [maneuver, setManeuver] = useState(false)
   const [school, setSchool] = useState(0)
   const [medium, setMedium] = useState(0)
+  // What the two numbers belong to: a school and medium, or an attack skill
+  // (whose attribute is the second number). Labels only; the math is the same.
+  const [schoolName, setSchoolName] = useState<string>(MAGIC_SCHOOLS[0])
+  const [mediumName, setMediumName] = useState<string>(MAGIC_MEDIUMS[0])
+  const [skillId, setSkillId] = useState<string>(MANEUVER_SKILLS[0].id)
+  const skill = MANEUVER_SKILLS.find((s) => s.id === skillId) ?? MANEUVER_SKILLS[0]
 
   const criteria = maneuver ? MANEUVER_CRITERIA : undefined
   const cost = useMemo(() => spellCost(draft, criteria), [draft, criteria])
@@ -67,15 +78,46 @@ export function SpellCalculator() {
       </header>
 
       <div className="space-y-4 p-4">
+        {maneuver ? (
+          <Choices
+            label="Combat skill"
+            options={MANEUVER_SKILLS.map((s) => ({
+              value: s.id,
+              label: s.name,
+              note: s.attribute,
+            }))}
+            value={skillId}
+            onChange={setSkillId}
+          />
+        ) : (
+          <>
+            <Choices
+              label="School"
+              options={MAGIC_SCHOOLS.map((s) => ({ value: s, label: s }))}
+              value={schoolName}
+              onChange={setSchoolName}
+            />
+            <Choices
+              label="Medium"
+              options={MAGIC_MEDIUMS.map((m) => ({
+                value: m,
+                label: m,
+                title: MAGIC_MEDIUM_DESCRIPTIONS[m],
+              }))}
+              value={mediumName}
+              onChange={setMediumName}
+            />
+          </>
+        )}
         <div className="flex flex-wrap gap-x-8 gap-y-2">
           <NumberStepper
-            label={maneuver ? 'Skill level' : 'School level'}
+            label={maneuver ? `${skill.name} level` : `${schoolName} level`}
             value={school}
             onChange={setSchool}
             min={0}
           />
           <NumberStepper
-            label={maneuver ? 'Attribute' : 'Medium level'}
+            label={maneuver ? (skill.attribute ?? 'Attribute') : `${mediumName} level`}
             value={medium}
             onChange={setMedium}
             min={maneuver ? -10 : 0}
@@ -113,6 +155,44 @@ function Result({ label, value, note }: { label: string; value: number | string;
       <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">{label}</div>
       <div className="font-mono text-2xl text-amber-300">{value}</div>
       <div className="text-[10px] text-zinc-500">{note}</div>
+    </div>
+  )
+}
+
+/** Every option on show at once, so nothing hides in a dropdown. */
+function Choices({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  options: { value: string; label: string; note?: string; title?: string }[]
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div>
+      <span className="mb-1 block text-xs uppercase tracking-wide text-zinc-400">{label}</span>
+      <div className="flex flex-wrap gap-1">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            title={o.title}
+            onClick={() => onChange(o.value)}
+            className={
+              'rounded border px-2 py-1 text-xs ' +
+              (o.value === value
+                ? 'border-violet-500 bg-violet-900/30 text-violet-200'
+                : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500')
+            }
+          >
+            {o.label}
+            {o.note && <span className="ml-1 text-[10px] text-zinc-500">{o.note}</span>}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
