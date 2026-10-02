@@ -11,7 +11,7 @@ export const TETHER_TIERS = [
     tier: 2,
     label: 'Major',
     bpRefund: 15,
-    examples: ['Sworn oath', 'Bounty on head', 'Life debt', 'Group protection'],
+    examples: ['Sworn oath', 'Bounty on head', 'Life debt', 'Territorial claim'],
   },
   {
     tier: 3,

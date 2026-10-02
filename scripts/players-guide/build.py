@@ -134,7 +134,7 @@ section('tethers', 'Tethers & Flaws', f'''
 <p>The GM sets an <b>obligation threshold</b>: your tethers' weights must add up to at least that number. Flaws carry no weight.</p>
 {table(['Tether', 'Typical obligations'], [
     ('Minor', 'Defense of another, debt, financial support'),
-    ('Major', 'Sworn oath, bounty on your head, life debt, protecting a group'),
+    ('Major', 'Sworn oath, bounty on your head, life debt, territorial claim'),
     ('Binding', "Blood oath, a god's orders, a geas, a hostage: anything that binds your life, or someone else's, to obedience"),
 ])}
 <h3>Tether examples</h3>
