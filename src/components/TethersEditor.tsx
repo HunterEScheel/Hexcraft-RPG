@@ -11,13 +11,15 @@ interface Props {
 }
 
 export function TethersEditor({ value, onChange }: Props) {
-  const add = () =>
+  // A blank tether, or one started from an example: the type is filled in
+  // and the player writes the specifics after it.
+  const add = (tier: TetherTier = 1, description = '') =>
     onChange([
       ...value,
       {
         id: `tether-${crypto.randomUUID()}`,
-        description: '',
-        tier: 1,
+        description,
+        tier,
       },
     ])
 
@@ -29,6 +31,29 @@ export function TethersEditor({ value, onChange }: Props) {
 
   return (
     <div className="space-y-3">
+      <div className="rounded border border-zinc-800 bg-zinc-950 p-3 space-y-2">
+        <p className="text-xs text-zinc-500">
+          Tethers are obligations the world will hold you to. Pick one to start from:
+        </p>
+        {TETHER_TIERS.map((opt) => (
+          <div key={opt.tier} className="flex flex-wrap items-center gap-1">
+            <span className="w-24 text-xs text-zinc-400">
+              {opt.label}{' '}
+              <span className="font-mono text-[10px] text-zinc-600">+{opt.bpRefund}</span>
+            </span>
+            {opt.examples.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                onClick={() => add(opt.tier as TetherTier, `${ex}: `)}
+                className="rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-300 hover:border-zinc-500"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
       {value.length === 0 ? (
         <p className="text-sm text-zinc-500 italic">
           No tethers. Add one to claim BP back in exchange for an obligation.
@@ -46,7 +71,7 @@ export function TethersEditor({ value, onChange }: Props) {
                   onChange={(e) =>
                     update(t.id, { description: e.target.value })
                   }
-                  placeholder="Sworn to protect the prince at all costs, etc."
+                  placeholder="Sworn oath: to protect the prince at all costs"
                   rows={2}
                   className="flex-1 bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 resize-y"
                 />
@@ -90,7 +115,7 @@ export function TethersEditor({ value, onChange }: Props) {
       )}
       <button
         type="button"
-        onClick={add}
+        onClick={() => add()}
         className="rounded bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 text-sm text-zinc-200"
       >
         + Add tether

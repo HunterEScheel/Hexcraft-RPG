@@ -1,7 +1,24 @@
+// Each tier's typical obligations: things the world will hold the character
+// to, not things they merely want (those are flaws).
 export const TETHER_TIERS = [
-  { tier: 1, label: 'Minor', bpRefund: 5 },
-  { tier: 2, label: 'Major', bpRefund: 15 },
-  { tier: 3, label: 'Binding', bpRefund: 40 },
+  {
+    tier: 1,
+    label: 'Minor',
+    bpRefund: 5,
+    examples: ['Defense of another', 'Debt', 'Financial support'],
+  },
+  {
+    tier: 2,
+    label: 'Major',
+    bpRefund: 15,
+    examples: ['Sworn oath', 'Bounty on head', 'Life debt', 'Group protection'],
+  },
+  {
+    tier: 3,
+    label: 'Binding',
+    bpRefund: 40,
+    examples: ['Blood oath', "God's orders", 'Geas', 'Hostage'],
+  },
 ] as const
 
 export type TetherTier = (typeof TETHER_TIERS)[number]['tier']

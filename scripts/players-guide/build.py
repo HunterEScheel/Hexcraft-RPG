@@ -132,6 +132,11 @@ section('tethers', 'Tethers & Flaws', f'''
 {table(['Flaw', 'BP refund'], [('Quirk', '+5'), ('Flaw', '+15'), ('Vice', '+40')], 'num')}
 </div>
 <p>The GM sets an <b>obligation threshold</b>: your tethers' weights must add up to at least that number. Flaws carry no weight.</p>
+{table(['Tether', 'Typical obligations'], [
+    ('Minor', 'Defense of another, debt, financial support'),
+    ('Major', 'Sworn oath, bounty on your head, life debt, protecting a group'),
+    ('Binding', "Blood oath, a god's orders, a geas, a hostage: anything that binds your life, or someone else's, to obedience"),
+])}
 <h3>Tether examples</h3>
 {table(['Tether', 'Example', 'How it bites'], [
     ('Minor', '<i>Keeper of the shrine in his home village, Brackwater.</i>', 'He is who they send for. Each season he must go back for the rites, and when trouble reaches Brackwater, a sickness, a raid, a bad omen, it becomes his problem, wherever the party happens to be.'),
