@@ -7,6 +7,7 @@ import {
   emptyMonster,
   monsterBpBreakdown,
   monsterEvasion,
+  monsterManeuverBonus,
   spellFactors,
   spellTargetingLabel,
   type LairAction,
@@ -16,8 +17,10 @@ import {
 } from '../system/monster'
 import { POWER_TIERS } from '../system/powerTiers'
 import { spellCost } from '../system/spells'
+import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from '../system/maneuvers'
 import { AttributesEditor } from '../components/AttributesEditor'
 import { MonsterSpellComposer } from '../components/MonsterSpellComposer'
+import { MonsterManeuverComposer } from '../components/MonsterManeuverComposer'
 import { NumberStepper } from '../components/NumberStepper'
 import { Section } from '../components/Section'
 import { TierSelector } from '../components/TierSelector'
@@ -199,6 +202,17 @@ export function MonsterMaker() {
             onChange={(spells) => patch({ spells })}
           />
         </div>
+      </Section>
+
+      <Section
+        title="Maneuvers"
+        subtitle="Martial moves drawn from the monster's attack skills: bonus is the skill plus its attribute. No training gates or save slots; using one still costs EP."
+      >
+        <MonsterManeuverComposer
+          monster={monster}
+          value={monster.maneuvers}
+          onChange={(maneuvers) => patch({ maneuvers })}
+        />
       </Section>
 
       <Section
@@ -600,6 +614,39 @@ function StatBlock({ monster }: { monster: Monster }) {
                 </div>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {spellFactors(s).map((label, i) => (
+                    <span
+                      key={i}
+                      className="rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-300"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </BlockSection>
+      )}
+
+      {monster.maneuvers.length > 0 && (
+        <BlockSection title="Maneuvers">
+          <ul className="space-y-2">
+            {monster.maneuvers.map((m) => (
+              <li key={m.id} className="text-sm">
+                <div className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-zinc-100 font-medium">{m.name}</span>
+                  <span className="text-xs text-rose-300">
+                    {MANEUVER_SKILLS.find((s) => s.id === m.skillId)?.name ?? m.skillId}
+                  </span>
+                  <span className="font-mono text-amber-300">
+                    {spellTargetingLabel(m, monsterManeuverBonus(monster, m.skillId))}
+                  </span>
+                  <span className="font-mono text-zinc-400">
+                    {spellCost(m.draft, MANEUVER_CRITERIA).totalEp} EP
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {spellFactors(m, MANEUVER_CRITERIA, true).map((label, i) => (
                     <span
                       key={i}
                       className="rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-300"

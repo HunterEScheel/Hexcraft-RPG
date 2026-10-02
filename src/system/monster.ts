@@ -12,7 +12,10 @@ import type { DamageType } from './inventory'
 import {
   CASTING_TIMES,
   SPELL_CRITERIA,
+  criterionApplies,
   selectedOption,
+  selectionFor,
+  type SpellCriterion,
   type SpellDraft,
 } from './spells'
 
@@ -28,6 +31,15 @@ export interface MonsterAttack {
 export interface MonsterSpell {
   id: string
   name: string
+  draft: SpellDraft
+}
+
+// Built like a character's maneuver, and drawn from one of the monster's
+// attack skills: its bonus is that skill plus the skill's attribute.
+export interface MonsterManeuver {
+  id: string
+  name: string
+  skillId: string
   draft: SpellDraft
 }
 
@@ -57,6 +69,7 @@ export interface Monster {
   multiattack: string
   attacks: MonsterAttack[]
   spells: MonsterSpell[]
+  maneuvers: MonsterManeuver[]
   lairActions: LairAction[]
   legendaryActionSlots: number
   legendaryActions: LegendaryAction[]
@@ -79,6 +92,7 @@ export function emptyMonster(tierName: string, bpBudget: number): Monster {
     multiattack: '',
     attacks: [],
     spells: [],
+    maneuvers: [],
     lairActions: [],
     legendaryActionSlots: 0,
     legendaryActions: [],
@@ -123,7 +137,13 @@ export function monsterEvasion(m: Monster): number {
   return 10 + m.attributes.Agility + (m.combatSkills['combat-dodge'] ?? 0)
 }
 
-export function spellTargetingLabel(s: MonsterSpell, bonus: number): string {
+export function monsterManeuverBonus(m: Monster, skillId: string): number {
+  const def = COMBAT_SKILLS.find((c) => c.id === skillId)
+  const attribute = def?.attribute ? m.attributes[def.attribute] : 0
+  return (m.combatSkills[skillId] ?? 0) + attribute
+}
+
+export function spellTargetingLabel(s: { draft: SpellDraft }, bonus: number): string {
   const targeting = s.draft.targeting ?? 'hit'
   if (targeting === 'hit') return `hit ${bonus >= 0 ? '+' : ''}${bonus}`
   const save =
@@ -131,13 +151,21 @@ export function spellTargetingLabel(s: MonsterSpell, bonus: number): string {
   return `${save} DC ${10 + bonus}`
 }
 
-export function spellFactors(s: MonsterSpell): string[] {
+// Maneuvers pass their own criteria; their dice add to the weapon's damage.
+export function spellFactors(
+  s: { draft: SpellDraft },
+  criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
+  extraDice = false,
+): string[] {
   const factors: string[] = []
-  for (const c of SPELL_CRITERIA) {
-    const opt = selectedOption(c, s.draft.selections[c.key])
-    if (opt) factors.push(opt.label)
+  for (const c of criteria) {
+    if (!criterionApplies(c, s.draft, criteria)) continue
+    const opt = selectedOption(c, selectionFor(s.draft, c.key))
+    if (!opt || (c.key === 'selfDebuff' && opt.tier === 0)) continue
+    factors.push(c.key === 'selfDebuff' ? `self: ${opt.label}` : opt.label)
   }
-  if (s.draft.damageDice > 0) factors.push(`${s.draft.damageDice}d6`)
+  if (s.draft.damageDice > 0)
+    factors.push(`${extraDice ? '+' : ''}${s.draft.damageDice}d6`)
   const time = CASTING_TIMES.find((t) => t.key === s.draft.castingTime)
   if (time) factors.push(time.label)
   return factors
