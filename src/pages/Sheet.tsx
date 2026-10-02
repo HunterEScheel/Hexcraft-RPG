@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   applyLongRest,
@@ -6,6 +6,7 @@ import {
   ensureCombatSkills,
   equippedArmorEvasionReduction,
   evasion,
+  maneuverBonus,
   normalizeCurrentValues,
   skillLabel,
   type BodyPart,
@@ -28,7 +29,8 @@ import { BodyDiagramEditor } from '../components/BodyDiagramEditor'
 import { InventoryEditor } from '../components/InventoryEditor'
 import { QuickCast } from '../components/QuickCast'
 import { QuickManeuver } from '../components/QuickManeuver'
-import { SavedManeuvers } from '../components/SavedManeuvers'
+import { SavedEffectRow } from '../components/SavedEffects'
+import { MANEUVER_CRITERIA } from '../system/maneuvers'
 import { SavedSpells } from '../components/SavedSpells'
 import { TakeDamagePanel } from '../components/TakeDamagePanel'
 import { DeathSavePanel } from '../components/DeathSavePanel'
@@ -383,6 +385,19 @@ export function Sheet() {
             onTakeDamage={(next) =>
               setCharacter((c) => (c ? normalizeCurrentValues(next) : c))
             }
+            onUseManeuver={spendEp}
+            onRemoveManeuver={(id) =>
+              setCharacter((c) =>
+                c
+                  ? {
+                      ...c,
+                      savedManeuvers: (c.savedManeuvers ?? []).filter(
+                        (m) => m.id !== id,
+                      ),
+                    }
+                  : c,
+              )
+            }
           />
           <ReadOnlySection title="Quick maneuver" collapsible defaultOpen={false}>
             <QuickManeuver
@@ -397,24 +412,6 @@ export function Sheet() {
                           ...(c.savedManeuvers ?? []),
                           { id: crypto.randomUUID(), ...maneuver },
                         ],
-                      }
-                    : c,
-                )
-              }
-            />
-          </ReadOnlySection>
-          <ReadOnlySection title="Saved maneuvers">
-            <SavedManeuvers
-              character={character}
-              onUse={spendEp}
-              onRemove={(id) =>
-                setCharacter((c) =>
-                  c
-                    ? {
-                        ...c,
-                        savedManeuvers: (c.savedManeuvers ?? []).filter(
-                          (m) => m.id !== id,
-                        ),
                       }
                     : c,
                 )
@@ -629,14 +626,46 @@ interface CombatTabProps {
   character: Character
   combatSkills: { id: string; name: string; level: number }[]
   onTakeDamage: (next: Character) => void
+  onUseManeuver: (epCost: number) => void
+  onRemoveManeuver: (id: string) => void
 }
 
 function CombatTab({
   character,
   combatSkills,
   onTakeDamage,
+  onUseManeuver,
+  onRemoveManeuver,
 }: CombatTabProps) {
   const parryLv = combatSkillLevel(character, 'combat-parry')
+
+  // Saved maneuvers sit with the attack they're built on; ones with Reaction
+  // timing go under Reactions instead.
+  const maneuvers = character.savedManeuvers ?? []
+  const isReaction = (m: (typeof maneuvers)[number]) =>
+    m.draft.castingTime === 'reaction'
+  const reactionManeuvers = maneuvers.filter(isReaction)
+  const maneuverRow = (m: (typeof maneuvers)[number]) => {
+    const def = COMBAT_SKILLS.find((d) => d.id === m.skillId)
+    return (
+      <SavedEffectRow
+        key={m.id}
+        item={{
+          id: m.id,
+          name: m.name,
+          source: <span className="text-rose-300">{def?.name ?? 'Maneuver'}</span>,
+          bonus: maneuverBonus(character, m.skillId),
+          draft: m.draft,
+        }}
+        verb="Use"
+        criteria={MANEUVER_CRITERIA}
+        extraDice
+        currentEp={character.currentEp}
+        onUse={onUseManeuver}
+        onRemove={onRemoveManeuver}
+      />
+    )
+  }
 
   const skillByName = new Map(combatSkills.map((s) => [s.id, s]))
   const equippedByCategory = new Map<string, typeof character.inventory>()
@@ -690,6 +719,34 @@ function CombatTab({
     }
   }
 
+  const actionDefs = COMBAT_SKILLS.filter((d) => d.category === 'action')
+  const actionRow = (a: ActionRow) => (
+    <li
+      key={a.key}
+      className="flex items-center justify-between gap-3 rounded bg-zinc-900 border border-zinc-800 px-3 py-2"
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-sm text-zinc-100">{a.label}</span>
+          <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+            {a.def.name}
+          </span>
+        </div>
+        {a.notes && (
+          <div className="text-xs text-zinc-300">{a.notes}</div>
+        )}
+        <div className="text-xs text-zinc-500 font-mono">
+          Skill {fmt(a.level)}
+          {a.def.attribute &&
+            ` · ${a.def.attribute} ${fmt(a.attrValue)}`}
+        </div>
+      </div>
+      <span className="text-base font-mono text-amber-300 whitespace-nowrap">
+        {fmt(a.total)}
+      </span>
+    </li>
+  )
+
   return (
     <div className="space-y-3">
       {character.currentHp === 0 && (
@@ -713,32 +770,30 @@ function CombatTab({
               {character.speed ?? 20} ft
             </span>
           </li>
-          {actions.map((a) => (
-            <li
-              key={a.key}
-              className="flex items-center justify-between gap-3 rounded bg-zinc-900 border border-zinc-800 px-3 py-2"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className="text-sm text-zinc-100">{a.label}</span>
-                  <span className="text-[10px] uppercase tracking-wider text-zinc-500">
-                    {a.def.name}
-                  </span>
-                </div>
-                {a.notes && (
-                  <div className="text-xs text-zinc-300">{a.notes}</div>
+          {actionDefs.map((def) => {
+            const rows = actions.filter((a) => a.def.id === def.id)
+            const own = maneuvers.filter(
+              (m) => m.skillId === def.id && !isReaction(m),
+            )
+            if (rows.length === 0 && own.length === 0) return null
+            return (
+              <Fragment key={def.id}>
+                {rows.length === 0 && (
+                  <li className="px-1 pt-1 text-[10px] uppercase tracking-wider text-zinc-500">
+                    {def.name} <span className="normal-case tracking-normal">(no weapon equipped)</span>
+                  </li>
                 )}
-                <div className="text-xs text-zinc-500 font-mono">
-                  Skill {fmt(a.level)}
-                  {a.def.attribute &&
-                    ` · ${a.def.attribute} ${fmt(a.attrValue)}`}
-                </div>
-              </div>
-              <span className="text-base font-mono text-amber-300 whitespace-nowrap">
-                {fmt(a.total)}
-              </span>
-            </li>
-          ))}
+                {rows.map(actionRow)}
+                {own.length > 0 && (
+                  <li>
+                    <ul className="ml-4 space-y-1 border-l border-zinc-800 pl-2">
+                      {own.map(maneuverRow)}
+                    </ul>
+                  </li>
+                )}
+              </Fragment>
+            )
+          })}
         </ul>
         {actions.length === 0 && (
           <p className="mt-2 text-sm text-zinc-500 italic">
@@ -767,6 +822,7 @@ function CombatTab({
               </>
             }
           />
+          {reactionManeuvers.map(maneuverRow)}
         </ul>
       </ReadOnlySection>
 
