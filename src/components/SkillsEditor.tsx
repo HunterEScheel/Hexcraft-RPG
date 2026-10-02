@@ -138,7 +138,7 @@ export function SkillsEditor({ value, onChange }: Props) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={
               supabaseConfigured
-                ? 'Search non-combat skills…'
+                ? 'Search non-combat skills, or type your own…'
                 : 'Add a skill (Supabase not configured — custom only)'
             }
             className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-zinc-100 placeholder:text-zinc-500"
@@ -163,15 +163,18 @@ export function SkillsEditor({ value, onChange }: Props) {
                   )}
                 </button>
               ))}
-              {!searching && results.length === 0 && (
-                <button
-                  type="button"
-                  onClick={() => addSkill(query)}
-                  className="w-full px-3 py-2 text-left text-sm text-amber-300 hover:bg-zinc-900"
-                >
-                  + Add &quot;{query.trim()}&quot; as custom skill
-                </button>
-              )}
+              {/* Skill names are freeform: whatever is typed can be added as-is,
+                  e.g. a listed skill with a tech level or specialty tacked on. */}
+              {!searching &&
+                !results.some((r) => r.name.toLowerCase() === query.trim().toLowerCase()) && (
+                  <button
+                    type="button"
+                    onClick={() => addSkill(query)}
+                    className="w-full px-3 py-2 text-left text-sm text-amber-300 hover:bg-zinc-900"
+                  >
+                    + Add &quot;{query.trim()}&quot;{results.length === 0 ? ' as custom skill' : ' as typed'}
+                  </button>
+                )}
             </div>
           )}
         </div>
