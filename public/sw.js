@@ -2,7 +2,7 @@
 // first, so a deploy shows up on the next load, and fall back to the cached copy
 // when offline. Built assets are content-hashed, so once fetched they are served
 // from the cache. Other origins (Supabase and the like) and /api/ are left alone.
-const CACHE = 'shell-v1';
+const CACHE = 'shell-v2';
 const SHELL = '/';
 
 self.addEventListener('install', (event) => {
@@ -48,6 +48,9 @@ async function cacheFirst(request) {
   const cached = await cache.match(request);
   if (cached) return cached;
   const response = await fetch(request);
-  if (response.ok) await cache.put(request, response.clone());
+  // A host that answers a missing asset with index.html must not get that page
+  // cached as a stylesheet or script for good.
+  const type = response.headers.get('content-type') ?? '';
+  if (response.ok && !type.includes('text/html')) await cache.put(request, response.clone());
   return response;
 }

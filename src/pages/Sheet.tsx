@@ -638,6 +638,7 @@ function CombatTab({
   onRemoveManeuver,
 }: CombatTabProps) {
   const parryLv = combatSkillLevel(character, 'combat-parry')
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
 
   // Saved maneuvers sit with the attack they're built on; ones with Reaction
   // timing go under Reactions instead.
@@ -719,30 +720,67 @@ function CombatTab({
     }
   }
 
-  const actionDefs = COMBAT_SKILLS.filter((d) => d.category === 'action')
-  const actionRow = (a: ActionRow) => (
-    <li
-      key={a.key}
-      className="flex items-center justify-between gap-3 rounded bg-zinc-900 border border-zinc-800 px-3 py-2"
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-sm text-zinc-100">{a.label}</span>
-        </div>
-        {a.notes && (
-          <div className="text-xs text-zinc-300">{a.notes}</div>
+  // Each attack expands to show what it can do: a basic attack, plus every
+  // saved maneuver built on its combat skill (Reaction ones live under
+  // Reactions).
+  const actionRow = (a: ActionRow) => {
+    const open = expanded.has(a.key)
+    const own = maneuvers.filter((m) => m.skillId === a.def.id && !isReaction(m))
+    return (
+      <li key={a.key} className="rounded bg-zinc-900 border border-zinc-800">
+        <button
+          type="button"
+          onClick={() =>
+            setExpanded((prev) => {
+              const next = new Set(prev)
+              if (next.has(a.key)) next.delete(a.key)
+              else next.add(a.key)
+              return next
+            })
+          }
+          aria-expanded={open}
+          className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left"
+        >
+          <span aria-hidden className="text-xs text-zinc-500 w-3">
+            {open ? '▾' : '▸'}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-sm text-zinc-100">{a.label}</span>
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+                {a.def.name}
+              </span>
+              <span className="text-[10px] text-zinc-500">
+                {1 + own.length} option{own.length === 0 ? '' : 's'}
+              </span>
+            </div>
+            {a.notes && <div className="text-xs text-zinc-300">{a.notes}</div>}
+            <div className="text-xs text-zinc-500 font-mono">
+              Skill {fmt(a.level)}
+              {a.def.attribute && ` · ${a.def.attribute} ${fmt(a.attrValue)}`}
+            </div>
+          </div>
+          <span className="text-base font-mono text-amber-300 whitespace-nowrap">
+            {fmt(a.total)}
+          </span>
+        </button>
+        {open && (
+          <ul className="space-y-1 border-t border-zinc-800 p-2">
+            <li className="rounded bg-zinc-950 border border-zinc-800 px-3 py-2 flex items-center gap-2">
+              <span className="text-sm text-zinc-100 whitespace-nowrap">Basic attack</span>
+              <span className="text-xs font-mono text-amber-300 whitespace-nowrap">
+                hit {fmt(a.total)}
+              </span>
+              <span className="flex-1 text-[11px] text-zinc-400">
+                1 action · weapon damage · no EP
+              </span>
+            </li>
+            {own.map(maneuverRow)}
+          </ul>
         )}
-        <div className="text-xs text-zinc-500 font-mono">
-          Skill {fmt(a.level)}
-          {a.def.attribute &&
-            ` · ${a.def.attribute} ${fmt(a.attrValue)}`}
-        </div>
-      </div>
-      <span className="text-base font-mono text-amber-300 whitespace-nowrap">
-        {fmt(a.total)}
-      </span>
-    </li>
-  )
+      </li>
+    )
+  }
 
   return (
     <div className="space-y-3">
@@ -767,30 +805,8 @@ function CombatTab({
               {character.speed ?? 20} ft
             </span>
           </li>
+          {actions.map(actionRow)}
         </ul>
-        {actionDefs.map((def) => {
-          const rows = actions.filter((a) => a.def.id === def.id)
-          const own = maneuvers.filter(
-            (m) => m.skillId === def.id && !isReaction(m),
-          )
-          if (rows.length === 0 && own.length === 0) return null
-          return (
-            <div key={def.id} className="mt-3">
-              <h4 className="mb-1 flex items-baseline gap-2 text-xs uppercase tracking-wide text-zinc-400">
-                {def.name}
-                {rows.length === 0 && (
-                  <span className="normal-case tracking-normal text-zinc-500">
-                    (no weapon equipped)
-                  </span>
-                )}
-              </h4>
-              <ul className="space-y-1">
-                {rows.map(actionRow)}
-                {own.map(maneuverRow)}
-              </ul>
-            </div>
-          )
-        })}
         {actions.length === 0 && (
           <p className="mt-2 text-sm text-zinc-500 italic">
             Equip a weapon on the General tab to add attack actions.
