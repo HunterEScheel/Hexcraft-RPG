@@ -54,6 +54,12 @@ EP = {'range': 4, 'aoe': 5, 'duration': 4, 'buff': 5, 'challenge': 8}
 CAST = [('Reaction', 4), ('Action', 2), ('2 Actions', 1), ('1 Round', 0.75), ('1 Minute', 0.5), ('1 Hour', 0.25)]
 DAMAGE_TYPES = 'Physical, Fire, Cold, Lightning, Acid, Poison, Psychic, Magical, Force, Sonic'
 ROMAN = {1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V'}
+# Mirrors TETHER_TIERS in src/system/tethers.ts: keep the two in step.
+TETHER_TIERS = [
+    {'label': 'Minor', 'examples': ['Defense of another', 'Debt', 'Financial support']},
+    {'label': 'Major', 'examples': ['Sworn oath', 'Bounty on head', 'Life debt', 'Territorial claim']},
+    {'label': 'Binding', 'examples': ['Blood oath', "God's orders", 'Geas', 'Hostage']},
+]
 
 
 def table(head, rows, cls=''):
@@ -132,22 +138,13 @@ section('tethers', 'Tethers & Flaws', f'''
 {table(['Flaw', 'BP refund'], [('Quirk', '+5'), ('Flaw', '+15'), ('Vice', '+40')], 'num')}
 </div>
 <p>The GM sets an <b>obligation threshold</b>: your tethers' weights must add up to at least that number. Flaws carry no weight.</p>
-{table(['Tether', 'Typical obligations'], [
-    ('Minor', 'Defense of another, debt, financial support'),
-    ('Major', 'Sworn oath, bounty on your head, life debt, territorial claim'),
-    ('Binding', "Blood oath, a god's orders, a geas, a hostage: anything that binds your life, or someone else's, to obedience"),
-])}
+{table(['Tether', 'Typical obligations'], [(t['label'], ', '.join(t['examples'])) for t in TETHER_TIERS])}
+<p class="small">Binding covers anything that binds your life, or someone else's, to obedience. A <i>geas</i> is a supernatural command or taboo whose breaking brings ruin.</p>
 <h3>Tether examples</h3>
 {table(['Tether', 'Example', 'How it bites'], [
-    ('Minor', '<i>Keeper of the shrine in his home village, Brackwater.</i>', 'He is who they send for. Each season he must go back for the rites, and when trouble reaches Brackwater, a sickness, a raid, a bad omen, it becomes his problem, wherever the party happens to be.'),
-    ('Major', '<i>Sworn to the Lantern Watch.</i>', 'The order sends orders and expects them followed, even mid-quest. Ignoring a summons costs rank, pay and allies inside the Watch.'),
-    ('Binding', '<i>Must protect his younger sister, Wren.</i>', 'Wren travels with the party or sends for help when she needs it, and anyone who wants leverage over him goes after her. Walking away is not an option.'),
-])}
-<p>A good tether names the obligation, and so what it demands. More examples:</p>
-{table(['Tether', 'Example'], [
-    ('Minor', '<i>Pays guild dues.</i>'),
-    ('Major', '<i>Indebted to smugglers.</i>'),
-    ('Binding', '<i>Oathsworn to Crown.</i>'),
+    ('Minor<br><span class="small">Defense of another</span>', '<i>Must protect his younger sister, Wren.</i>', 'Wren sends for him when she is in trouble, and anyone who wants leverage over him goes after her.'),
+    ('Major<br><span class="small">Sworn oath</span>', '<i>Sworn to the Lantern Watch.</i>', 'The order sends orders and expects them followed, even mid-quest. Ignoring a summons costs rank, pay and allies inside the Watch.'),
+    ('Binding<br><span class="small">Hostage</span>', '<i>The Duke holds his mother.</i>', "He does the Duke's work when the Duke asks, whatever it is, or she dies. There is no walking away while she is held."),
 ])}
 <p>This is a contract. When a tether or flaw costs you time, money, allies or HP, it's working as intended. If yours never come up, expect the GM to bring them in.</p>
 <div class="callout"><b>For the GM: setting the threshold.</b> If you're not sure what obligation threshold to set, start at <b>3</b>. That all but guarantees every character carries obligations that matter, and that their choices will run into them.<br><br>
