@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
+  applyLongRest,
   combatSkillLevel,
   ensureCombatSkills,
   equippedArmorEvasionReduction,
   evasion,
   normalizeCurrentValues,
-  restoreToMax,
   skillLabel,
   type BodyPart,
   type Character,
@@ -32,6 +32,7 @@ import { SavedManeuvers } from '../components/SavedManeuvers'
 import { SavedSpells } from '../components/SavedSpells'
 import { TakeDamagePanel } from '../components/TakeDamagePanel'
 import { DeathSavePanel } from '../components/DeathSavePanel'
+import { LongRestDialog } from '../components/LongRestDialog'
 
 type Tab = 'general' | 'combat' | 'spellcasting' | 'description'
 
@@ -62,6 +63,7 @@ export function Sheet() {
     'idle',
   )
   const [adjusting, setAdjusting] = useState<'hp' | 'ep' | null>(null)
+  const [resting, setResting] = useState(false)
   const saveTimer = useRef<number | null>(null)
   const skipNextSave = useRef(true)
 
@@ -177,7 +179,8 @@ export function Sheet() {
           })
         : c,
     )
-  const longRest = () => setCharacter((c) => (c ? restoreToMax(c) : c))
+  const longRest = (hp: number, ep: number) =>
+    setCharacter((c) => (c ? applyLongRest(c, hp, ep) : c))
   const setGold = (gold: number) =>
     setCharacter((c) => (c ? { ...c, gold: Math.max(0, gold) } : c))
   const setInventory = (inventory: typeof character.inventory) =>
@@ -318,8 +321,8 @@ export function Sheet() {
         />
         <button
           type="button"
-          onClick={longRest}
-          title="Long rest — restore HP & EP, clear death saves"
+          onClick={() => setResting(true)}
+          title="Long rest: 1d6 HP and 1d4−1 EP per hour slept, clears death saves"
           aria-label="Long rest"
           className="ml-auto self-end inline-flex items-center justify-center rounded bg-emerald-700/90 hover:bg-emerald-600 border border-emerald-500/40 h-8 w-8 text-emerald-50 transition"
         >
@@ -601,6 +604,8 @@ export function Sheet() {
           Supabase isn&apos;t configured — changes won&apos;t be saved.
         </div>
       )}
+
+      {resting && <LongRestDialog onRest={longRest} onClose={() => setResting(false)} />}
 
       {adjusting && (
         <ResourceAdjustDialog

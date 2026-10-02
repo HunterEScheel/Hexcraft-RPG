@@ -220,6 +220,34 @@ export function bpBreakdown(c: Character): BPBreakdown {
   }
 }
 
+// A long rest heals 1d6 HP and recovers 1d4−1 EP for each hour slept. The
+// sheet takes the rolled totals; rollLongRest rolls them for you.
+export const LONG_REST_HP_DIE = 6
+export const LONG_REST_EP_DIE = 4
+
+export function rollLongRest(
+  hours: number,
+  roll: (sides: number) => number = (sides) => 1 + Math.floor(Math.random() * sides),
+): { hp: number; ep: number } {
+  let hp = 0
+  let ep = 0
+  for (let h = 0; h < Math.max(0, Math.floor(hours)); h++) {
+    hp += roll(LONG_REST_HP_DIE)
+    ep += roll(LONG_REST_EP_DIE) - 1
+  }
+  return { hp, ep }
+}
+
+/** Heal and recover the rolled amounts, up to the maximums, and clear death saves. */
+export function applyLongRest(c: Character, hp: number, ep: number): Character {
+  return normalizeCurrentValues({
+    ...c,
+    currentHp: c.currentHp + Math.max(0, Math.floor(hp)),
+    currentEp: c.currentEp + Math.max(0, Math.floor(ep)),
+    deathSaves: { ...EMPTY_DEATH_SAVES },
+  })
+}
+
 export function restoreToMax(c: Character): Character {
   return normalizeCurrentValues({
     ...c,
