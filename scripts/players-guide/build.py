@@ -187,7 +187,7 @@ section('combat', 'Combat', f'''
 <p>Combat runs in turns. You have <b>4 actions</b>, and they reset to 4 at the <b>end of your turn</b>.</p>
 <ul>
 <li><b>On your turn</b>, spend actions on whatever you do: attack, move up to your speed, cast a spell or use a maneuver (one with a timing of <i>Action</i> takes 1 action, <i>2 Actions</i> takes 2, <i>1 Round</i> takes all 4), draw a weapon, open a door.</li>
-<li><b>Between your turns</b>, the actions you hold are your <b>reactions</b>. When any combatant takes an action, you may react to it by spending one of your actions. You can react once per turn: once during each other combatant's turn.</li>
+<li><b>Between your turns</b>, the actions you hold are your <b>reactions</b>. When any combatant takes an action, you may react to it by spending one of your actions. You can react once per turn, meaning once during each other combatant's turn, so over a round you can react as many times as you have actions for.</li>
 <li><b>Whatever you spend reacting comes out of your next turn.</b> React twice and you start your turn with 2 actions.</li>
 </ul>
 {table(['Default reaction', 'When', 'Effect'], [
@@ -359,7 +359,7 @@ section('app', 'Using rpg.jaeg.click', f'''
 section('reference', 'Quick Reference', f'''
 <div class="two">
 <div>
-<h3>Turns</h3><p>4 actions, reset at the end of your turn<br>Unspent actions are reactions: one per other combatant's turn<br>Default reactions: Parry (adjacent attacker), Move</p>
+<h3>Turns</h3><p>4 actions, reset at the end of your turn<br>Unspent actions are reactions: one per other combatant's turn, any number per round<br>Default reactions: Parry (adjacent attacker), Move</p>
 <h3>Rolls</h3>
 <p>Check: d20 + attribute + skill vs DC<br>Attack: d20 + weapon skill + attribute vs Evasion<br>Spell attack: d20 + school + medium vs Evasion<br>Spell save DC: 10 + school + medium<br>Maneuver: d20 + skill + attribute; DC 10 + skill + attribute<br>Evasion: 10 + Agility + Dodge − armor</p>
 <h3>DCs</h3><p>Easy 12 &middot; Medium 20 &middot; Hard 30 &middot; Near-impossible 40</p>
