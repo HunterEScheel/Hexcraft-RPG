@@ -1,3 +1,5 @@
+import { splitLegacyTitle } from './titled'
+
 // Each tier's typical obligations: things the world will hold the character
 // to, not things they merely want (those are flaws).
 export const TETHER_TIERS = [
@@ -38,19 +40,9 @@ export interface Tether {
   tier: TetherTier
 }
 
-/**
- * Tethers saved before titles existed held everything in the description,
- * usually as "Type: details" (the example chips start one that way). Split that
- * into a title and description; a short line with no colon becomes the title.
- */
+/** Tethers saved before titles existed get one split out of the description. */
 export function migrateTether(t: Omit<Tether, 'title'> & { title?: string }): Tether {
-  if (t.title !== undefined) return t as Tether
-  const text = (t.description ?? '').trim()
-  const colon = text.indexOf(':')
-  if (colon > 0 && colon <= 40)
-    return { ...t, title: text.slice(0, colon).trim(), description: text.slice(colon + 1).trim() }
-  if (text.length <= 40 && !text.includes('\n')) return { ...t, title: text, description: '' }
-  return { ...t, title: '', description: text }
+  return t.title !== undefined ? (t as Tether) : { ...t, ...splitLegacyTitle(t.description) }
 }
 
 export function tetherRefundTotal(tethers: Tether[]): number {

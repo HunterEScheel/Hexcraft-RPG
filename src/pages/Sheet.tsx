@@ -236,7 +236,7 @@ export function Sheet() {
               title={`Flaw · ${sevLabel}`}
               className="border-l-2 border-rose-600/70 pl-1.5 text-[11px] text-rose-300"
             >
-              {f.description || 'Untitled flaw'}
+              {f.title || sevLabel}
             </span>
           )
         })}
@@ -614,6 +614,36 @@ export function Sheet() {
                       {t.description ? (
                         <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-300">
                           {t.description}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs italic text-zinc-500">No description.</p>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </ReadOnlySection>
+          )}
+          {character.flaws.length > 0 && (
+            <ReadOnlySection title="Flaws">
+              <ul className="space-y-2">
+                {character.flaws.map((f) => {
+                  const sev =
+                    FLAW_SEVERITIES.find((o) => o.key === f.severity)?.label ?? f.severity
+                  return (
+                    <li
+                      key={f.id}
+                      className="rounded bg-zinc-900 border border-zinc-800 border-l-2 border-l-rose-600/70 px-3 py-2"
+                    >
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-sm text-rose-200">{f.title || sev}</span>
+                        <span className="text-[10px] uppercase tracking-wider text-zinc-500 whitespace-nowrap">
+                          {sev}
+                        </span>
+                      </div>
+                      {f.description ? (
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-300">
+                          {f.description}
                         </p>
                       ) : (
                         <p className="mt-1 text-xs italic text-zinc-500">No description.</p>

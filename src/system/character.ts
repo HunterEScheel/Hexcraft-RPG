@@ -1,6 +1,6 @@
 import { ATTRIBUTES, type AttributeName } from './attributes'
 import { COMBAT_SKILLS, isCombatSkillId } from './combatSkills'
-import { flawRefundTotal, type Flaw } from './flaws'
+import { flawRefundTotal, migrateFlaw, type Flaw } from './flaws'
 import {
   ARMOR_CLASS_STATS,
   armorEvasionReduction,
@@ -506,7 +506,7 @@ export function ensureCombatSkills(raw: Character): Character {
     bonusBp: c.bonusBp ?? 0,
     speed: c.speed ?? DEFAULT_SPEED,
     tethers: (c.tethers ?? []).map(migrateTether),
-    flaws: c.flaws ?? [],
+    flaws: (c.flaws ?? []).map(migrateFlaw),
     obligationThreshold: c.obligationThreshold ?? 0,
     gold: c.gold ?? 0,
     inventory: (c.inventory ?? []).map(migrateInventoryItem),

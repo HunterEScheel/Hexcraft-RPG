@@ -95,7 +95,7 @@ page2 = f'''
            '</div><p class="hint">Spell attack: d20 + school + medium vs Evasion. Save DC: 10 + school + medium.</p>')}
     {panel('Tethers', rows(['Title', 'Description', 'Tier'], 4, ['36%', '50%', '14%']) +
            '<div class="inline">' + field('Obligation threshold') + field('Total weight') + '</div>')}
-    {panel('Flaws', rows(['Flaw', 'Quirk / Flaw / Vice'], 3, ['66%', '34%']))}
+    {panel('Flaws', rows(['Title', 'Description', 'Severity'], 3, ['32%', '48%', '20%']))}
   </div>
 </div>
 

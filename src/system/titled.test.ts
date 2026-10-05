@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { migrateTether } from './tethers'
+import { migrateFlaw } from './flaws'
 
 describe('migrateTether', () => {
   it('splits "Type: details" into a title and description', () => {
@@ -21,5 +22,14 @@ describe('migrateTether', () => {
   it('leaves titled tethers alone', () => {
     const t = { id: 't', tier: 3 as const, title: 'Geas', description: 'Never refuse a guest' }
     expect(migrateTether(t)).toBe(t)
+  })
+})
+
+describe('migrateFlaw', () => {
+  it('splits an old flaw the same way', () => {
+    expect(migrateFlaw({ id: 'f', severity: 'vice', description: 'Gambler: bets on anything' })).toMatchObject({
+      title: 'Gambler',
+      description: 'bets on anything',
+    })
   })
 })
