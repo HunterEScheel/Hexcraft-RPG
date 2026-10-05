@@ -31,8 +31,26 @@ export const TETHER_BP_BY_TIER: Record<TetherTier, number> = {
 
 export interface Tether {
   id: string
+  /** Short name, shown in the sheet header: "Sworn oath to Prince Aldric". */
+  title: string
+  /** The full story, shown on the Description tab. */
   description: string
   tier: TetherTier
+}
+
+/**
+ * Tethers saved before titles existed held everything in the description,
+ * usually as "Type: details" (the example chips start one that way). Split that
+ * into a title and description; a short line with no colon becomes the title.
+ */
+export function migrateTether(t: Omit<Tether, 'title'> & { title?: string }): Tether {
+  if (t.title !== undefined) return t as Tether
+  const text = (t.description ?? '').trim()
+  const colon = text.indexOf(':')
+  if (colon > 0 && colon <= 40)
+    return { ...t, title: text.slice(0, colon).trim(), description: text.slice(colon + 1).trim() }
+  if (text.length <= 40 && !text.includes('\n')) return { ...t, title: text, description: '' }
+  return { ...t, title: '', description: text }
 }
 
 export function tetherRefundTotal(tethers: Tether[]): number {

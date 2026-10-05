@@ -11,14 +11,15 @@ interface Props {
 }
 
 export function TethersEditor({ value, onChange }: Props) {
-  // A blank tether, or one started from an example: the type is filled in
-  // and the player writes the specifics after it.
-  const add = (tier: TetherTier = 1, description = '') =>
+  // A blank tether, or one started from an example, which names it; the
+  // player makes the title specific and writes the details.
+  const add = (tier: TetherTier = 1, title = '') =>
     onChange([
       ...value,
       {
         id: `tether-${crypto.randomUUID()}`,
-        description,
+        title,
+        description: '',
         tier,
       },
     ])
@@ -45,7 +46,7 @@ export function TethersEditor({ value, onChange }: Props) {
               <button
                 key={ex}
                 type="button"
-                onClick={() => add(opt.tier as TetherTier, `${ex}: `)}
+                onClick={() => add(opt.tier as TetherTier, ex)}
                 className="rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-300 hover:border-zinc-500"
               >
                 {ex}
@@ -66,15 +67,26 @@ export function TethersEditor({ value, onChange }: Props) {
               className="rounded border border-zinc-800 bg-zinc-900 p-3 space-y-2"
             >
               <div className="flex items-start gap-2">
-                <textarea
-                  value={t.description}
-                  onChange={(e) =>
-                    update(t.id, { description: e.target.value })
-                  }
-                  placeholder="Sworn oath: to protect the prince at all costs"
-                  rows={2}
-                  className="flex-1 bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 resize-y"
-                />
+                <div className="flex-1 space-y-2">
+                  <input
+                    type="text"
+                    value={t.title}
+                    onChange={(e) => update(t.id, { title: e.target.value })}
+                    placeholder="Title, e.g. Sworn oath to Prince Aldric"
+                    aria-label="Tether title"
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500"
+                  />
+                  <textarea
+                    value={t.description}
+                    onChange={(e) =>
+                      update(t.id, { description: e.target.value })
+                    }
+                    placeholder="Description: who holds you to it, what it demands, what happens if you break it"
+                    aria-label="Tether description"
+                    rows={2}
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 resize-y"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => remove(t.id)}

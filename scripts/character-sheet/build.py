@@ -93,7 +93,7 @@ page2 = f'''
            named(['School', 'Lv'], [(s,) for s in SCHOOLS], ['72%', '28%'], 'compact') +
            named(['Medium', 'Lv'], [(m,) for m in MEDIUMS], ['72%', '28%'], 'compact') +
            '</div><p class="hint">Spell attack: d20 + school + medium vs Evasion. Save DC: 10 + school + medium.</p>')}
-    {panel('Tethers', rows(['Tether', 'Tier', 'Weight'], 4, ['66%', '17%', '17%']) +
+    {panel('Tethers', rows(['Title', 'Description', 'Tier'], 4, ['36%', '50%', '14%']) +
            '<div class="inline">' + field('Obligation threshold') + field('Total weight') + '</div>')}
     {panel('Flaws', rows(['Flaw', 'Quirk / Flaw / Vice'], 3, ['66%', '34%']))}
   </div>

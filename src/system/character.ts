@@ -30,6 +30,7 @@ import {
   speedCost,
 } from './costs'
 import {
+  migrateTether,
   tetherObligationWeight,
   tetherRefundTotal,
   type Tether,
@@ -504,7 +505,7 @@ export function ensureCombatSkills(raw: Character): Character {
     ...c,
     bonusBp: c.bonusBp ?? 0,
     speed: c.speed ?? DEFAULT_SPEED,
-    tethers: c.tethers ?? [],
+    tethers: (c.tethers ?? []).map(migrateTether),
     flaws: c.flaws ?? [],
     obligationThreshold: c.obligationThreshold ?? 0,
     gold: c.gold ?? 0,

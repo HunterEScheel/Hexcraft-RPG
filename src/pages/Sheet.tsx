@@ -222,7 +222,7 @@ export function Sheet() {
               title={`Tether · ${tierLabel}`}
               className="border-l-2 border-sky-600/70 pl-1.5 text-[11px] text-sky-300"
             >
-              {t.description || 'Untitled tether'}
+              {t.title || `${tierLabel} tether`}
             </span>
           )
         })}
@@ -593,6 +593,37 @@ export function Sheet() {
               onChange={setBodyDescriptions}
             />
           </ReadOnlySection>
+          {character.tethers.length > 0 && (
+            <ReadOnlySection title="Tethers">
+              <ul className="space-y-2">
+                {character.tethers.map((t) => {
+                  const tier = TETHER_TIERS.find((o) => o.tier === t.tier)
+                  return (
+                    <li
+                      key={t.id}
+                      className="rounded bg-zinc-900 border border-zinc-800 border-l-2 border-l-sky-600/70 px-3 py-2"
+                    >
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-sm text-sky-200">
+                          {t.title || `${tier?.label ?? `Tier ${t.tier}`} tether`}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-wider text-zinc-500 whitespace-nowrap">
+                          {tier?.label ?? `Tier ${t.tier}`} · weight {t.tier}
+                        </span>
+                      </div>
+                      {t.description ? (
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-300">
+                          {t.description}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs italic text-zinc-500">No description.</p>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </ReadOnlySection>
+          )}
         </div>
       )}
 
