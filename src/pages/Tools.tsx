@@ -1,5 +1,7 @@
 import { DCCalculator } from '../components/DCCalculator'
 import { SpellCalculator } from '../components/SpellCalculator'
+import { RunEmbeddings } from '../components/RunEmbeddings'
+import { useIsAdmin, useUser } from '../lib/useUser'
 
 // The rules live in the Player's Guide PDF (built by scripts/players-guide);
 // this page keeps only the tools a GM uses at the table.
@@ -7,6 +9,7 @@ const GUIDE_URL = '/hexcraft-players-guide.pdf'
 const SHEET_URL = '/hexcraft-character-sheet.pdf'
 
 export function Tools() {
+  const isAdmin = useIsAdmin(useUser())
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -38,6 +41,7 @@ export function Tools() {
       </div>
       <DCCalculator />
       <SpellCalculator />
+      {isAdmin && <RunEmbeddings />}
     </div>
   )
 }
