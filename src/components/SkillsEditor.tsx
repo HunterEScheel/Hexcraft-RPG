@@ -41,14 +41,15 @@ export function SkillsEditor({ value, onChange }: Props) {
     }
   }, [query])
 
-  // Each search by meaning costs an embedding, so wait for typing to pause.
+  // Each search by meaning costs an embedding, so wait until typing has
+  // stopped for a second.
   useEffect(() => {
     if (!supabaseConfigured || query.trim().length < 3) return
     const controller = new AbortController()
     const t = setTimeout(async () => {
       const r = await searchSkillsByMeaning(query, controller.signal)
       if (!controller.signal.aborted) setRelated({ query, skills: r })
-    }, 600)
+    }, 1000)
     return () => {
       controller.abort()
       clearTimeout(t)
@@ -121,9 +122,16 @@ export function SkillsEditor({ value, onChange }: Props) {
       onClick={() => addSkill(r.name, typedSpecificity)}
       className="w-full px-3 py-2 text-left hover:bg-zinc-900"
     >
-      <div className="text-sm text-zinc-100">
-        {r.name}
-        {typedSpecificity && <span className="text-zinc-400"> ({typedSpecificity})</span>}
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-sm text-zinc-100">
+          {r.name}
+          {typedSpecificity && <span className="text-zinc-400"> ({typedSpecificity})</span>}
+        </span>
+        {r.similarity !== undefined && (
+          <span className="text-[10px] font-mono text-zinc-500">
+            {Math.round(r.similarity * 100)}% match
+          </span>
+        )}
       </div>
       {r.description && (
         <div className="text-xs text-zinc-500 line-clamp-1">{r.description}</div>
