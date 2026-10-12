@@ -32,9 +32,10 @@ jobs:
 
       - name: Check the app is actually in the bundle
         run: |
-          # A table name rather than UI copy: a canary that will not go stale
-          # the next time a button is reworded.
-          if ! grep -q "hexcraft_characters" dist/assets/*.js; then
+          # A database function name rather than UI copy: a canary that will
+          # not go stale the next time a button is reworded. (Characters are
+          # read and written through RPCs, so the table name itself is gone.)
+          if ! grep -q "hexcraft_get_character" dist/assets/*.js; then
             echo "The bundle has no application code in it." >&2
             exit 1
           fi
