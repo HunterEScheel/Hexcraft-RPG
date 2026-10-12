@@ -63,3 +63,12 @@ export async function searchSkillsByMeaning(
     return []
   }
 }
+
+// A custom skill a player adds joins the shared list (hexcraft_add_skill), so
+// everyone's search finds it. A name already listed is left alone. Failing
+// quietly is fine: the skill is on the character either way.
+export async function addSkillToList(name: string): Promise<void> {
+  if (!supabaseConfigured || !supabase || !name.trim()) return
+  const { error } = await supabase.rpc('hexcraft_add_skill', { p_name: name.trim() })
+  if (error) console.error('adding skill to the list failed', error)
+}

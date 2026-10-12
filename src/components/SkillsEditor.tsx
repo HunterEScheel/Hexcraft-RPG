@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { skillLabel, splitSkillName, type CharacterSkill } from '../system/character'
 import { COMBAT_SKILLS, isCombatSkillId } from '../system/combatSkills'
 import { MAX_SKILL_LEVEL, skillCost } from '../system/costs'
-import { searchSkills, searchSkillsByMeaning, type SkillSearchResult } from '../lib/skills'
+import { addSkillToList, searchSkills, searchSkillsByMeaning, type SkillSearchResult } from '../lib/skills'
 import { supabaseConfigured } from '../lib/supabase'
 import { NumberStepper } from './NumberStepper'
 
@@ -87,8 +87,9 @@ export function SkillsEditor({ value, onChange }: Props) {
   // A specificity is the character's own: one character takes Driving for
   // motorcycles, another for airships. Typed text like "Driving (Motorcycles)"
   // becomes a name and a specificity, and the same skill can be taken more than
-  // once with different specificities.
-  const addSkill = (name: string, specificity?: string) => {
+  // once with different specificities. A typed skill that isn't on the list
+  // is added to it for everyone.
+  const addSkill = (name: string, specificity?: string, custom = false) => {
     const typed = { name: name.trim(), specificity: specificity?.trim() || undefined }
     if (!typed.name) return
     const label = skillLabel(typed).toLowerCase()
@@ -97,6 +98,7 @@ export function SkillsEditor({ value, onChange }: Props) {
       COMBAT_SKILLS.some((c) => c.name.toLowerCase() === typed.name.toLowerCase())
     )
       return
+    if (custom) void addSkillToList(typed.name)
     onChange([
       ...value,
       {
@@ -225,7 +227,7 @@ export function SkillsEditor({ value, onChange }: Props) {
                     type="button"
                     onClick={() => {
                       const typed = splitSkillName(query)
-                      addSkill(typed.name, typed.specificity)
+                      addSkill(typed.name, typed.specificity, true)
                     }}
                     className="w-full px-3 py-2 text-left text-sm text-amber-300 hover:bg-zinc-900"
                   >
