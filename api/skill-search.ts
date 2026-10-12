@@ -5,13 +5,12 @@
 // ones the app already uses.
 //
 // GET /api/skill-search?q=ride+a+horse → [{ id, name, description, similarity }],
-// every skill over a 50% match, closest first.
+// the 10 closest skills by match, closest first.
 
 const MODEL = process.env.EMBEDDING_MODEL || 'text-embedding-3-small'
 const MAX_QUERY = 80
-// Every skill at least this similar is shown, however many that is.
-const MIN_SIMILARITY = 0.5
-const MAX_MATCHES = 50
+// The closest skills, however close they are.
+const MATCHES = 10
 
 export async function GET(request: Request): Promise<Response> {
   const q = (new URL(request.url).searchParams.get('q') ?? '').trim().toLowerCase()
@@ -43,7 +42,7 @@ export async function GET(request: Request): Promise<Response> {
       apikey: anonKey,
       authorization: `Bearer ${anonKey}`,
     },
-    body: JSON.stringify({ query_embedding: embedding, match_count: MAX_MATCHES }),
+    body: JSON.stringify({ query_embedding: embedding, match_count: MATCHES }),
   })
   if (!matchRes.ok) {
     console.error('Supabase', matchRes.status, await matchRes.text())
@@ -51,10 +50,7 @@ export async function GET(request: Request): Promise<Response> {
   }
   // The same words give the same answer, so let the CDN keep it for a day:
   // repeat searches cost nothing.
-  const matches = ((await matchRes.json()) as { similarity: number }[]).filter(
-    (m) => m.similarity > MIN_SIMILARITY,
-  )
-  return json(matches, 200, 'public, s-maxage=86400, max-age=300')
+  return json(await matchRes.json(), 200, 'public, s-maxage=86400, max-age=300')
 }
 
 function json(body: unknown, status = 200, cache = 'no-store'): Response {

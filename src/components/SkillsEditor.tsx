@@ -55,11 +55,10 @@ export function SkillsEditor({ value, onChange }: Props) {
       clearTimeout(t)
     }
   }, [query])
-  // Only for the current text, and not repeating a name match.
+  // The top matches by meaning for the current text, even ones that also
+  // matched by name.
   const relatedOnly =
-    related.query === query && query.trim().length >= 3
-      ? related.skills.filter((r) => !results.some((n) => n.id === r.id))
-      : []
+    related.query === query && query.trim().length >= 3 ? related.skills : []
 
   const { saveSkills, combatSkills, customSkills } = useMemo(() => {
     const combatById = new Map(value.filter((s) => isCombatSkillId(s.id)).map((s) => [s.id, s]))
@@ -115,9 +114,9 @@ export function SkillsEditor({ value, onChange }: Props) {
   const setSpecificity = (id: string, specificity: string) =>
     onChange(value.map((s) => (s.id === id ? { ...s, specificity } : s)))
 
-  const renderResult = (r: SkillSearchResult) => (
+  const renderResult = (r: SkillSearchResult, group: string) => (
     <button
-      key={r.id}
+      key={`${group}-${r.id}`}
       type="button"
       onClick={() => addSkill(r.name, typedSpecificity)}
       className="w-full px-3 py-2 text-left hover:bg-zinc-900"
@@ -211,13 +210,13 @@ export function SkillsEditor({ value, onChange }: Props) {
               {searching && (
                 <div className="px-3 py-2 text-xs text-zinc-500">Searching…</div>
               )}
-              {results.map(renderResult)}
+              {results.map((r) => renderResult(r, 'name'))}
               {relatedOnly.length > 0 && (
                 <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-zinc-500">
                   Related skills
                 </div>
               )}
-              {relatedOnly.map(renderResult)}
+              {relatedOnly.map((r) => renderResult(r, 'meaning'))}
               {/* Skill names are freeform: whatever is typed can be added as-is,
                   e.g. a listed skill with a tech level or specialty tacked on. */}
               {!searching &&
