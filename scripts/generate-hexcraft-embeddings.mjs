@@ -4,9 +4,8 @@
 //
 // Usage:
 //   1. Put your skill list in scripts/hexcraft-skills.txt (one "Name | description" per line,
-//      or just "Name" — description is optional). A specificity goes in
-//      parentheses: "Animal Handling (Dogs) | ...".
-//      Needs hexcraft_0004 (the specificity column) applied.
+//      or just "Name" — description is optional). One line per skill:
+//      characters choose their own specificity, so the list has none.
 //   2. Set env vars: OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
 //   3. npm run embeddings
 
@@ -35,10 +34,8 @@ const lines = readFileSync('scripts/hexcraft-skills.txt', 'utf8')
 
 const skills = lines.map((line) => {
   const [label, ...descParts] = line.split('|').map((s) => s.trim())
-  const m = label.match(/^(.*\S)\s*\((.+)\)$/)
   return {
-    name: m ? m[1] : label,
-    specificity: m ? m[2].trim() : null,
+    name: label,
     description: descParts.join(' | ') || null,
   }
 })
@@ -63,20 +60,16 @@ async function embedBatch(inputs) {
 
 for (let i = 0; i < skills.length; i += BATCH_SIZE) {
   const batch = skills.slice(i, i + BATCH_SIZE)
-  const inputs = batch.map((s) => {
-    const label = s.specificity ? `${s.name} (${s.specificity})` : s.name
-    return s.description ? `${label}: ${s.description}` : label
-  })
+  const inputs = batch.map((s) => (s.description ? `${s.name}: ${s.description}` : s.name))
   const embeddings = await embedBatch(inputs)
   const rows = batch.map((s, j) => ({
     skill_name: s.name,
-    specificity: s.specificity,
     description: s.description,
     embedding: embeddings[j],
   }))
   const { error } = await supabase
     .from('hexcraft_skill_embeddings')
-    .upsert(rows, { onConflict: 'skill_name,specificity' })
+    .upsert(rows, { onConflict: 'skill_name' })
   if (error) {
     console.error('upsert failed', error)
     process.exit(1)

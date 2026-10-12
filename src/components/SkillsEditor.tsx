@@ -60,10 +60,12 @@ export function SkillsEditor({ value, onChange }: Props) {
     onChange(value.filter((s) => s.id !== id))
   }
 
-  // Typed text like "Animal Handling (Dogs)" becomes a name and a specificity.
-  // The same skill can be taken more than once with different specificities.
-  const addSkill = (text: string, specificity?: string | null, externalId?: number) => {
-    const typed = specificity == null ? splitSkillName(text) : { name: text.trim(), specificity }
+  // A specificity is the character's own: one character takes Driving for
+  // motorcycles, another for airships. Typed text like "Driving (Motorcycles)"
+  // becomes a name and a specificity, and the same skill can be taken more than
+  // once with different specificities.
+  const addSkill = (name: string, specificity?: string) => {
+    const typed = { name: name.trim(), specificity: specificity?.trim() || undefined }
     if (!typed.name) return
     const label = skillLabel(typed).toLowerCase()
     if (
@@ -71,14 +73,19 @@ export function SkillsEditor({ value, onChange }: Props) {
       COMBAT_SKILLS.some((c) => c.name.toLowerCase() === typed.name.toLowerCase())
     )
       return
-    const id = externalId ? `sk-${externalId}` : `custom-${crypto.randomUUID()}`
     onChange([
       ...value,
-      { id, name: typed.name, level: 1, ...(typed.specificity ? { specificity: typed.specificity } : {}) },
+      {
+        id: `custom-${crypto.randomUUID()}`,
+        name: typed.name,
+        level: 1,
+        ...(typed.specificity ? { specificity: typed.specificity } : {}),
+      },
     ])
     setQuery('')
     setResults([])
   }
+  const typedSpecificity = splitSkillName(query).specificity
 
   const setSpecificity = (id: string, specificity: string) =>
     onChange(value.map((s) => (s.id === id ? { ...s, specificity } : s)))
@@ -159,12 +166,12 @@ export function SkillsEditor({ value, onChange }: Props) {
                 <button
                   key={r.id}
                   type="button"
-                  onClick={() => addSkill(r.name, r.specificity ?? '', r.id)}
+                  onClick={() => addSkill(r.name, typedSpecificity)}
                   className="w-full px-3 py-2 text-left hover:bg-zinc-900"
                 >
                   <div className="text-sm text-zinc-100">
                     {r.name}
-                    {r.specificity && <span className="text-zinc-400"> ({r.specificity})</span>}
+                    {typedSpecificity && <span className="text-zinc-400"> ({typedSpecificity})</span>}
                   </div>
                   {r.description && (
                     <div className="text-xs text-zinc-500 line-clamp-1">
@@ -176,10 +183,13 @@ export function SkillsEditor({ value, onChange }: Props) {
               {/* Skill names are freeform: whatever is typed can be added as-is,
                   e.g. a listed skill with a tech level or specialty tacked on. */}
               {!searching &&
-                !results.some((r) => skillLabel(r).toLowerCase() === query.trim().toLowerCase()) && (
+                !results.some((r) => r.name.toLowerCase() === splitSkillName(query).name.toLowerCase()) && (
                   <button
                     type="button"
-                    onClick={() => addSkill(query)}
+                    onClick={() => {
+                      const typed = splitSkillName(query)
+                      addSkill(typed.name, typed.specificity)
+                    }}
                     className="w-full px-3 py-2 text-left text-sm text-amber-300 hover:bg-zinc-900"
                   >
                     + Add &quot;{query.trim()}&quot;{results.length === 0 ? ' as custom skill' : ' as typed'}
@@ -203,7 +213,7 @@ export function SkillsEditor({ value, onChange }: Props) {
                   type="text"
                   value={s.specificity ?? ''}
                   onChange={(e) => setSpecificity(s.id, e.target.value)}
-                  placeholder="Specificity (optional)"
+                  placeholder="Specificity, e.g. Motorcycles (optional)"
                   aria-label={`${s.name} specificity`}
                   className="flex-1 min-w-0 bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 placeholder:text-zinc-600"
                 />
