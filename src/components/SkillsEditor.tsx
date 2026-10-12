@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { skillLabel, splitSkillName, type CharacterSkill } from '../system/character'
 import { COMBAT_SKILLS, isCombatSkillId } from '../system/combatSkills'
 import { MAX_SKILL_LEVEL, skillCost } from '../system/costs'
-import { searchSkills, type SkillSearchResult } from '../lib/skills'
+import { searchSkills, searchSkillsByMeaning, type SkillSearchResult } from '../lib/skills'
 import { supabaseConfigured } from '../lib/supabase'
 import { NumberStepper } from './NumberStepper'
 
@@ -15,6 +15,11 @@ export function SkillsEditor({ value, onChange }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SkillSearchResult[]>([])
   const [searching, setSearching] = useState(false)
+  // Skills that mean what was typed, found a moment later by /api/skill-search.
+  const [related, setRelated] = useState<{ query: string; skills: SkillSearchResult[] }>({
+    query: '',
+    skills: [],
+  })
 
   useEffect(() => {
     if (!query.trim()) {
@@ -35,6 +40,25 @@ export function SkillsEditor({ value, onChange }: Props) {
       clearTimeout(t)
     }
   }, [query])
+
+  // Each search by meaning costs an embedding, so wait for typing to pause.
+  useEffect(() => {
+    if (!supabaseConfigured || query.trim().length < 3) return
+    const controller = new AbortController()
+    const t = setTimeout(async () => {
+      const r = await searchSkillsByMeaning(query, controller.signal)
+      if (!controller.signal.aborted) setRelated({ query, skills: r })
+    }, 600)
+    return () => {
+      controller.abort()
+      clearTimeout(t)
+    }
+  }, [query])
+  // Only for the current text, and not repeating a name match.
+  const relatedOnly =
+    related.query === query && query.trim().length >= 3
+      ? related.skills.filter((r) => !results.some((n) => n.id === r.id))
+      : []
 
   const { saveSkills, combatSkills, customSkills } = useMemo(() => {
     const combatById = new Map(value.filter((s) => isCombatSkillId(s.id)).map((s) => [s.id, s]))
@@ -89,6 +113,23 @@ export function SkillsEditor({ value, onChange }: Props) {
 
   const setSpecificity = (id: string, specificity: string) =>
     onChange(value.map((s) => (s.id === id ? { ...s, specificity } : s)))
+
+  const renderResult = (r: SkillSearchResult) => (
+    <button
+      key={r.id}
+      type="button"
+      onClick={() => addSkill(r.name, typedSpecificity)}
+      className="w-full px-3 py-2 text-left hover:bg-zinc-900"
+    >
+      <div className="text-sm text-zinc-100">
+        {r.name}
+        {typedSpecificity && <span className="text-zinc-400"> ({typedSpecificity})</span>}
+      </div>
+      {r.description && (
+        <div className="text-xs text-zinc-500 line-clamp-1">{r.description}</div>
+      )}
+    </button>
+  )
 
   const renderSkillRow = ({
     def,
@@ -162,24 +203,13 @@ export function SkillsEditor({ value, onChange }: Props) {
               {searching && (
                 <div className="px-3 py-2 text-xs text-zinc-500">Searching…</div>
               )}
-              {results.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => addSkill(r.name, typedSpecificity)}
-                  className="w-full px-3 py-2 text-left hover:bg-zinc-900"
-                >
-                  <div className="text-sm text-zinc-100">
-                    {r.name}
-                    {typedSpecificity && <span className="text-zinc-400"> ({typedSpecificity})</span>}
-                  </div>
-                  {r.description && (
-                    <div className="text-xs text-zinc-500 line-clamp-1">
-                      {r.description}
-                    </div>
-                  )}
-                </button>
-              ))}
+              {results.map(renderResult)}
+              {relatedOnly.length > 0 && (
+                <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-zinc-500">
+                  Related skills
+                </div>
+              )}
+              {relatedOnly.map(renderResult)}
               {/* Skill names are freeform: whatever is typed can be added as-is,
                   e.g. a listed skill with a tech level or specialty tacked on. */}
               {!searching &&
@@ -192,7 +222,7 @@ export function SkillsEditor({ value, onChange }: Props) {
                     }}
                     className="w-full px-3 py-2 text-left text-sm text-amber-300 hover:bg-zinc-900"
                   >
-                    + Add &quot;{query.trim()}&quot;{results.length === 0 ? ' as custom skill' : ' as typed'}
+                    + Add &quot;{query.trim()}&quot;{results.length + relatedOnly.length === 0 ? ' as custom skill' : ' as typed'}
                   </button>
                 )}
             </div>

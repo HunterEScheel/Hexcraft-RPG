@@ -45,21 +45,21 @@ export async function searchSkills(
   }))
 }
 
-export async function searchSkillsBySimilarity(
-  embedding: number[],
-  limit = 12,
+// Skills that mean what was typed ("ride a horse" → Riding), from the
+// /api/skill-search function, which holds the OpenAI key. Empty when that
+// isn't set up or the skills have no embeddings yet.
+export async function searchSkillsByMeaning(
+  query: string,
+  signal?: AbortSignal,
 ): Promise<SkillSearchResult[]> {
-  if (!supabaseConfigured || !supabase) return []
-
-  const { data, error } = await supabase.rpc('hexcraft_match_skills', {
-    query_embedding: embedding,
-    match_count: limit,
-  })
-
-  if (error) {
-    console.error('similarity search failed', error)
+  const q = splitSkillName(query).name.trim().toLowerCase()
+  if (q.length < 3) return []
+  try {
+    const res = await fetch(`/api/skill-search?q=${encodeURIComponent(q)}`, { signal })
+    if (!res.ok) return []
+    const data: unknown = await res.json()
+    return Array.isArray(data) ? (data as SkillSearchResult[]) : []
+  } catch {
     return []
   }
-
-  return (data ?? []) as SkillSearchResult[]
 }
