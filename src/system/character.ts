@@ -500,7 +500,21 @@ export function ensureCombatSkills(raw: Character): Character {
       ? { ...found, name: def.name }
       : { id: def.id, name: def.name, level: 0 }
   })
-  const custom = c.skills.filter((s) => !isCombatSkillId(s.id))
+  // Skills added from search used to share the list's id, so a skill taken
+  // twice had two rows with one id, and editing one changed both. Give any
+  // repeat its own id.
+  const seenIds = new Set<string>()
+  const custom = c.skills
+    .filter((s) => !isCombatSkillId(s.id))
+    .map((s) => {
+      if (!seenIds.has(s.id)) {
+        seenIds.add(s.id)
+        return s
+      }
+      const id = `custom-${crypto.randomUUID()}`
+      seenIds.add(id)
+      return { ...s, id }
+    })
   return {
     ...c,
     bonusBp: c.bonusBp ?? 0,

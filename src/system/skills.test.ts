@@ -22,4 +22,21 @@ describe('skill specificity', () => {
     expect(once.skills.find((s) => s.id === 'combat-melee-1h')?.name).toBe('1-handed melee')
     expect(ensureCombatSkills(once).skills.find((s) => s.id === 'custom-1')).toEqual(driving)
   })
+
+  it('gives a skill taken twice under one id its own id', () => {
+    const base = emptyCharacter('Peasants', 150)
+    const twice = {
+      ...base,
+      skills: [
+        ...base.skills,
+        { id: 'sk-12', name: 'Driving', specificity: 'Motorcycles', level: 2 },
+        { id: 'sk-12', name: 'Driving', level: 1 },
+      ],
+    }
+    const driving = ensureCombatSkills(twice).skills.filter((s) => s.name === 'Driving')
+    expect(driving).toHaveLength(2)
+    expect(driving[0].id).toBe('sk-12')
+    expect(driving[1].id).not.toBe('sk-12')
+    expect(driving[1]).toMatchObject({ name: 'Driving', level: 1 })
+  })
 })

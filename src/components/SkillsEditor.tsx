@@ -15,6 +15,8 @@ export function SkillsEditor({ value, onChange }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SkillSearchResult[]>([])
   const [searching, setSearching] = useState(false)
+  // Why the last add didn't happen, if it didn't.
+  const [addNote, setAddNote] = useState<string | null>(null)
   // Skills that mean what was typed, found a moment later by /api/skill-search.
   const [related, setRelated] = useState<{ query: string; skills: SkillSearchResult[] }>({
     query: '',
@@ -93,11 +95,21 @@ export function SkillsEditor({ value, onChange }: Props) {
     const typed = { name: name.trim(), specificity: specificity?.trim() || undefined }
     if (!typed.name) return
     const label = skillLabel(typed).toLowerCase()
-    if (
-      value.some((s) => skillLabel(s).toLowerCase() === label) ||
-      COMBAT_SKILLS.some((c) => c.name.toLowerCase() === typed.name.toLowerCase())
-    )
+    if (COMBAT_SKILLS.some((c) => c.name.toLowerCase() === typed.name.toLowerCase())) {
+      setAddNote(`${typed.name} is a combat skill; raise it above instead.`)
       return
+    }
+    // A skill can be taken again only if every copy has its own specificity.
+    const same = value.find((s) => skillLabel(s).toLowerCase() === label)
+    if (same) {
+      setAddNote(
+        same.specificity?.trim()
+          ? `You already have ${skillLabel(same)}.`
+          : `You already have ${same.name}. Give it a specificity first, then you can add ${same.name} again with another.`,
+      )
+      return
+    }
+    setAddNote(null)
     if (custom) void addSkillToList(typed.name)
     onChange([
       ...value,
@@ -199,7 +211,10 @@ export function SkillsEditor({ value, onChange }: Props) {
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setAddNote(null)
+            }}
             placeholder={
               supabaseConfigured
                 ? 'Search non-combat skills, or type your own…'
@@ -237,6 +252,8 @@ export function SkillsEditor({ value, onChange }: Props) {
             </div>
           )}
         </div>
+
+        {addNote && <p className="mt-2 text-xs text-amber-300">{addNote}</p>}
 
         {customSkills.length === 0 ? (
           <p className="text-sm text-zinc-500 italic mt-3">No other skills yet.</p>
