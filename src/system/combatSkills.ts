@@ -9,6 +9,11 @@ export interface CombatSkillDef {
   effect: string
   category: CombatSkillCategory
   requiresWeapon?: WeaponCategory
+  /**
+   * Weapons of this category each get their own attack row, alongside the
+   * skill's own bare attack (Unarmed: fists, plus any claws or horns).
+   */
+  extraWeapons?: WeaponCategory
   attribute?: AttributeName
 }
 
@@ -72,8 +77,9 @@ export const COMBAT_SKILLS: readonly CombatSkillDef[] = [
   {
     id: 'combat-unarmed',
     name: 'Unarmed',
-    effect: 'Attack (action) +1',
+    effect: 'Attack (action) +1 · fists or natural weapons (claws, horns, bite)',
     category: 'action',
+    extraWeapons: 'natural',
     attribute: 'Agility',
   },
   {

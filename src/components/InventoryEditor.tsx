@@ -223,6 +223,8 @@ function ItemEditor({ item, onChange, onRemove, onClose }: ItemEditorProps) {
                 onChange({
                   weaponCategory: v as WeaponCategory,
                   armor: undefined,
+                  // Claws and horns are always to hand.
+                  ...(v === 'natural' ? { equipped: true } : {}),
                 })
               }
             }}

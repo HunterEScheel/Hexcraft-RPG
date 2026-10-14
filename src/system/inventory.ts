@@ -3,6 +3,8 @@ export const WEAPON_CATEGORIES = [
   { key: 'melee-2h', label: 'Melee (2H)' },
   { key: 'fired-1h', label: 'Fired (1H)' },
   { key: 'fired-2h', label: 'Fired (2H)' },
+  // Claws, horns, a bite: part of the body, used with the Unarmed skill.
+  { key: 'natural', label: 'Natural (Unarmed)' },
 ] as const
 
 export type WeaponCategory = (typeof WEAPON_CATEGORIES)[number]['key']

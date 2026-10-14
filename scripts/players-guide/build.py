@@ -34,7 +34,7 @@ COMBAT = [('Dodge', 'Passive', '+1 Evasion per level; save vs. agility-based eff
           ('1-handed fired', 'Action', 'Attack bonus with 1H fired weapons', 'Agility'),
           ('2-handed melee', 'Action', 'Attack bonus with 2H melee weapons', 'Power'),
           ('2-handed fired', 'Action', 'Attack bonus with 2H fired weapons', 'Power'),
-          ('Unarmed', 'Action', 'Attack bonus when fighting bare-handed', 'Agility'),
+          ('Unarmed', 'Action', 'Attack bonus with fists or natural weapons (claws, horns, bite)', 'Agility'),
           ('Grapple', 'Action', 'Attack bonus to seize and hold', 'Agility'),
           ('Tackle', 'Action', 'Attack bonus to knock down or drive back', 'Power')]
 
@@ -200,6 +200,7 @@ section('combat', 'Combat', f'''
 <div class="formula">d20 + weapon skill + attribute &nbsp;vs&nbsp; Evasion</div>
 <div class="formula">Evasion = 10 + Agility + Dodge − armor penalties</div>
 <p>On a hit, roll the weapon's damage (for example a shortsword: 1d6 Physical). The GM may add damage types for the situation: a torch deals Fire.</p>
+<p><b>Natural weapons.</b> Claws, horns, a bite or a tail are weapons that are part of you. Add one to your inventory with the category <i>Natural (Unarmed)</i>, its damage in the notes (for example claws: 1d6 Physical). It attacks with the Unarmed skill, can't be dropped or disarmed, and sits beside your plain fists in your attacks.</p>
 <div class="example"><b>Example.</b> A bandit with 1-handed melee +3 and Power +2 swings at Mira (Evasion 14): d20 + 5, rolls 13, total 18. Hit, 1d6 + 2 Physical.</div>
 <h3>Damage types</h3>
 <p>All damage has a type: {DAMAGE_TYPES}.</p>

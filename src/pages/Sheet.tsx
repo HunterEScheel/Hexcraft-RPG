@@ -778,6 +778,20 @@ function CombatTab({
         attrValue,
         total,
       })
+      // Natural weapons (claws, horns) attack with this skill too.
+      if (def.extraWeapons) {
+        for (const w of equippedByCategory.get(def.extraWeapons) ?? []) {
+          actions.push({
+            key: `${def.id}:${w.id}`,
+            label: w.name || def.name,
+            notes: w.notes,
+            def,
+            level,
+            attrValue,
+            total,
+          })
+        }
+      }
     }
   }
 
