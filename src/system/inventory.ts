@@ -9,6 +9,9 @@ export const WEAPON_CATEGORIES = [
 
 export type WeaponCategory = (typeof WEAPON_CATEGORIES)[number]['key']
 
+export const NATURAL_WEAPON_ATTRIBUTES = ['Agility', 'Power'] as const
+export type NaturalWeaponAttribute = (typeof NATURAL_WEAPON_ATTRIBUTES)[number]
+
 export function weaponCategoryLabel(key: WeaponCategory): string {
   return WEAPON_CATEGORIES.find((c) => c.key === key)?.label ?? key
 }
@@ -144,6 +147,11 @@ export interface InventoryItem {
   quantity: number
   notes?: string
   weaponCategory?: WeaponCategory
+  /**
+   * Natural weapons only: the attribute the attack uses. Claws can be quick
+   * (Agility) and horns brutal (Power). Agility when unset, like the skill.
+   */
+  attackAttribute?: NaturalWeaponAttribute
   armor?: ArmorStats
   equipped?: boolean
 }

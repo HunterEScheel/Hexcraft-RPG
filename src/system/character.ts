@@ -551,10 +551,11 @@ export function combatSkillLevel(c: Character, id: string): number {
 }
 
 /** A maneuver's hit bonus: its combat skill plus that skill's attribute. */
-export function maneuverBonus(c: Character, skillId: string): number {
+/** Skill + attribute; `attribute` overrides the skill's own (a natural weapon's choice). */
+export function maneuverBonus(c: Character, skillId: string, attribute?: AttributeName): number {
   const def = COMBAT_SKILLS.find((s) => s.id === skillId)
-  const attribute = def?.attribute ? (c.attributes[def.attribute] ?? 0) : 0
-  return combatSkillLevel(c, skillId) + attribute
+  const attr = attribute ?? def?.attribute
+  return combatSkillLevel(c, skillId) + (attr ? (c.attributes[attr] ?? 0) : 0)
 }
 
 // Migrate legacy armor (flat reductionDie / damageThreshold / durability /

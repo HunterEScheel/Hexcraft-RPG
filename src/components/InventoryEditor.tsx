@@ -3,6 +3,7 @@ import {
   ARMOR_CLASSES,
   ARMOR_CLASS_STATS,
   DAMAGE_TYPES,
+  NATURAL_WEAPON_ATTRIBUTES,
   WEAPON_CATEGORIES,
   armorEvasionReduction,
   armorMaxDurability,
@@ -249,6 +250,29 @@ function ItemEditor({ item, onChange, onRemove, onClose }: ItemEditorProps) {
             />
             Equipped
           </label>
+        )}
+        {item.weaponCategory === 'natural' && (
+          <div className="flex items-center gap-1 text-xs text-zinc-400">
+            Attacks with
+            {NATURAL_WEAPON_ATTRIBUTES.map((attr) => {
+              const active = (item.attackAttribute ?? 'Agility') === attr
+              return (
+                <button
+                  key={attr}
+                  type="button"
+                  onClick={() => onChange({ attackAttribute: attr })}
+                  className={
+                    'rounded border px-2 py-0.5 ' +
+                    (active
+                      ? 'border-amber-500 bg-amber-900/30 text-amber-200'
+                      : 'border-zinc-700 text-zinc-400 hover:border-zinc-500')
+                  }
+                >
+                  {attr === 'Agility' ? 'AGI' : 'POW'}
+                </button>
+              )
+            })}
+          </div>
         )}
       </div>
       {itemKind === 'armor' && item.armor && (

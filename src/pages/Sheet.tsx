@@ -13,7 +13,7 @@ import {
   type Character,
 } from '../system/character'
 import { magicSchoolCost, skillCost } from '../system/costs'
-import { ATTRIBUTES } from '../system/attributes'
+import { ATTRIBUTES, type AttributeName } from '../system/attributes'
 import { COMBAT_SKILLS, isCombatSkillId } from '../system/combatSkills'
 import {
   MAGIC_MEDIUMS,
@@ -707,7 +707,7 @@ function CombatTab({
   const isReaction = (m: (typeof maneuvers)[number]) =>
     m.draft.castingTime === 'reaction'
   const reactionManeuvers = maneuvers.filter(isReaction)
-  const maneuverRow = (m: (typeof maneuvers)[number]) => {
+  const maneuverRow = (m: (typeof maneuvers)[number], attribute?: AttributeName) => {
     const def = COMBAT_SKILLS.find((d) => d.id === m.skillId)
     return (
       <SavedEffectRow
@@ -716,7 +716,7 @@ function CombatTab({
           id: m.id,
           name: m.name,
           source: <span className="text-rose-300">{def?.name ?? 'Maneuver'}</span>,
-          bonus: maneuverBonus(character, m.skillId),
+          bonus: maneuverBonus(character, m.skillId, attribute),
           draft: m.draft,
         }}
         verb="Use"
@@ -744,6 +744,8 @@ function CombatTab({
     notes?: string
     def: (typeof COMBAT_SKILLS)[number]
     level: number
+    /** The attribute this attack uses: the skill's, or a natural weapon's choice. */
+    attribute?: AttributeName
     attrValue: number
     total: number
   }
@@ -765,6 +767,7 @@ function CombatTab({
           notes: w.notes,
           def,
           level,
+          attribute: def.attribute,
           attrValue,
           total,
         })
@@ -775,20 +778,25 @@ function CombatTab({
         label: def.name,
         def,
         level,
+        attribute: def.attribute,
         attrValue,
         total,
       })
       // Natural weapons (claws, horns) attack with this skill too.
       if (def.extraWeapons) {
         for (const w of equippedByCategory.get(def.extraWeapons) ?? []) {
+          // Each natural weapon picks Power or Agility.
+          const attribute = w.attackAttribute ?? def.attribute
+          const value = attribute ? (character.attributes[attribute] ?? 0) : 0
           actions.push({
             key: `${def.id}:${w.id}`,
             label: w.name || def.name,
             notes: w.notes,
             def,
             level,
-            attrValue,
-            total,
+            attribute,
+            attrValue: value,
+            total: level + value,
           })
         }
       }
@@ -832,7 +840,7 @@ function CombatTab({
             {a.notes && <div className="text-xs text-zinc-300">{a.notes}</div>}
             <div className="text-xs text-zinc-500 font-mono">
               Skill {fmt(a.level)}
-              {a.def.attribute && ` · ${a.def.attribute} ${fmt(a.attrValue)}`}
+              {a.attribute && ` · ${a.attribute} ${fmt(a.attrValue)}`}
             </div>
           </div>
           <span className="text-base font-mono text-amber-300 whitespace-nowrap">
@@ -850,7 +858,7 @@ function CombatTab({
                 1 action · weapon damage · no EP
               </span>
             </li>
-            {own.map(maneuverRow)}
+            {own.map((m) => maneuverRow(m, a.attribute))}
           </ul>
         )}
       </li>
@@ -909,7 +917,7 @@ function CombatTab({
               </>
             }
           />
-          {reactionManeuvers.map(maneuverRow)}
+          {reactionManeuvers.map((m) => maneuverRow(m))}
         </ul>
       </ReadOnlySection>
 

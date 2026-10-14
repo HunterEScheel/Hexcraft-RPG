@@ -200,7 +200,7 @@ section('combat', 'Combat', f'''
 <div class="formula">d20 + weapon skill + attribute &nbsp;vs&nbsp; Evasion</div>
 <div class="formula">Evasion = 10 + Agility + Dodge − armor penalties</div>
 <p>On a hit, roll the weapon's damage (for example a shortsword: 1d6 Physical). The GM may add damage types for the situation: a torch deals Fire.</p>
-<p><b>Natural weapons.</b> Claws, horns, a bite or a tail are weapons that are part of you. Add one to your inventory with the category <i>Natural (Unarmed)</i>, its damage in the notes (for example claws: 1d6 Physical). It attacks with the Unarmed skill, can't be dropped or disarmed, and sits beside your plain fists in your attacks.</p>
+<p><b>Natural weapons.</b> Claws, horns, a bite or a tail are weapons that are part of you. Add one to your inventory with the category <i>Natural (Unarmed)</i>, its damage in the notes (for example claws: 1d6 Physical). It attacks with the Unarmed skill plus your choice of <b>Agility</b> (quick claws, a snapping bite) or <b>Power</b> (goring horns, a crushing tail), picked per weapon. It can't be dropped or disarmed, and sits beside your plain fists in your attacks.</p>
 <div class="example"><b>Example.</b> A bandit with 1-handed melee +3 and Power +2 swings at Mira (Evasion 14): d20 + 5, rolls 13, total 18. Hit, 1d6 + 2 Physical.</div>
 <h3>Damage types</h3>
 <p>All damage has a type: {DAMAGE_TYPES}.</p>
