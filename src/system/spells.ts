@@ -391,30 +391,38 @@ export interface SavedSpell {
 }
 
 /**
- * A spell that mechanically alters creatures (a buff or debuff, or dice of
- * damage or healing) and lasts beyond the instant needs concentration;
- * anything else lasts without it.
+ * A lasting spell needs concentration when it works against a creature: it
+ * inflicts a debuff or condition, or keeps dealing damage (or healing) dice.
+ * Buffs, senses, utility, illusions and knowledge last on their own, like
+ * 5e's Mage Armor or Darkvision.
  */
 export function needsConcentration(draft: SpellDraft): boolean {
   const buff = SPELL_CRITERIA.find((c) => c.key === 'buffDebuff')
   const effect = buff ? selectedOption(buff, selectionFor(draft, 'buffDebuff')) : undefined
-  const altersCreature =
-    effect !== undefined && effect.tier > 0 && !NO_CONCENTRATION_EFFECTS.has(effect.label)
-  return altersCreature || draft.damageDice > 0
+  return (effect !== undefined && CONCENTRATION_EFFECTS.has(effect.label)) || draft.damageDice > 0
 }
 
-/**
- * Buff/Debuff effects that inform or deceive rather than change a creature,
- * so they last without concentration: magic detection, knowledge, illusions.
- */
-export const NO_CONCENTRATION_EFFECTS: ReadonlySet<string> = new Set([
-  'magic detection',
-  'cursory knowledge',
-  'fundamental knowledge',
-  'detailed knowledge',
-  'total knowledge',
-  '1-sense illusions',
-  'multi-sense illusions',
+/** The Buff/Debuff options that are debuffs and conditions: these need concentration. */
+export const CONCENTRATION_EFFECTS: ReadonlySet<string> = new Set([
+  'inconvenience',
+  'poisoned',
+  'deafened',
+  'grappled',
+  'slowed',
+  'prone',
+  'frightened',
+  'illness',
+  'exhaustion',
+  'disability',
+  'restrained',
+  'blinded',
+  'silenced',
+  'charmed',
+  'debilitated',
+  'banished',
+  'dominated',
+  'polymorphed',
+  'soul-bound',
 ])
 
 /** The duration criterion's no-concentration and concentration modes, if it has both. */
@@ -429,7 +437,7 @@ export function concentrationModes(
 
 /**
  * Moves a spell's duration onto the list the concentration rule allows,
- * keeping the same length where that list has it: a buff, debuff or dice of
+ * keeping the same length where that list has it: a debuff or dice of
  * damage or healing needs concentration unless instantaneous; otherwise no
  * concentration.
  */

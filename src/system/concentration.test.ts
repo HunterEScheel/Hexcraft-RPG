@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CONCENTRATION_EFFECTS,
   SPELL_CRITERIA,
   applyConcentrationRule,
   emptySpellDraft,
@@ -20,32 +21,30 @@ const withDuration = (d: SpellDraft, modeIndex: number, optionIndex: number): Sp
 })
 
 describe('concentration rule', () => {
-  it('needs concentration when it alters creatures: a buff, debuff or dice', () => {
+  const pick = (label: string) => {
+    const buff = SPELL_CRITERIA.find((c) => c.key === 'buffDebuff')!
+    const modeIndex = buff.modes!.findIndex((m) => m.options.some((o) => o.label === label))
+    const optionIndex = buff.modes![modeIndex].options.findIndex((o) => o.label === label)
+    return {
+      ...emptySpellDraft(),
+      selections: { ...emptySpellDraft().selections, buffDebuff: { modeIndex, optionIndex } },
+    }
+  }
+
+  it('needs concentration for debuffs and dice, not buffs', () => {
     expect(needsConcentration(emptySpellDraft())).toBe(false)
-    // A saving throw alone doesn't count.
     expect(needsConcentration({ ...emptySpellDraft(), targeting: 'grit' })).toBe(false)
     expect(needsConcentration({ ...emptySpellDraft(), damageDice: 2 })).toBe(true)
-    const buffed = {
-      ...emptySpellDraft(),
-      selections: { ...emptySpellDraft().selections, buffDebuff: { modeIndex: 1, optionIndex: 0 } },
-    }
-    expect(needsConcentration(buffed)).toBe(true)
+    for (const label of ['poisoned', 'frightened', 'restrained', 'charmed', 'dominated'])
+      expect(needsConcentration(pick(label))).toBe(true)
+    for (const label of ['darkvision', '+5 skill', 'total evasion', 'magic detection', 'total knowledge', 'multi-sense illusions'])
+      expect(needsConcentration(pick(label))).toBe(false)
   })
 
-  it('does not count magic detection, knowledge or illusions', () => {
-    const pick = (label: string) => {
-      const buff = SPELL_CRITERIA.find((c) => c.key === 'buffDebuff')!
-      const modeIndex = buff.modes!.findIndex((m) => m.options.some((o) => o.label === label))
-      const optionIndex = buff.modes![modeIndex].options.findIndex((o) => o.label === label)
-      return {
-        ...emptySpellDraft(),
-        selections: { ...emptySpellDraft().selections, buffDebuff: { modeIndex, optionIndex } },
-      }
-    }
-    for (const label of ['magic detection', 'cursory knowledge', 'total knowledge', '1-sense illusions', 'multi-sense illusions'])
-      expect(needsConcentration(pick(label))).toBe(false)
-    expect(needsConcentration(pick('darkvision'))).toBe(true)
-    expect(needsConcentration(pick('detect lies'))).toBe(true)
+  it('lists only real Buff/Debuff options as needing concentration', () => {
+    const buff = SPELL_CRITERIA.find((c) => c.key === 'buffDebuff')!
+    const labels = new Set(buff.modes!.flatMap((m) => m.options.map((o) => o.label)))
+    for (const label of CONCENTRATION_EFFECTS) expect(labels.has(label)).toBe(true)
   })
 
   it('moves a lasting damage spell onto concentration, keeping its length', () => {
@@ -54,11 +53,11 @@ describe('concentration rule', () => {
     const long = withDuration(
       {
         ...emptySpellDraft(),
-        selections: { ...emptySpellDraft().selections, buffDebuff: { modeIndex: 2, optionIndex: 0 } },
+        selections: pick('frightened').selections,
       },
       0,
       5,
-    ) // a buff, permanent
+    ) // a debuff, permanent
     expect(label(applyConcentrationRule(long))).toBe('concentration:8 hours')
   })
 
