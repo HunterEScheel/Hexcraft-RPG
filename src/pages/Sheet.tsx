@@ -36,13 +36,14 @@ import { TakeDamagePanel } from '../components/TakeDamagePanel'
 import { DeathSavePanel } from '../components/DeathSavePanel'
 import { LongRestDialog } from '../components/LongRestDialog'
 
-type Tab = 'general' | 'combat' | 'spellcasting' | 'description'
+type Tab = 'general' | 'combat' | 'spellcasting' | 'description' | 'notes'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General' },
   { key: 'combat', label: 'Combat' },
   { key: 'spellcasting', label: 'Spellcasting' },
   { key: 'description', label: 'Description' },
+  { key: 'notes', label: 'Notes' },
 ]
 
 const ATTRIBUTE_ABBR: Record<(typeof ATTRIBUTES)[number], string> = {
@@ -189,6 +190,7 @@ export function Sheet() {
     setCharacter((c) => (c ? { ...c, inventory } : c))
   const setBodyDescriptions = (bodyDescriptions: Partial<Record<BodyPart, string>>) =>
     setCharacter((c) => (c ? { ...c, bodyDescriptions } : c))
+  const setNotes = (notes: string) => setCharacter((c) => (c ? { ...c, notes } : c))
 
   const hasMagic =
     Object.values(character.magicSchools).some((v) => v > 0) ||
@@ -356,7 +358,7 @@ export function Sheet() {
         </button>
       </div>
 
-      <nav className="flex gap-1 border-b border-zinc-800">
+      <nav className="flex gap-1 overflow-x-auto border-b border-zinc-800">
         {TABS.map((t) => {
           const active = t.key === tab
           return (
@@ -655,6 +657,20 @@ export function Sheet() {
             </ReadOnlySection>
           )}
         </div>
+      )}
+
+      {tab === 'notes' && (
+        <ReadOnlySection title="Notes">
+          <textarea
+            value={character.notes ?? ''}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Anything worth remembering: NPCs met, leads, debts owed, loot to split, what the party promised…"
+            aria-label="Character notes"
+            rows={18}
+            className="w-full min-h-[24rem] bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm leading-relaxed text-zinc-100 placeholder:text-zinc-600 resize-y"
+          />
+          <p className="mt-1 text-[10px] text-zinc-500">Saved with the character as you type.</p>
+        </ReadOnlySection>
       )}
 
       {!supabaseConfigured && (

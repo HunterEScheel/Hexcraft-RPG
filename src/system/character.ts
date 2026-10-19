@@ -113,6 +113,8 @@ export interface Character {
   deathSaves: DeathSaves
   tempHp: number
   bodyDescriptions: Partial<Record<BodyPart, string>>
+  /** Free-form notes the player keeps on the sheet's Notes tab. */
+  notes?: string
   /** Which one-off data migrations have run; see migrateRules. */
   rulesVersion?: number
 }
