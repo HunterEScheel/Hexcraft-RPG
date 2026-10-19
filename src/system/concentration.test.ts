@@ -31,13 +31,15 @@ describe('concentration rule', () => {
     }
   }
 
-  it('needs concentration for debuffs and dice, not buffs', () => {
+  it('splits buffs and debuffs the way 5e does', () => {
     expect(needsConcentration(emptySpellDraft())).toBe(false)
     expect(needsConcentration({ ...emptySpellDraft(), targeting: 'grit' })).toBe(false)
     expect(needsConcentration({ ...emptySpellDraft(), damageDice: 2 })).toBe(true)
-    for (const label of ['poisoned', 'frightened', 'restrained', 'charmed', 'dominated'])
+    // Enhance Ability, Slow, Hold Person, Silent/Major Image, Detect Magic.
+    for (const label of ['+5 skill', 'slowed', 'debilitated', 'multi-sense illusions', 'magic detection'])
       expect(needsConcentration(pick(label))).toBe(true)
-    for (const label of ['darkvision', '+5 skill', 'total evasion', 'magic detection', 'total knowledge', 'multi-sense illusions'])
+    // Darkvision, Charm Person, Blindness/Deafness, Contagion, Command, Minor Illusion.
+    for (const label of ['darkvision', 'charmed', 'blinded', 'illness', 'prone', '1-sense illusions'])
       expect(needsConcentration(pick(label))).toBe(false)
   })
 

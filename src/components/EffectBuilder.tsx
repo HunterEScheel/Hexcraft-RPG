@@ -1,5 +1,6 @@
 import {
   CASTING_TIMES,
+  CONCENTRATION_EFFECTS,
   EP_PER_DAMAGE_DIE,
   SPELL_CRITERIA,
   SPELL_TARGETING_OPTIONS,
@@ -40,7 +41,7 @@ export function EffectBuilder({
   damageLabel?: string
 }) {
   // Every change re-applies the concentration rule, so a spell that gains a
-  // debuff or dice moves its duration onto the concentration list.
+  // concentration effect or dice moves its duration onto that list.
   const onChange = (update: (d: SpellDraft) => SpellDraft) =>
     onDraftChange((d) => applyConcentrationRule(update(d), criteria))
   const setMode = (key: CriterionKey, modeIndex: number) =>
@@ -276,6 +277,14 @@ export function CriterionRow({
               }
             >
               <span>{opt.label}</span>
+              {criterion.key === 'buffDebuff' && CONCENTRATION_EFFECTS.has(opt.label) && (
+                <span
+                  title="Needs concentration unless instantaneous"
+                  className="ml-1 rounded bg-violet-900/50 px-1 text-[9px] font-semibold text-violet-200"
+                >
+                  C
+                </span>
+              )}
               <span className="ml-1 text-[10px] text-zinc-500 font-mono">
                 {formatEp(optionEp)}
               </span>
@@ -294,9 +303,10 @@ export function CriterionRow({
 }
 
 /**
- * A spell's duration under the concentration rule: with a debuff or dice of
- * damage or healing it is instantaneous or held by concentration; otherwise
- * it lasts on its own. Only the allowed list is offered.
+ * A spell's duration under the concentration rule: with a concentration
+ * effect (marked C) or dice of damage or healing it is instantaneous or held
+ * by concentration; otherwise it lasts on its own. Only the allowed list is
+ * offered.
  */
 function DurationRow({
   criterion,
@@ -370,8 +380,8 @@ function DurationRow({
       </div>
       <p className="mt-1 text-[11px] text-zinc-500">
         {concentration
-          ? 'Works against a creature (a debuff or condition, or damage or healing dice), so anything longer than instantaneous needs concentration.'
-          : 'No debuff and no dice: buffs, senses, illusions and knowledge last without concentration.'}
+          ? 'Has a concentration effect (marked C) or damage or healing dice, so anything longer than instantaneous needs concentration.'
+          : 'No concentration effect (marked C) and no dice, so it lasts without concentration.'}
       </p>
     </div>
   )

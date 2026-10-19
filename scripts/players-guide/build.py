@@ -49,6 +49,17 @@ BUFFS = {1: 'darkvision, magic detection, languages, 1-sense illusions, +2 skill
          3: 'truesight, total evasion, detailed knowledge, disability, restrained, blinded, silenced, charmed, resurrection',
          4: 'debilitated, banished, dominated, polymorphed, total knowledge, true resurrection',
          5: 'soul-bound, death, True Resurrection (greater)'}
+# Mirrors CONCENTRATION_EFFECTS in src/system/spells.ts: keep the two in step.
+CONCENTRATION_EFFECTS = {'magic detection', '+2 skill', 'inconvenience', 'poisoned', 'grappled', 'slowed',
+                         'multi-sense illusions', '+5 skill', 'frightened', 'exhaustion',
+                         'total evasion', 'disability', 'restrained', 'silenced',
+                         'debilitated', 'banished', 'dominated', 'polymorphed'}
+
+
+def mark_concentration(effects):
+    return ', '.join(f'{e} (C)' if e in CONCENTRATION_EFFECTS else e for e in effects.split(', '))
+
+
 CHALLENGE = [('none / 150 BP', 0), ('400 BP', 1), ('1,000 BP', 2), ('2,500 BP', 3), ('5,000 BP', 4), ('10,000 BP', 5)]
 EP = {'range': 4, 'aoe': 5, 'duration': 4, 'buff': 5, 'challenge': 8}
 CAST = [('Reaction', 4), ('Action', 2), ('2 Actions', 1), ('1 Round', 0.75), ('1 Minute', 0.5), ('1 Hour', 0.25)]
@@ -255,9 +266,10 @@ section('spellbuilding', 'Building a Spell', f'''
 </div>
 <div class="two">
 <div><h3>Duration &middot; {EP['duration']} EP per tier</h3>
-<p class="small"><b>Concentration:</b> a spell that lasts beyond an instant needs concentration if it works <b>against</b> a creature: it inflicts a <b>debuff or condition</b>, or keeps dealing <b>damage or healing dice</b>. Buffs, senses, illusions and knowledge last on their own (an hour of darkvision, armor of force). You don't choose: the spell builder offers only the list that applies.</p>{dur_rows}</div>
+<p class="small"><b>Concentration:</b> a spell that lasts beyond an instant needs concentration if it has <b>damage or healing dice</b>, or a Buff/Debuff marked <b>(C)</b>. The split follows D&amp;D 5e's nearest spells: an hour of darkvision or Charm Person needs none, while Enhance Ability (+skill), Hold Person (debilitated) or Slow do. You don't choose: the spell builder offers only the list that applies.</p>{dur_rows}</div>
 <div><h3>Buff / Debuff &middot; {EP['buff']} EP per tier</h3>
-{table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], e) for t, e in BUFFS.items()], 'compact')}</div>
+{table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], mark_concentration(e)) for t, e in BUFFS.items()], 'compact')}
+<p class="small">(C) needs concentration unless instantaneous.</p></div>
 </div>
 <div class="example"><b>Example: Cinder Lance.</b> Devon (Destroy 3, Elemental 3) builds a single-target, 120 ft fire bolt doing 4d6, resolved as a hit roll and cast in 2 actions. Range 120 ft is 4 EP; four damage dice are 8 EP. Base cost <b>12 EP</b>; saved, <b>9 EP</b>. His hit bonus is +6; for 5 more EP (14 total) he can push it to +7.</div>
 ''')

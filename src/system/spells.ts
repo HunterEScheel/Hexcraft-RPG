@@ -391,10 +391,8 @@ export interface SavedSpell {
 }
 
 /**
- * A lasting spell needs concentration when it works against a creature: it
- * inflicts a debuff or condition, or keeps dealing damage (or healing) dice.
- * Buffs, senses, utility, illusions and knowledge last on their own, like
- * 5e's Mage Armor or Darkvision.
+ * A lasting spell needs concentration when its Buff/Debuff is one of
+ * CONCENTRATION_EFFECTS, or when it keeps dealing damage (or healing) dice.
  */
 export function needsConcentration(draft: SpellDraft): boolean {
   const buff = SPELL_CRITERIA.find((c) => c.key === 'buffDebuff')
@@ -402,27 +400,38 @@ export function needsConcentration(draft: SpellDraft): boolean {
   return (effect !== undefined && CONCENTRATION_EFFECTS.has(effect.label)) || draft.damageDice > 0
 }
 
-/** The Buff/Debuff options that are debuffs and conditions: these need concentration. */
+/**
+ * The Buff/Debuff options that need concentration, sorted the way 5e sorts
+ * its nearest spells: Guidance and Enhance Ability (+2 / +5 skill), Detect
+ * Magic, Silent and Major Image, Entangle, Slow, Fear, Bestow Curse, Hold
+ * Person and Monster, Silence, Banishment, Dominate, Polymorph and so on are
+ * concentration. Darkvision, See Invisibility, True Seeing, Tongues, Zone of
+ * Truth, Minor Illusion, Blindness/Deafness, Charm Person, Contagion and
+ * Command are not, and neither are knowledge, raising the dead or death.
+ */
 export const CONCENTRATION_EFFECTS: ReadonlySet<string> = new Set([
+  // Tier I
+  'magic detection',
+  '+2 skill',
   'inconvenience',
   'poisoned',
-  'deafened',
   'grappled',
   'slowed',
-  'prone',
+  // Tier II
+  'multi-sense illusions',
+  '+5 skill',
   'frightened',
-  'illness',
   'exhaustion',
+  // Tier III
+  'total evasion',
   'disability',
   'restrained',
-  'blinded',
   'silenced',
-  'charmed',
+  // Tier IV
   'debilitated',
   'banished',
   'dominated',
   'polymorphed',
-  'soul-bound',
 ])
 
 /** The duration criterion's no-concentration and concentration modes, if it has both. */
@@ -437,9 +446,9 @@ export function concentrationModes(
 
 /**
  * Moves a spell's duration onto the list the concentration rule allows,
- * keeping the same length where that list has it: a debuff or dice of
- * damage or healing needs concentration unless instantaneous; otherwise no
- * concentration.
+ * keeping the same length where that list has it: a concentration effect
+ * or dice of damage or healing need concentration unless instantaneous;
+ * otherwise no concentration.
  */
 export function applyConcentrationRule(
   draft: SpellDraft,
