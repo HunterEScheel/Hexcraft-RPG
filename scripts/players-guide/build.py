@@ -254,7 +254,8 @@ section('spellbuilding', 'Building a Spell', f'''
 <div><h3>AOE / Targets &middot; {EP['aoe']} EP per tier</h3>{aoe_rows}</div>
 </div>
 <div class="two">
-<div><h3>Duration &middot; {EP['duration']} EP per tier</h3>{dur_rows}</div>
+<div><h3>Duration &middot; {EP['duration']} EP per tier</h3>
+<p class="small"><b>Concentration:</b> a spell with a <b>saving throw</b> or <b>damage dice</b> is either instantaneous or held by concentration. Any other spell lasts without it. You don't choose: the spell builder offers only the list that applies.</p>{dur_rows}</div>
 <div><h3>Buff / Debuff &middot; {EP['buff']} EP per tier</h3>
 {table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], e) for t, e in BUFFS.items()], 'compact')}</div>
 </div>

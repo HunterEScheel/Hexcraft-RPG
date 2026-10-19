@@ -3,9 +3,12 @@ import {
   EP_PER_DAMAGE_DIE,
   SPELL_CRITERIA,
   SPELL_TARGETING_OPTIONS,
+  applyConcentrationRule,
+  concentrationModes,
   criterionApplies,
   criterionEp,
   criterionOptions,
+  needsConcentration,
   selectionFor,
   selectedOption,
   type CastingTimeKey,
@@ -24,7 +27,7 @@ import { conditionDescription } from '../system/conditions'
  */
 export function EffectBuilder({
   draft,
-  onChange,
+  onChange: onDraftChange,
   timingLabel = 'Casting time',
   criteria = SPELL_CRITERIA,
   damageLabel = 'Damage dice (d6)',
@@ -36,6 +39,10 @@ export function EffectBuilder({
   criteria?: readonly SpellCriterion[]
   damageLabel?: string
 }) {
+  // Every change re-applies the concentration rule, so a spell that gains a
+  // save or damage dice moves its duration onto the concentration list.
+  const onChange = (update: (d: SpellDraft) => SpellDraft) =>
+    onDraftChange((d) => applyConcentrationRule(update(d), criteria))
   const setMode = (key: CriterionKey, modeIndex: number) =>
     onChange((d) => ({
       ...d,
@@ -58,15 +65,30 @@ export function EffectBuilder({
 
   return (
     <>
-      {criteria.filter((c) => criterionApplies(c, draft, criteria)).map((c) => (
-        <CriterionRow
-          key={c.key}
-          criterion={c}
-          selection={selectionFor(draft, c.key)}
-          onModeChange={(idx) => setMode(c.key, idx)}
-          onOptionChange={(idx) => setOption(c.key, idx)}
-        />
-      ))}
+      {criteria.filter((c) => criterionApplies(c, draft, criteria)).map((c) =>
+        c.key === 'duration' && concentrationModes(c) ? (
+          <DurationRow
+            key={c.key}
+            criterion={c}
+            selection={selectionFor(draft, c.key)}
+            concentration={needsConcentration(draft)}
+            onPick={(modeIndex, optionIndex) =>
+              onChange((d) => ({
+                ...d,
+                selections: { ...d.selections, duration: { modeIndex, optionIndex } },
+              }))
+            }
+          />
+        ) : (
+          <CriterionRow
+            key={c.key}
+            criterion={c}
+            selection={selectionFor(draft, c.key)}
+            onModeChange={(idx) => setMode(c.key, idx)}
+            onOptionChange={(idx) => setOption(c.key, idx)}
+          />
+        ),
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -267,6 +289,90 @@ export function CriterionRow({
           {conditionDescription(currentOption.label)}
         </p>
       )}
+    </div>
+  )
+}
+
+/**
+ * A spell's duration under the concentration rule: with a saving throw or
+ * damage dice it is instantaneous or held by concentration; otherwise it
+ * lasts on its own. Only the allowed list is offered.
+ */
+function DurationRow({
+  criterion,
+  selection,
+  concentration,
+  onPick,
+}: {
+  criterion: SpellCriterion
+  selection: SpellSelection
+  concentration: boolean
+  onPick: (modeIndex: number, optionIndex: number) => void
+}) {
+  const modes = concentrationModes(criterion)!
+  const standard = criterionOptions(criterion, modes.standard)
+  const choices = concentration
+    ? [
+        { modeIndex: modes.standard, optionIndex: 0, option: standard[0] },
+        ...criterionOptions(criterion, modes.concentration).map((option, i) => ({
+          modeIndex: modes.concentration,
+          optionIndex: i,
+          option,
+        })),
+      ]
+    : standard.map((option, i) => ({ modeIndex: modes.standard, optionIndex: i, option }))
+  const current = selectedOption(criterion, selection)
+  const ep = criterionEp(criterion, selection)
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-1">
+        <span className="text-xs uppercase tracking-wide text-zinc-400">
+          {criterion.label}
+          <span
+            className={
+              'ml-2 rounded px-1.5 py-0.5 text-[10px] normal-case tracking-normal ' +
+              (concentration
+                ? 'bg-violet-900/40 text-violet-200'
+                : 'bg-zinc-800 text-zinc-400')
+            }
+          >
+            {concentration ? 'Concentration' : 'No concentration'}
+          </span>
+        </span>
+        <span className="text-xs text-zinc-500 font-mono">
+          {current ? current.label : '—'} · {formatEp(ep)}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {choices.map((c) => {
+          const active =
+            c.modeIndex === selection.modeIndex && c.optionIndex === selection.optionIndex
+          return (
+            <button
+              key={`${c.modeIndex}-${c.optionIndex}`}
+              type="button"
+              onClick={() => onPick(c.modeIndex, c.optionIndex)}
+              className={
+                'rounded px-2 py-1 text-xs border ' +
+                (active
+                  ? 'border-emerald-500 bg-emerald-900/30 text-emerald-200'
+                  : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500')
+              }
+            >
+              <span>{c.option.label}</span>
+              <span className="ml-1 text-[10px] text-zinc-500 font-mono">
+                {formatEp(c.option.tier * criterion.epPerTier)}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      <p className="mt-1 text-[11px] text-zinc-500">
+        {concentration
+          ? 'Has a saving throw or damage dice, so anything longer than instantaneous needs concentration.'
+          : 'No saving throw or damage dice, so it lasts without concentration.'}
+      </p>
     </div>
   )
 }

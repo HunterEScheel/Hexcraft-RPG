@@ -389,3 +389,53 @@ export interface SavedSpell {
   medium: string
   draft: SpellDraft
 }
+
+/**
+ * A spell with a saving throw or damage dice that lasts beyond the instant
+ * needs concentration; anything else lasts without it.
+ */
+export function needsConcentration(draft: SpellDraft): boolean {
+  return draft.targeting !== 'hit' || draft.damageDice > 0
+}
+
+/** The duration criterion's no-concentration and concentration modes, if it has both. */
+export function concentrationModes(
+  criterion: SpellCriterion,
+): { standard: number; concentration: number } | null {
+  const modes = criterion.modes ?? []
+  const concentration = modes.findIndex((m) => m.key === 'concentration')
+  const standard = modes.findIndex((m) => m.key === 'standard')
+  return concentration >= 0 && standard >= 0 ? { standard, concentration } : null
+}
+
+/**
+ * Moves a spell's duration onto the list the concentration rule allows,
+ * keeping the same length where that list has it: a saving throw or damage
+ * dice needs concentration unless instantaneous; otherwise no concentration.
+ */
+export function applyConcentrationRule(
+  draft: SpellDraft,
+  criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
+): SpellDraft {
+  const duration = criteria.find((c) => c.key === 'duration')
+  const modes = duration && concentrationModes(duration)
+  if (!duration || !modes) return draft
+  const sel = selectionFor(draft, 'duration')
+  const current = selectedOption(duration, sel)
+  const needs = needsConcentration(draft)
+  const target = (modeIndex: number, fallback: string) => {
+    const options = criterionOptions(duration, modeIndex)
+    const same = options.findIndex((o) => o.label === current?.label)
+    const optionIndex = same >= 0 ? same : options.findIndex((o) => o.label === fallback)
+    return { modeIndex, optionIndex: Math.max(0, optionIndex) }
+  }
+  let next = sel
+  if (needs && sel.modeIndex === modes.standard && (current?.tier ?? 0) > 0) {
+    // Lasting longer than concentration can: hold it as long as possible.
+    next = target(modes.concentration, '8 hours')
+  } else if (!needs && sel.modeIndex === modes.concentration) {
+    next = target(modes.standard, current?.label === '8 hours' ? '1 day' : '1 minute')
+  }
+  if (next === sel) return draft
+  return { ...draft, selections: { ...draft.selections, duration: next } }
+}
