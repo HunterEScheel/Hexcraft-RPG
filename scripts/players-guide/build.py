@@ -255,7 +255,7 @@ section('spellbuilding', 'Building a Spell', f'''
 </div>
 <div class="two">
 <div><h3>Duration &middot; {EP['duration']} EP per tier</h3>
-<p class="small"><b>Concentration:</b> a spell that <b>mechanically alters creatures</b> (a buff or debuff, or dice of damage or healing) is either instantaneous or held by concentration. Any other spell, like a light or a wall, lasts without it. You don't choose: the spell builder offers only the list that applies.</p>{dur_rows}</div>
+<p class="small"><b>Concentration:</b> a spell that <b>mechanically alters creatures</b> (a buff or debuff, or dice of damage or healing) is either instantaneous or held by concentration. Magic detection, knowledge and illusions don't count. Any other spell, like a light, a wall or a lasting illusion, lasts without it. You don't choose: the spell builder offers only the list that applies.</p>{dur_rows}</div>
 <div><h3>Buff / Debuff &middot; {EP['buff']} EP per tier</h3>
 {table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], e) for t, e in BUFFS.items()], 'compact')}</div>
 </div>

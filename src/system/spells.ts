@@ -397,9 +397,25 @@ export interface SavedSpell {
  */
 export function needsConcentration(draft: SpellDraft): boolean {
   const buff = SPELL_CRITERIA.find((c) => c.key === 'buffDebuff')
-  const buffTier = buff ? (selectedOption(buff, selectionFor(draft, 'buffDebuff'))?.tier ?? 0) : 0
-  return buffTier > 0 || draft.damageDice > 0
+  const effect = buff ? selectedOption(buff, selectionFor(draft, 'buffDebuff')) : undefined
+  const altersCreature =
+    effect !== undefined && effect.tier > 0 && !NO_CONCENTRATION_EFFECTS.has(effect.label)
+  return altersCreature || draft.damageDice > 0
 }
+
+/**
+ * Buff/Debuff effects that inform or deceive rather than change a creature,
+ * so they last without concentration: magic detection, knowledge, illusions.
+ */
+export const NO_CONCENTRATION_EFFECTS: ReadonlySet<string> = new Set([
+  'magic detection',
+  'cursory knowledge',
+  'fundamental knowledge',
+  'detailed knowledge',
+  'total knowledge',
+  '1-sense illusions',
+  'multi-sense illusions',
+])
 
 /** The duration criterion's no-concentration and concentration modes, if it has both. */
 export function concentrationModes(

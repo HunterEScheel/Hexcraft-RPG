@@ -372,7 +372,7 @@ function DurationRow({
       <p className="mt-1 text-[11px] text-zinc-500">
         {concentration
           ? 'Alters creatures (a buff, debuff, or damage or healing dice), so anything longer than instantaneous needs concentration.'
-          : 'No buff, debuff, or damage or healing dice, so it lasts without concentration.'}
+          : 'Alters no creature (magic detection, knowledge and illusions don\'t count), so it lasts without concentration.'}
       </p>
     </div>
   )

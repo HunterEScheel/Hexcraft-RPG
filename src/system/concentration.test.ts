@@ -32,6 +32,22 @@ describe('concentration rule', () => {
     expect(needsConcentration(buffed)).toBe(true)
   })
 
+  it('does not count magic detection, knowledge or illusions', () => {
+    const pick = (label: string) => {
+      const buff = SPELL_CRITERIA.find((c) => c.key === 'buffDebuff')!
+      const modeIndex = buff.modes!.findIndex((m) => m.options.some((o) => o.label === label))
+      const optionIndex = buff.modes![modeIndex].options.findIndex((o) => o.label === label)
+      return {
+        ...emptySpellDraft(),
+        selections: { ...emptySpellDraft().selections, buffDebuff: { modeIndex, optionIndex } },
+      }
+    }
+    for (const label of ['magic detection', 'cursory knowledge', 'total knowledge', '1-sense illusions', 'multi-sense illusions'])
+      expect(needsConcentration(pick(label))).toBe(false)
+    expect(needsConcentration(pick('darkvision'))).toBe(true)
+    expect(needsConcentration(pick('detect lies'))).toBe(true)
+  })
+
   it('moves a lasting damage spell onto concentration, keeping its length', () => {
     const d = withDuration({ ...emptySpellDraft(), damageDice: 2 }, 0, 2) // 1 hour
     expect(label(applyConcentrationRule(d))).toBe('concentration:1 hour')
