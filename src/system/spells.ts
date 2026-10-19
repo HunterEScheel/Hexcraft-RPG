@@ -391,11 +391,14 @@ export interface SavedSpell {
 }
 
 /**
- * A spell with a saving throw or damage dice that lasts beyond the instant
- * needs concentration; anything else lasts without it.
+ * A spell that mechanically alters creatures (a buff or debuff, or dice of
+ * damage or healing) and lasts beyond the instant needs concentration;
+ * anything else lasts without it.
  */
 export function needsConcentration(draft: SpellDraft): boolean {
-  return draft.targeting !== 'hit' || draft.damageDice > 0
+  const buff = SPELL_CRITERIA.find((c) => c.key === 'buffDebuff')
+  const buffTier = buff ? (selectedOption(buff, selectionFor(draft, 'buffDebuff'))?.tier ?? 0) : 0
+  return buffTier > 0 || draft.damageDice > 0
 }
 
 /** The duration criterion's no-concentration and concentration modes, if it has both. */
@@ -410,8 +413,9 @@ export function concentrationModes(
 
 /**
  * Moves a spell's duration onto the list the concentration rule allows,
- * keeping the same length where that list has it: a saving throw or damage
- * dice needs concentration unless instantaneous; otherwise no concentration.
+ * keeping the same length where that list has it: a buff, debuff or dice of
+ * damage or healing needs concentration unless instantaneous; otherwise no
+ * concentration.
  */
 export function applyConcentrationRule(
   draft: SpellDraft,

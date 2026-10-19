@@ -20,21 +20,34 @@ const withDuration = (d: SpellDraft, modeIndex: number, optionIndex: number): Sp
 })
 
 describe('concentration rule', () => {
-  it('needs concentration with a saving throw or damage dice', () => {
+  it('needs concentration when it alters creatures: a buff, debuff or dice', () => {
     expect(needsConcentration(emptySpellDraft())).toBe(false)
-    expect(needsConcentration({ ...emptySpellDraft(), targeting: 'grit' })).toBe(true)
+    // A saving throw alone doesn't count.
+    expect(needsConcentration({ ...emptySpellDraft(), targeting: 'grit' })).toBe(false)
     expect(needsConcentration({ ...emptySpellDraft(), damageDice: 2 })).toBe(true)
+    const buffed = {
+      ...emptySpellDraft(),
+      selections: { ...emptySpellDraft().selections, buffDebuff: { modeIndex: 1, optionIndex: 0 } },
+    }
+    expect(needsConcentration(buffed)).toBe(true)
   })
 
   it('moves a lasting damage spell onto concentration, keeping its length', () => {
     const d = withDuration({ ...emptySpellDraft(), damageDice: 2 }, 0, 2) // 1 hour
     expect(label(applyConcentrationRule(d))).toBe('concentration:1 hour')
-    const long = withDuration({ ...emptySpellDraft(), targeting: 'dodge' }, 0, 5) // permanent
+    const long = withDuration(
+      {
+        ...emptySpellDraft(),
+        selections: { ...emptySpellDraft().selections, buffDebuff: { modeIndex: 2, optionIndex: 0 } },
+      },
+      0,
+      5,
+    ) // a buff, permanent
     expect(label(applyConcentrationRule(long))).toBe('concentration:8 hours')
   })
 
-  it('leaves an instantaneous save spell alone', () => {
-    const d = { ...emptySpellDraft(), targeting: 'resolve' as const }
+  it('leaves an instantaneous damage spell alone', () => {
+    const d = { ...emptySpellDraft(), damageDice: 4 }
     expect(applyConcentrationRule(d)).toBe(d)
   })
 

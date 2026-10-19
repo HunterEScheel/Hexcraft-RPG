@@ -40,7 +40,7 @@ export function EffectBuilder({
   damageLabel?: string
 }) {
   // Every change re-applies the concentration rule, so a spell that gains a
-  // save or damage dice moves its duration onto the concentration list.
+  // buff, debuff or dice moves its duration onto the concentration list.
   const onChange = (update: (d: SpellDraft) => SpellDraft) =>
     onDraftChange((d) => applyConcentrationRule(update(d), criteria))
   const setMode = (key: CriterionKey, modeIndex: number) =>
@@ -294,9 +294,10 @@ export function CriterionRow({
 }
 
 /**
- * A spell's duration under the concentration rule: with a saving throw or
- * damage dice it is instantaneous or held by concentration; otherwise it
- * lasts on its own. Only the allowed list is offered.
+ * A spell's duration under the concentration rule: if it alters creatures
+ * (buff, debuff, damage or healing dice) it is instantaneous or held by
+ * concentration; otherwise it lasts on its own. Only the allowed list is
+ * offered.
  */
 function DurationRow({
   criterion,
@@ -370,8 +371,8 @@ function DurationRow({
       </div>
       <p className="mt-1 text-[11px] text-zinc-500">
         {concentration
-          ? 'Has a saving throw or damage dice, so anything longer than instantaneous needs concentration.'
-          : 'No saving throw or damage dice, so it lasts without concentration.'}
+          ? 'Alters creatures (a buff, debuff, or damage or healing dice), so anything longer than instantaneous needs concentration.'
+          : 'No buff, debuff, or damage or healing dice, so it lasts without concentration.'}
       </p>
     </div>
   )
