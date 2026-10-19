@@ -360,7 +360,7 @@ export function Sheet() {
         </button>
       </div>
 
-      <nav className="flex gap-1 overflow-x-auto border-b border-zinc-800">
+      <nav className="flex flex-wrap gap-x-1 border-b border-zinc-800">
         {TABS.map((t) => {
           const active = t.key === tab
           return (
@@ -369,7 +369,7 @@ export function Sheet() {
               type="button"
               onClick={() => setTab(t.key)}
               className={
-                'px-4 py-2 text-sm border-b-2 -mb-px transition ' +
+                'px-3 sm:px-4 py-2 text-sm border-b-2 -mb-px transition ' +
                 (active
                   ? 'border-amber-400 text-amber-200'
                   : 'border-transparent text-zinc-500 hover:text-zinc-300')
