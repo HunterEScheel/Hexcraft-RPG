@@ -35,6 +35,8 @@ import { SavedSpells } from '../components/SavedSpells'
 import { TakeDamagePanel } from '../components/TakeDamagePanel'
 import { DeathSavePanel } from '../components/DeathSavePanel'
 import { LongRestDialog } from '../components/LongRestDialog'
+import { NotesEditor } from '../components/NotesEditor'
+import type { CharacterNote } from '../system/notes'
 
 type Tab = 'general' | 'combat' | 'spellcasting' | 'description' | 'notes'
 
@@ -190,7 +192,7 @@ export function Sheet() {
     setCharacter((c) => (c ? { ...c, inventory } : c))
   const setBodyDescriptions = (bodyDescriptions: Partial<Record<BodyPart, string>>) =>
     setCharacter((c) => (c ? { ...c, bodyDescriptions } : c))
-  const setNotes = (notes: string) => setCharacter((c) => (c ? { ...c, notes } : c))
+  const setNotes = (notes: CharacterNote[]) => setCharacter((c) => (c ? { ...c, notes } : c))
 
   const hasMagic =
     Object.values(character.magicSchools).some((v) => v > 0) ||
@@ -661,15 +663,7 @@ export function Sheet() {
 
       {tab === 'notes' && (
         <ReadOnlySection title="Notes">
-          <textarea
-            value={character.notes ?? ''}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Anything worth remembering: NPCs met, leads, debts owed, loot to split, what the party promised…"
-            aria-label="Character notes"
-            rows={18}
-            className="w-full min-h-[24rem] bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm leading-relaxed text-zinc-100 placeholder:text-zinc-600 resize-y"
-          />
-          <p className="mt-1 text-[10px] text-zinc-500">Saved with the character as you type.</p>
+          <NotesEditor notes={character.notes ?? []} onChange={setNotes} />
         </ReadOnlySection>
       )}
 

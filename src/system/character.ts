@@ -1,5 +1,6 @@
 import { ATTRIBUTES, type AttributeName } from './attributes'
 import { COMBAT_SKILLS, isCombatSkillId } from './combatSkills'
+import { migrateNotes, type CharacterNote } from './notes'
 import { flawRefundTotal, migrateFlaw, type Flaw } from './flaws'
 import {
   ARMOR_CLASS_STATS,
@@ -113,8 +114,8 @@ export interface Character {
   deathSaves: DeathSaves
   tempHp: number
   bodyDescriptions: Partial<Record<BodyPart, string>>
-  /** Free-form notes the player keeps on the sheet's Notes tab. */
-  notes?: string
+  /** The player's notes on the sheet's Notes tab. */
+  notes: CharacterNote[]
   /** Which one-off data migrations have run; see migrateRules. */
   rulesVersion?: number
 }
@@ -181,6 +182,7 @@ export function emptyCharacter(tierName: string, bpBudget: number): Character {
     deathSaves: { ...EMPTY_DEATH_SAVES },
     tempHp: 0,
     bodyDescriptions: {},
+    notes: [],
   }
 }
 
@@ -522,6 +524,7 @@ export function ensureCombatSkills(raw: Character): Character {
     bonusBp: c.bonusBp ?? 0,
     speed: c.speed ?? DEFAULT_SPEED,
     tethers: (c.tethers ?? []).map(migrateTether),
+    notes: migrateNotes(c.notes),
     flaws: (c.flaws ?? []).map(migrateFlaw),
     obligationThreshold: c.obligationThreshold ?? 0,
     gold: c.gold ?? 0,
