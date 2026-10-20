@@ -405,13 +405,14 @@ export function needsConcentration(draft: SpellDraft): boolean {
  * its nearest spells: Guidance and Enhance Ability (+2 / +5 skill), Detect
  * Magic, Silent and Major Image, Entangle, Slow, Fear, Bestow Curse, Hold
  * Person and Monster, Silence, Banishment, Dominate, Polymorph and so on are
- * concentration. Truesight is concentration too, by house rule.
- * Darkvision, See Invisibility, Tongues, Zone of
+ * concentration. By house rule every sense is too: darkvision,
+ * tremorsense, see invisibility and truesight. Tongues, Zone of
  * Truth, Minor Illusion, Blindness/Deafness, Charm Person, Contagion and
  * Command are not, and neither are knowledge, raising the dead or death.
  */
 export const CONCENTRATION_EFFECTS: ReadonlySet<string> = new Set([
   // Tier I
+  'darkvision',
   'magic detection',
   '+2 skill',
   'inconvenience',
@@ -419,6 +420,8 @@ export const CONCENTRATION_EFFECTS: ReadonlySet<string> = new Set([
   'grappled',
   'slowed',
   // Tier II
+  'tremorsense',
+  'see invisibility',
   'multi-sense illusions',
   '+5 skill',
   'frightened',
