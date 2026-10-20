@@ -380,8 +380,8 @@ function DurationRow({
       </div>
       <p className="mt-1 text-[11px] text-zinc-500">
         {concentration
-          ? 'Has a concentration effect (marked C) or damage or healing dice, so anything longer than instantaneous needs concentration.'
-          : 'No concentration effect (marked C) and no dice, so it lasts without concentration.'}
+          ? 'Has an area (splash or line), a concentration effect (marked C), or damage or healing dice, so anything longer than instantaneous needs concentration.'
+          : 'No area, no concentration effect (marked C) and no dice, so it lasts without concentration.'}
       </p>
     </div>
   )

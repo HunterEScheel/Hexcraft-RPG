@@ -392,12 +392,24 @@ export interface SavedSpell {
 
 /**
  * A lasting spell needs concentration when its Buff/Debuff is one of
- * CONCENTRATION_EFFECTS, or when it keeps dealing damage (or healing) dice.
+ * CONCENTRATION_EFFECTS, when it keeps dealing damage (or healing) dice, or
+ * when it covers an area (a splash or a line).
  */
 export function needsConcentration(draft: SpellDraft): boolean {
   const buff = SPELL_CRITERIA.find((c) => c.key === 'buffDebuff')
   const effect = buff ? selectedOption(buff, selectionFor(draft, 'buffDebuff')) : undefined
-  return (effect !== undefined && CONCENTRATION_EFFECTS.has(effect.label)) || draft.damageDice > 0
+  return (
+    (effect !== undefined && CONCENTRATION_EFFECTS.has(effect.label)) ||
+    draft.damageDice > 0 ||
+    isAreaSpell(draft)
+  )
+}
+
+/** Covers an area (a splash or a line) rather than picking targets. */
+export function isAreaSpell(draft: SpellDraft): boolean {
+  const aoe = SPELL_CRITERIA.find((c) => c.key === 'aoe')
+  const mode = aoe?.modes?.[selectionFor(draft, 'aoe').modeIndex]
+  return mode?.key === 'splash' || mode?.key === 'line'
 }
 
 /**

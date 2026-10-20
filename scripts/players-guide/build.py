@@ -266,7 +266,7 @@ section('spellbuilding', 'Building a Spell', f'''
 </div>
 <div class="two">
 <div><h3>Duration &middot; {EP['duration']} EP per tier</h3>
-<p class="small"><b>Concentration:</b> a spell that lasts beyond an instant needs concentration if it has <b>damage or healing dice</b>, or a Buff/Debuff marked <b>(C)</b>. The split follows D&amp;D 5e's nearest spells, except that every granted sense needs concentration: Charm Person or Tongues need none, while darkvision, Enhance Ability (+skill), Hold Person (debilitated) or Slow do. You don't choose: the spell builder offers only the list that applies.</p>{dur_rows}</div>
+<p class="small"><b>Concentration:</b> a spell that lasts beyond an instant needs concentration if it covers an <b>area</b> (a splash or a line), has <b>damage or healing dice</b>, or has a Buff/Debuff marked <b>(C)</b>. So an area spell is either instantaneous or concentration. The split follows D&amp;D 5e's nearest spells, except that every granted sense needs concentration: Charm Person or Tongues need none, while darkvision, Enhance Ability (+skill), Hold Person (debilitated) or Slow do. You don't choose: the spell builder offers only the list that applies.</p>{dur_rows}</div>
 <div><h3>Buff / Debuff &middot; {EP['buff']} EP per tier</h3>
 {table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], mark_concentration(e)) for t, e in BUFFS.items()], 'compact')}
 <p class="small">(C) needs concentration unless instantaneous.</p></div>

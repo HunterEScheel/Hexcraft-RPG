@@ -43,6 +43,19 @@ describe('concentration rule', () => {
       expect(needsConcentration(pick(label))).toBe(false)
   })
 
+  it('makes area spells instantaneous or concentration', () => {
+    const area = (modeIndex: number) => ({
+      ...emptySpellDraft(),
+      selections: { ...emptySpellDraft().selections, aoe: { modeIndex, optionIndex: 0 } },
+    })
+    expect(needsConcentration(area(1))).toBe(true) // splash
+    expect(needsConcentration(area(2))).toBe(true) // line
+    // Picking targets isn't an area.
+    expect(needsConcentration({ ...area(0), selections: { ...area(0).selections, aoe: { modeIndex: 0, optionIndex: 3 } } })).toBe(false)
+    const lasting = withDuration(area(1), 0, 3) // 1 day
+    expect(label(applyConcentrationRule(lasting))).toBe('concentration:8 hours')
+  })
+
   it('lists only real Buff/Debuff options as needing concentration', () => {
     const buff = SPELL_CRITERIA.find((c) => c.key === 'buffDebuff')!
     const labels = new Set(buff.modes!.flatMap((m) => m.options.map((o) => o.label)))
