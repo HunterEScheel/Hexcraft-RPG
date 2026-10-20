@@ -406,8 +406,7 @@ export function needsConcentration(draft: SpellDraft): boolean {
  * Magic, Silent and Major Image, Entangle, Slow, Fear, Bestow Curse, Hold
  * Person and Monster, Silence, Banishment, Dominate, Polymorph and so on are
  * concentration. By house rule every sense is too: darkvision,
- * tremorsense, see invisibility and truesight. Tongues, Zone of
- * Truth, Minor Illusion, Blindness/Deafness, Charm Person, Contagion and
+ * tremorsense, see invisibility and truesight, and detect lies. Tongues, Minor Illusion, Blindness/Deafness, Charm Person, Contagion and
  * Command are not, and neither are knowledge, raising the dead or death.
  */
 export const CONCENTRATION_EFFECTS: ReadonlySet<string> = new Set([
@@ -422,6 +421,7 @@ export const CONCENTRATION_EFFECTS: ReadonlySet<string> = new Set([
   // Tier II
   'tremorsense',
   'see invisibility',
+  'detect lies',
   'multi-sense illusions',
   '+5 skill',
   'frightened',

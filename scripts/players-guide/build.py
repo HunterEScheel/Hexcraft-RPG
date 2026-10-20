@@ -50,7 +50,7 @@ BUFFS = {1: 'darkvision, magic detection, languages, 1-sense illusions, +2 skill
          4: 'debilitated, banished, dominated, polymorphed, total knowledge, true resurrection',
          5: 'soul-bound, death, True Resurrection (greater)'}
 # Mirrors CONCENTRATION_EFFECTS in src/system/spells.ts: keep the two in step.
-CONCENTRATION_EFFECTS = {'darkvision', 'tremorsense', 'see invisibility', 'magic detection', '+2 skill', 'inconvenience', 'poisoned', 'grappled', 'slowed',
+CONCENTRATION_EFFECTS = {'darkvision', 'tremorsense', 'see invisibility', 'detect lies', 'magic detection', '+2 skill', 'inconvenience', 'poisoned', 'grappled', 'slowed',
                          'multi-sense illusions', '+5 skill', 'frightened', 'exhaustion',
                          'truesight', 'total evasion', 'disability', 'restrained', 'silenced',
                          'debilitated', 'banished', 'dominated', 'polymorphed'}
