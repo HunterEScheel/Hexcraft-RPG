@@ -36,7 +36,7 @@ describe('concentration rule', () => {
     expect(needsConcentration({ ...emptySpellDraft(), targeting: 'grit' })).toBe(false)
     expect(needsConcentration({ ...emptySpellDraft(), damageDice: 2 })).toBe(true)
     // Enhance Ability, Slow, Hold Person, Silent/Major Image, Detect Magic.
-    for (const label of ['+5 skill', 'slowed', 'debilitated', 'multi-sense illusions', 'magic detection'])
+    for (const label of ['truesight', '+5 skill', 'slowed', 'debilitated', 'multi-sense illusions', 'magic detection'])
       expect(needsConcentration(pick(label))).toBe(true)
     // Darkvision, Charm Person, Blindness/Deafness, Contagion, Command, Minor Illusion.
     for (const label of ['darkvision', 'charmed', 'blinded', 'illness', 'prone', '1-sense illusions'])
