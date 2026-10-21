@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { emptyCharacter, ensureCombatSkills, maneuverBonus } from './character'
 import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from './maneuvers'
-import { emptySpellDraft, savedSpellCost, selectedOption, spellCost } from './spells'
+import { SPELL_CASTING_TIMES, emptySpellDraft, savedSpellCost, selectedOption, spellCost } from './spells'
 import { conditionDescription } from './conditions'
 
 describe('maneuvers', () => {
@@ -110,5 +110,13 @@ describe('maneuvers', () => {
     expect(sels(once)).toEqual([[4, 0], [4, 1], [4, 0], [4, 0], [5, 1]])
     expect(once.savedManeuvers[0].draft.selections.buffDebuff).toEqual({ modeIndex: 4, optionIndex: 0 })
     expect(sels(ensureCombatSkills(once))).toEqual(sels(once))
+  })
+})
+
+describe('maneuver timing', () => {
+  it('takes no action at eight times the price', () => {
+    const draft = { ...emptySpellDraft(), damageDice: 2, castingTime: 'none' as const }
+    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(32)
+    expect(SPELL_CASTING_TIMES.some((t) => t.key === 'none')).toBe(false)
   })
 })

@@ -219,6 +219,7 @@ export const SPELL_CRITERIA: readonly SpellCriterion[] = [
 ] as const
 
 export type CastingTimeKey =
+  | 'none'
   | 'reaction'
   | 'action'
   | '2actions'
@@ -230,9 +231,13 @@ export interface CastingTimeOption {
   key: CastingTimeKey
   label: string
   multiplier: number
+  /** Only maneuvers can use it. */
+  maneuverOnly?: boolean
 }
 
 export const CASTING_TIMES: readonly CastingTimeOption[] = [
+  // A maneuver that takes no action at all, at eight times the price.
+  { key: 'none', label: 'None (no action)', multiplier: 8, maneuverOnly: true },
   { key: 'reaction', label: 'Reaction', multiplier: 4 },
   { key: 'action', label: 'Action', multiplier: 2 },
   { key: '2actions', label: '2 Actions', multiplier: 1 },
@@ -240,6 +245,9 @@ export const CASTING_TIMES: readonly CastingTimeOption[] = [
   { key: '1minute', label: '1 Minute', multiplier: 0.5 },
   { key: '1hour', label: '1 Hour', multiplier: 0.25 },
 ] as const
+
+/** The timings a spell can use: all but the maneuver-only ones. */
+export const SPELL_CASTING_TIMES = CASTING_TIMES.filter((t) => !t.maneuverOnly)
 
 export const EP_PER_DAMAGE_DIE = 2
 
@@ -363,7 +371,8 @@ export function spellCost(
   // Refunds can bring a maneuver down to free, never below.
   const baseEp = Math.max(0, criteriaEp + damageEp)
   const time =
-    CASTING_TIMES.find((t) => t.key === draft.castingTime) ?? CASTING_TIMES[2]
+    CASTING_TIMES.find((t) => t.key === draft.castingTime) ??
+    CASTING_TIMES.find((t) => t.key === '2actions')!
   const totalEp = Math.ceil(baseEp * time.multiplier)
   return { baseEp, multiplier: time.multiplier, totalEp }
 }

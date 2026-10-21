@@ -302,7 +302,7 @@ section('maneuvers', 'Maneuvers', f'''
 <li><b>Effect</b>: non-magical effects only, listed below. There's no Challenge.</li>
 <li><b>Extra damage</b>: d6s added to the weapon's own damage, 2 EP per die.</li>
 <li><b>Self-debuff</b> (optional): a drawback you take on to pay for the move, which <b>takes EP off</b> its cost.</li>
-<li><b>Timing</b>: the same multipliers as a spell's casting time.</li>
+<li><b>Timing</b>: the same multipliers as a spell's casting time, plus <b>None (no action) at ×8</b>: a maneuver that costs no action at all.</li>
 </ul>
 <div class="two">
 <div><h3>Duration &middot; {EP['duration']} EP per tier</h3>{opts(MAN_DURATION, EP['duration'])}</div>
