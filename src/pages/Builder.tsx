@@ -6,10 +6,11 @@ import {
   ensureCombatSkills,
   restAttributeFor,
   restoreToMax,
+  spellcastingAttributeFor,
   type Character,
 } from '../system/character'
 import { POWER_TIERS } from '../system/powerTiers'
-import { REST_ATTRIBUTES } from '../system/attributes'
+import { REST_ATTRIBUTES, SPELLCASTING_ATTRIBUTES } from '../system/attributes'
 import {
   BP_PER_1_EP,
   BP_PER_3_HP,
@@ -419,6 +420,32 @@ export function Builder() {
                 value={character.magicMediums}
                 onChange={(magicMediums) => patch({ magicMediums })}
               />
+            </Subsection>
+            <Subsection title="Spellcasting attribute" meta="Adds to counterspell rolls">
+              <div className="flex flex-wrap gap-1">
+                {SPELLCASTING_ATTRIBUTES.map((a) => {
+                  const active = spellcastingAttributeFor(character) === a
+                  const value = character.attributes[a] ?? 0
+                  return (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => patch({ spellcastingAttribute: a })}
+                      className={
+                        'rounded border px-3 py-1.5 text-xs ' +
+                        (active
+                          ? 'border-violet-500 bg-violet-900/30 text-violet-200'
+                          : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500')
+                      }
+                    >
+                      {a}{' '}
+                      <span className="font-mono text-[10px] text-zinc-500">
+                        {value >= 0 ? `+${value}` : value}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
             </Subsection>
           </StepBlock>
         )}

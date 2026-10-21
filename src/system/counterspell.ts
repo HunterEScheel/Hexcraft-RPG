@@ -1,8 +1,8 @@
-// Counterspells. A counter with at least as much EP as the spell stops it
-// outright. A smaller counter needs d20 + school + medium (the counter's own,
-// in the target spell's medium) against DC 10 + every 10 EP the spell has over
-// it, so even a heavily amped spell can be stopped by a modest counter. A
-// natural 1 always fails.
+// Counterspells. A counter is a Destroy / Magic spell cast as a reaction. With
+// at least as much EP as the spell it stops it outright. A smaller counter
+// needs d20 + Destroy + Magic + spellcasting attribute against DC 10 + every
+// 10 EP the spell has over it, so even a heavily amped spell can be stopped
+// by a modest counter. A natural 1 always fails.
 
 /** The roll a counter needs, or null when it succeeds automatically. */
 export function counterspellDC(spellEp: number, counterEp: number): number | null {

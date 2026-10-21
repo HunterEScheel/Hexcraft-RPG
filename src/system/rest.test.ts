@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { applyLongRest, emptyCharacter, restAttributeFor, restEpBonus, rollLongRest } from './character'
+import {
+  applyLongRest,
+  counterspellBonus,
+  emptyCharacter,
+  restAttributeFor,
+  restEpBonus,
+  rollLongRest,
+  spellcastingAttributeFor,
+} from './character'
 
 describe('long rest', () => {
   it('rolls 1d6 HP and 1d4-1 EP per hour slept', () => {
@@ -28,5 +36,17 @@ describe('long rest', () => {
     expect(restAttributeFor(c)).toBe('Sense')
     expect(restEpBonus(c)).toBe(3)
     expect(restEpBonus({ ...c, restAttribute: 'Influence' })).toBe(-2)
+  })
+})
+
+describe('spellcasting attribute', () => {
+  it('defaults to the highest attribute other than Agility and adds to counters', () => {
+    const c = emptyCharacter('Peasants', 150)
+    c.attributes = { ...c.attributes, Agility: 5, Power: 1, Intelligence: 4, Sense: 2, Influence: 0 }
+    c.magicSchools = { ...c.magicSchools, Destroy: 3 }
+    c.magicMediums = { ...c.magicMediums, Magic: 2 }
+    expect(spellcastingAttributeFor(c)).toBe('Intelligence')
+    expect(counterspellBonus(c)).toBe(9)
+    expect(counterspellBonus({ ...c, spellcastingAttribute: 'Power' })).toBe(6)
   })
 })
