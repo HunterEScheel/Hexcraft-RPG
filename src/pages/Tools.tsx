@@ -1,5 +1,6 @@
 import { DCCalculator } from '../components/DCCalculator'
 import { SpellCalculator } from '../components/SpellCalculator'
+import { CounterspellCalculator } from '../components/CounterspellCalculator'
 import { RunEmbeddings } from '../components/RunEmbeddings'
 import { useIsAdmin, useUser } from '../lib/useUser'
 
@@ -41,6 +42,7 @@ export function Tools() {
       </div>
       <DCCalculator />
       <SpellCalculator />
+      <CounterspellCalculator />
       {isAdmin && <RunEmbeddings />}
     </div>
   )
