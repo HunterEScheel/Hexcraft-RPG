@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyLongRest, emptyCharacter, rollLongRest } from './character'
+import { applyLongRest, emptyCharacter, restAttributeFor, restEpBonus, rollLongRest } from './character'
 
 describe('long rest', () => {
   it('rolls 1d6 HP and 1d4-1 EP per hour slept', () => {
@@ -20,5 +20,13 @@ describe('long rest', () => {
     expect(rested.deathSaves).toEqual({ successes: 0, failures: 0 })
     expect(rested.tempHp).toBe(0)
     expect(applyLongRest(rested, 50, 0).currentHp).toBe(30)
+  })
+
+  it('adds the rest attribute once: the pick, or the highest of INT, SEN, INF', () => {
+    const c = emptyCharacter('Peasants', 150)
+    c.attributes = { ...c.attributes, Intelligence: 1, Sense: 3, Influence: -2 }
+    expect(restAttributeFor(c)).toBe('Sense')
+    expect(restEpBonus(c)).toBe(3)
+    expect(restEpBonus({ ...c, restAttribute: 'Influence' })).toBe(-2)
   })
 })

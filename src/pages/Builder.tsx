@@ -4,10 +4,12 @@ import {
   bpBreakdown,
   emptyCharacter,
   ensureCombatSkills,
+  restAttributeFor,
   restoreToMax,
   type Character,
 } from '../system/character'
 import { POWER_TIERS } from '../system/powerTiers'
+import { REST_ATTRIBUTES } from '../system/attributes'
 import {
   BP_PER_1_EP,
   BP_PER_3_HP,
@@ -350,6 +352,36 @@ export function Builder() {
               value={character.attributes}
               onChange={(attributes) => patch({ attributes })}
             />
+            <div className="mt-4 rounded border border-zinc-800 bg-zinc-950 p-3 space-y-2">
+              <div className="text-xs uppercase tracking-wide text-zinc-400">Rest attribute</div>
+              <p className="text-xs text-zinc-500">
+                Added once to the EP every long rest recovers, on top of the dice.
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {REST_ATTRIBUTES.map((a) => {
+                  const active = restAttributeFor(character) === a
+                  const value = character.attributes[a] ?? 0
+                  return (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => patch({ restAttribute: a })}
+                      className={
+                        'rounded border px-3 py-1.5 text-xs ' +
+                        (active
+                          ? 'border-sky-500 bg-sky-900/30 text-sky-200'
+                          : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500')
+                      }
+                    >
+                      {a}{' '}
+                      <span className="font-mono text-[10px] text-zinc-500">
+                        {value >= 0 ? `+${value}` : value}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </StepBlock>
         )}
 

@@ -1,4 +1,4 @@
-import { ATTRIBUTES, type AttributeName } from './attributes'
+import { ATTRIBUTES, REST_ATTRIBUTES, type AttributeName, type RestAttribute } from './attributes'
 import { COMBAT_SKILLS, isCombatSkillId } from './combatSkills'
 import { migrateNotes, type CharacterNote } from './notes'
 import { flawRefundTotal, migrateFlaw, type Flaw } from './flaws'
@@ -114,6 +114,8 @@ export interface Character {
   deathSaves: DeathSaves
   tempHp: number
   bodyDescriptions: Partial<Record<BodyPart, string>>
+  /** Added to the EP a long rest recovers: Intelligence, Sense or Influence. */
+  restAttribute?: RestAttribute
   /** The player's notes on the sheet's Notes tab. */
   notes: CharacterNote[]
   /** Which one-off data migrations have run; see migrateRules. */
@@ -241,6 +243,22 @@ export function rollLongRest(
     ep += roll(LONG_REST_EP_DIE) - 1
   }
   return { hp, ep }
+}
+
+/**
+ * The attribute a character adds to their long-rest EP: their pick, or until
+ * they pick one, the highest of Intelligence, Sense and Influence.
+ */
+export function restAttributeFor(c: Character): RestAttribute {
+  if (c.restAttribute) return c.restAttribute
+  return REST_ATTRIBUTES.reduce((best, a) =>
+    (c.attributes[a] ?? 0) > (c.attributes[best] ?? 0) ? a : best,
+  )
+}
+
+/** EP a long rest adds on top of the dice: the rest attribute's value, once per rest. */
+export function restEpBonus(c: Character): number {
+  return c.attributes[restAttributeFor(c)] ?? 0
 }
 
 /** Heal and recover the rolled amounts, up to the maximums; temp HP and death saves clear. */

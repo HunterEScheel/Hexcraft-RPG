@@ -8,6 +8,7 @@ import {
   evasion,
   maneuverBonus,
   normalizeCurrentValues,
+  restAttributeFor,
   skillLabel,
   type BodyPart,
   type Character,
@@ -673,7 +674,17 @@ export function Sheet() {
         </div>
       )}
 
-      {resting && <LongRestDialog onRest={longRest} onClose={() => setResting(false)} />}
+      {resting && (
+        <LongRestDialog
+          restAttribute={restAttributeFor(character)}
+          attributes={character.attributes}
+          onRestAttributeChange={(restAttribute) =>
+            setCharacter((c) => (c ? { ...c, restAttribute } : c))
+          }
+          onRest={longRest}
+          onClose={() => setResting(false)}
+        />
+      )}
 
       {adjusting && (
         <ResourceAdjustDialog
