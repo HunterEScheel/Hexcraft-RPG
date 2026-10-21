@@ -310,7 +310,7 @@ section('maneuvers', 'Maneuvers', f'''
 {table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], e) for t, e in MAN_EFFECTS.items()], 'compact')}</div>
 </div>
 <h3>Self-debuffs</h3>
-<p>Going all in has a price. A self-debuff refunds 5 EP per tier, and the longer it lasts the more it refunds (4 EP per tier of its own duration). The refund comes off before the timing multiplier, and a maneuver never costs less than 0.</p>
+<p>Going all in has a price. A self-debuff refunds 5 EP per tier, and the longer it lasts the more it refunds (4 EP per tier of its own duration). You can take <b>several self-debuffs</b>: each refunds its own tier, and they share one duration, which refunds once. The refund comes off before the timing multiplier, and a maneuver never costs less than 0.</p>
 <div class="two">
 <div>{table(['Tier', 'Refund', 'Self-debuffs'], [(ROMAN[t], f'−{t * 5}', e) for t, e in MAN_SELF.items()], 'compact')}</div>
 <div>{table(['Lasts', 'Tier', 'Refund'], [(l, t, f'−{t * 4}' if t else '0') for l, t in MAN_SELF_DURATION], 'compact')}</div>

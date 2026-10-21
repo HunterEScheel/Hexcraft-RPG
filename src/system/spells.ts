@@ -275,6 +275,8 @@ export interface SpellDraft {
    * its own. Drafts saved before there could be several have none.
    */
   extraEffects?: SpellSelection[]
+  /** A maneuver's self-debuffs beyond the first, each refunded on its own. */
+  extraSelfDebuffs?: SpellSelection[]
   damageDice: number
   castingTime: CastingTimeKey
   targeting: SpellTargeting
@@ -323,26 +325,53 @@ export function isEmptyDraft(draft: SpellDraft): boolean {
   return (
     draft.damageDice === 0 &&
     (draft.extraEffects?.length ?? 0) === 0 &&
+    (draft.extraSelfDebuffs?.length ?? 0) === 0 &&
     Object.values(draft.selections).every((s) => s.modeIndex === 0 && s.optionIndex === 0)
   )
 }
 
-/** Every buff/debuff pick on a draft: the first, then any extras. */
-export function effectSelections(draft: SpellDraft): SpellSelection[] {
-  return [selectionFor(draft, 'buffDebuff'), ...(draft.extraEffects ?? [])]
+/** Criteria that can be picked more than once: buffs/debuffs and self-debuffs. */
+export const REPEATABLE_CRITERIA: readonly CriterionKey[] = ['buffDebuff', 'selfDebuff']
+
+/** A repeatable criterion's picks beyond the first. */
+export function extrasFor(draft: SpellDraft, key: CriterionKey): SpellSelection[] {
+  if (key === 'buffDebuff') return draft.extraEffects ?? []
+  if (key === 'selfDebuff') return draft.extraSelfDebuffs ?? []
+  return []
 }
 
-/** The labels of every buff/debuff a draft picks (none counts for nothing). */
+/** The draft with a repeatable criterion's extra picks replaced. */
+export function withExtras(draft: SpellDraft, key: CriterionKey, extras: SpellSelection[]): SpellDraft {
+  if (key === 'buffDebuff') return { ...draft, extraEffects: extras }
+  if (key === 'selfDebuff') return { ...draft, extraSelfDebuffs: extras }
+  return draft
+}
+
+/** Every pick for a criterion: the first, then any extras. */
+export function picksFor(draft: SpellDraft, key: CriterionKey): SpellSelection[] {
+  return [selectionFor(draft, key), ...extrasFor(draft, key)]
+}
+
+/** The labels of every pick for a criterion that counts for something (tier above 0). */
+export function pickLabels(
+  draft: SpellDraft,
+  key: CriterionKey,
+  criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
+): string[] {
+  const criterion = criteria.find((c) => c.key === key)
+  if (!criterion) return []
+  return picksFor(draft, key)
+    .map((sel) => selectedOption(criterion, sel))
+    .filter((o): o is SpellOption => o !== undefined && o.tier > 0)
+    .map((o) => o.label)
+}
+
+/** The labels of every buff/debuff a draft picks. */
 export function effectLabels(
   draft: SpellDraft,
   criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
 ): string[] {
-  const effect = criteria.find((c) => c.key === 'buffDebuff')
-  if (!effect) return []
-  return effectSelections(draft)
-    .map((sel) => selectedOption(effect, sel))
-    .filter((o): o is SpellOption => o !== undefined && o.tier > 0)
-    .map((o) => o.label)
+  return pickLabels(draft, 'buffDebuff', criteria)
 }
 
 /** A draft's pick for a criterion; drafts saved before it existed pick option 0. */
@@ -369,7 +398,7 @@ export function criterionApplies(
   if (!criterion.onlyWith) return true
   const partner = criteria.find((c) => c.key === criterion.onlyWith)
   if (!partner) return false
-  return (selectedOption(partner, selectionFor(draft, partner.key))?.tier ?? 0) > 0
+  return pickLabels(draft, partner.key, criteria).length > 0
 }
 
 export interface SpellCost {
@@ -391,11 +420,13 @@ export function spellCost(
         : sum,
     0,
   )
-  // Each extra buff/debuff is priced like the first.
-  const effect = criteria.find((c) => c.key === 'buffDebuff')
-  const extraEp = effect
-    ? (draft.extraEffects ?? []).reduce((sum, sel) => sum + criterionEp(effect, sel), 0)
-    : 0
+  // Each extra buff/debuff (or self-debuff refund) is priced like the first.
+  const extraEp = criteria
+    .filter((c) => REPEATABLE_CRITERIA.includes(c.key))
+    .reduce(
+      (sum, c) => sum + extrasFor(draft, c.key).reduce((s, sel) => s + criterionEp(c, sel), 0),
+      0,
+    )
   const damageEp = draft.damageDice * EP_PER_DAMAGE_DIE
   // Refunds can bring a maneuver down to free, never below.
   const baseEp = Math.max(0, criteriaEp + extraEp + damageEp)

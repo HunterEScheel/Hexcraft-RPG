@@ -120,3 +120,23 @@ describe('maneuver timing', () => {
     expect(SPELL_CASTING_TIMES.some((t) => t.key === 'none')).toBe(false)
   })
 })
+
+describe('several self-debuffs', () => {
+  it('refund each one, and the duration once', () => {
+    const base = { ...emptySpellDraft(), damageDice: 10 } // 20 EP
+    const one = {
+      ...base,
+      selections: { ...base.selections, selfDebuff: { modeIndex: 1, optionIndex: 0 } }, // −5
+    }
+    const two = { ...one, extraSelfDebuffs: [{ modeIndex: 2, optionIndex: 0 }] } // −10 more
+    expect(spellCost(one, MANEUVER_CRITERIA).baseEp).toBe(15)
+    expect(spellCost(two, MANEUVER_CRITERIA).baseEp).toBe(5)
+    // Removing the first still leaves the duration counting for the extra.
+    const extraOnly = { ...base, extraSelfDebuffs: [{ modeIndex: 1, optionIndex: 0 }] }
+    const lasting = {
+      ...extraOnly,
+      selections: { ...extraOnly.selections, selfDuration: { modeIndex: 0, optionIndex: 1 } },
+    }
+    expect(spellCost(lasting, MANEUVER_CRITERIA).baseEp).toBe(11)
+  })
+})

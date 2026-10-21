@@ -3,7 +3,7 @@ import {
   CASTING_TIMES,
   SPELL_CRITERIA,
   criterionApplies,
-  effectLabels,
+  pickLabels,
   savedSpellCost,
   selectedOption,
   selectionFor,
@@ -106,8 +106,9 @@ export function SavedEffectRow({
     const opt = selectedOption(c, selectionFor(item.draft, c.key))
     if (!opt || (c.refund && c.key === 'selfDebuff' && opt.tier === 0)) continue
     factors.push(c.key === 'selfDebuff' ? `self: ${opt.label}` : opt.label)
-    // The first buff/debuff is the criterion's own pick; the rest follow it.
-    if (c.key === 'buffDebuff') factors.push(...effectLabels(item.draft, criteria).slice(opt.tier > 0 ? 1 : 0))
+    // A repeatable criterion's first pick is above; its extras follow it.
+    for (const extra of pickLabels(item.draft, c.key, criteria).slice(opt.tier > 0 ? 1 : 0))
+      factors.push(c.key === 'selfDebuff' ? `self: ${extra}` : extra)
   }
   if (item.draft.damageDice > 0)
     factors.push(`${extraDice ? '+' : ''}${item.draft.damageDice}d6`)

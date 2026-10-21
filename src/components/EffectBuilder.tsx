@@ -1,6 +1,7 @@
 import {
   CASTING_TIMES,
   CONCENTRATION_EFFECTS,
+  REPEATABLE_CRITERIA,
   SPELL_CASTING_TIMES,
   EP_PER_DAMAGE_DIE,
   SPELL_CRITERIA,
@@ -10,9 +11,11 @@ import {
   criterionApplies,
   criterionEp,
   criterionOptions,
+  extrasFor,
   needsConcentration,
   selectionFor,
   selectedOption,
+  withExtras,
   type CastingTimeKey,
   type CriterionKey,
   type SpellCriterion,
@@ -83,14 +86,14 @@ export function EffectBuilder({
               }))
             }
           />
-        ) : c.key === 'buffDebuff' ? (
-          <EffectRows
+        ) : REPEATABLE_CRITERIA.includes(c.key) ? (
+          <RepeatableRows
             key={c.key}
             criterion={c}
             draft={draft}
             onModeChange={(idx) => setMode(c.key, idx)}
             onOptionChange={(idx) => setOption(c.key, idx)}
-            onExtrasChange={(extraEffects) => onChange((d) => ({ ...d, extraEffects }))}
+            onExtrasChange={(extras) => onChange((d) => withExtras(d, c.key, extras))}
           />
         ) : (
           <CriterionRow
@@ -222,10 +225,10 @@ export function PickerSelect({
 }
 
 /**
- * The Buff/Debuff criterion, which can be picked more than once: the first
- * pick, then any extras, each priced on its own.
+ * A criterion that can be picked more than once (Buff/Debuff, a maneuver's
+ * Self-debuff): the first pick, then any extras, each priced on its own.
  */
-function EffectRows({
+function RepeatableRows({
   criterion,
   draft,
   onModeChange,
@@ -238,7 +241,7 @@ function EffectRows({
   onOptionChange: (idx: number) => void
   onExtrasChange: (next: SpellSelection[]) => void
 }) {
-  const extras = draft.extraEffects ?? []
+  const extras = extrasFor(draft, criterion.key)
   const first = selectionFor(draft, criterion.key)
   const hasFirst = (selectedOption(criterion, first)?.tier ?? 0) > 0
   // A new extra starts on the first real effect, past "none".
