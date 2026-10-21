@@ -16,6 +16,8 @@ export type CriterionKey =
 export interface SpellOption {
   label: string
   tier: number
+  /** For a `multiplies` criterion: what it multiplies the other one's EP by. */
+  multiplier?: number
 }
 
 export interface SpellMode {
@@ -35,6 +37,11 @@ export interface SpellCriterion {
   refund?: boolean
   /** Counts only when this other criterion is above tier 0. */
   onlyWith?: CriterionKey
+  /**
+   * Instead of adding EP, multiplies this other criterion's total (every pick
+   * of it) by the chosen option's multiplier: a maneuver's durations.
+   */
+  multiplies?: CriterionKey
 }
 
 export const SPELL_CRITERIA: readonly SpellCriterion[] = [
@@ -413,23 +420,24 @@ export function spellCost(
   draft: SpellDraft,
   criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
 ): SpellCost {
-  const criteriaEp = criteria.reduce(
-    (sum, c) =>
-      criterionApplies(c, draft, criteria)
-        ? sum + criterionEp(c, selectionFor(draft, c.key))
-        : sum,
-    0,
-  )
-  // Each extra buff/debuff (or self-debuff refund) is priced like the first.
-  const extraEp = criteria
-    .filter((c) => REPEATABLE_CRITERIA.includes(c.key))
-    .reduce(
-      (sum, c) => sum + extrasFor(draft, c.key).reduce((s, sel) => s + criterionEp(c, sel), 0),
-      0,
-    )
+  // Each criterion's EP over all its picks (a repeatable one has extras).
+  const totals = new Map<CriterionKey, number>()
+  for (const c of criteria) {
+    if (!criterionApplies(c, draft, criteria) || c.multiplies) continue
+    const picks = REPEATABLE_CRITERIA.includes(c.key) ? picksFor(draft, c.key) : [selectionFor(draft, c.key)]
+    totals.set(c.key, picks.reduce((sum, sel) => sum + criterionEp(c, sel), 0))
+  }
+  // A duration that multiplies scales its criterion's total.
+  for (const c of criteria) {
+    if (!c.multiplies || !criterionApplies(c, draft, criteria)) continue
+    const factor = selectedOption(c, selectionFor(draft, c.key))?.multiplier ?? 1
+    const total = totals.get(c.multiplies)
+    if (total !== undefined) totals.set(c.multiplies, total * factor)
+  }
+  const criteriaEp = [...totals.values()].reduce((sum, ep) => sum + ep, 0)
   const damageEp = draft.damageDice * EP_PER_DAMAGE_DIE
   // Refunds can bring a maneuver down to free, never below.
-  const baseEp = Math.max(0, criteriaEp + extraEp + damageEp)
+  const baseEp = Math.max(0, criteriaEp + damageEp)
   const time =
     CASTING_TIMES.find((t) => t.key === draft.castingTime) ??
     CASTING_TIMES.find((t) => t.key === '2actions')!

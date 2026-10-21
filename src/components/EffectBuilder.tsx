@@ -313,7 +313,8 @@ export function CriterionRow({
           {label ?? criterion.label}
         </span>
         <span className="flex items-baseline gap-2 text-xs text-zinc-500 font-mono">
-          {currentOption ? currentOption.label : '—'} · {formatEp(ep)}
+          {currentOption ? currentOption.label : '—'} ·{' '}
+          {criterion.multiplies ? `×${currentOption?.multiplier ?? 1}` : formatEp(ep)}
           {onRemove && (
             <button
               type="button"
@@ -375,7 +376,7 @@ export function CriterionRow({
                 </span>
               )}
               <span className="ml-1 text-[10px] text-zinc-500 font-mono">
-                {formatEp(optionEp)}
+                {criterion.multiplies ? `×${opt.multiplier ?? 1}` : formatEp(optionEp)}
               </span>
             </button>
           )

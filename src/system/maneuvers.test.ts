@@ -31,29 +31,30 @@ describe('maneuvers', () => {
     // Hamstring: slowed for 1 minute, +1d6, two actions.
     const draft = emptySpellDraft()
     draft.selections.buffDebuff = { modeIndex: 1, optionIndex: 5 } // slowed, Tier I
-    draft.selections.duration = { modeIndex: 0, optionIndex: 2 } // 1 minute, tier 2
+    draft.selections.duration = { modeIndex: 0, optionIndex: 2 } // 1 minute: effects ×2
     draft.selections.challenge = { modeIndex: 0, optionIndex: 6 } // not a maneuver criterion
     draft.damageDice = 1
-    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(5 + 8 + 2)
-    expect(savedSpellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(11)
+    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(5 * 2 + 2)
+    expect(savedSpellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(9)
   })
 
   it('have no concentration or Challenge', () => {
     expect(MANEUVER_CRITERIA.map((c) => c.key)).not.toContain('challenge')
     const duration = MANEUVER_CRITERIA.find((c) => c.key === 'duration')!
     expect(duration.modes).toBeUndefined()
-    expect(duration.options?.map((o) => o.label)).toEqual(['instantaneous', '1 round', '1 minute'])
+    expect(duration.options?.map((o) => o.label)).toEqual(['instantaneous', '1 round', '1 minute', '1 hour'])
+    expect(duration.options?.map((o) => o.multiplier)).toEqual([1, 1, 2, 4])
   })
 
-  it('refund EP for a self-debuff, and more the longer it lasts', () => {
+  it('refund EP for a self-debuff, multiplied the longer it lasts', () => {
     // Reckless Strike: advantage on the attack and +4d6, leaving you rooted.
     const draft = emptySpellDraft()
     draft.selections.buffDebuff = { modeIndex: 1, optionIndex: 0 } // advantage, 5 EP
     draft.damageDice = 4 // 8 EP
     draft.selections.selfDebuff = { modeIndex: 1, optionIndex: 0 } // rooted, −5 EP
     expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(8) // 1 round: no extra refund
-    draft.selections.selfDuration = { modeIndex: 0, optionIndex: 1 } // 1 minute, −4 EP
-    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(4)
+    draft.selections.selfDuration = { modeIndex: 0, optionIndex: 1 } // 1 minute: refund ×2
+    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(3)
   })
 
   it('ignore a self-debuff duration without a self-debuff, and never go below 0', () => {
@@ -122,7 +123,7 @@ describe('maneuver timing', () => {
 })
 
 describe('several self-debuffs', () => {
-  it('refund each one, and the duration once', () => {
+  it('refund each one, all multiplied by the shared duration', () => {
     const base = { ...emptySpellDraft(), damageDice: 10 } // 20 EP
     const one = {
       ...base,
@@ -137,6 +138,8 @@ describe('several self-debuffs', () => {
       ...extraOnly,
       selections: { ...extraOnly.selections, selfDuration: { modeIndex: 0, optionIndex: 1 } },
     }
-    expect(spellCost(lasting, MANEUVER_CRITERIA).baseEp).toBe(11)
+    expect(spellCost(lasting, MANEUVER_CRITERIA).baseEp).toBe(10) // 20 − 5 × 2
+    const both = { ...two, selections: { ...two.selections, selfDuration: { modeIndex: 0, optionIndex: 2 } } }
+    expect(spellCost(both, MANEUVER_CRITERIA).baseEp).toBe(0) // 20 − 15 × 4, floored at 0
   })
 })

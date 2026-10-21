@@ -283,7 +283,7 @@ section('spellbuilding', 'Building a Spell', f'''
 <div class="example"><b>Example: Cinder Lance.</b> Devon (Destroy 3, Elemental 3) builds a single-target, 120 ft fire bolt doing 4d6, resolved as a hit roll and cast in 2 actions. Range 120 ft is 4 EP; four damage dice are 8 EP. Base cost <b>12 EP</b>; saved, <b>9 EP</b>. His hit bonus is +6; for 5 more EP (14 total) he can push it to +7.</div>
 ''')
 
-MAN_DURATION = [('instantaneous', 0), ('1 round', 1), ('1 minute', 2)]
+MAN_DURATION = [('instantaneous', 1), ('1 round', 1), ('1 minute', 2), ('1 hour', 4)]
 MAN_EFFECTS = {1: 'advantage on attack, +2 to a check, push 10 ft, disarmed, grappled, slowed',
                2: 'damage resistance, sneak attack, +5 to a check, prone, frightened, bleeding',
                3: 'extra action, restrained, blinded',
@@ -292,28 +292,28 @@ MAN_SELF = {1: 'rooted, exposed, off-balance',
             2: 'poisoned, burned, prone, exhaustion',
             3: 'blinded, restrained',
             4: 'debilitated'}
-MAN_SELF_DURATION = [('1 round', 0), ('1 minute', 1), ('1 hour', 2), ('until a long rest', 3)]
+MAN_SELF_DURATION = [('1 round', 1), ('1 minute', 2), ('1 hour', 4), ('until a long rest', 8)]
 
 section('maneuvers', 'Maneuvers', f'''
 <p>Maneuvers are the martial side of the same system: signature strikes, sweeps, trips, disarms and feints. You build one the way you build a spell and pay for it in EP, but from a shorter list of parts:</p>
 <ul>
 <li><b>Range</b> and <b>AOE / targets</b>: the same options and EP as spells.</li>
-<li><b>Duration</b>: instantaneous, 1 round or 1 minute. There's no concentration.</li>
+<li><b>Duration</b>: how long the effects last, which <b>multiplies</b> their EP: instantaneous or 1 round ×1, 1 minute ×2, 1 hour ×4. There's no concentration.</li>
 <li><b>Effect</b>: non-magical effects only, listed below. There's no Challenge.</li>
 <li><b>Extra damage</b>: d6s added to the weapon's own damage, 2 EP per die.</li>
 <li><b>Self-debuff</b> (optional): a drawback you take on to pay for the move, which <b>takes EP off</b> its cost.</li>
 <li><b>Timing</b>: the same multipliers as a spell's casting time, plus <b>None (no action) at ×8</b>: a maneuver that costs no action at all.</li>
 </ul>
 <div class="two">
-<div><h3>Duration &middot; {EP['duration']} EP per tier</h3>{opts(MAN_DURATION, EP['duration'])}</div>
+<div><h3>Duration &middot; multiplies Effect EP</h3>{table(['Lasts', 'Effect EP'], [(l, f'× {m}') for l, m in MAN_DURATION], 'compact')}</div>
 <div><h3>Effect &middot; {EP['buff']} EP per tier</h3>
 {table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], e) for t, e in MAN_EFFECTS.items()], 'compact')}</div>
 </div>
 <h3>Self-debuffs</h3>
-<p>Going all in has a price. A self-debuff refunds 5 EP per tier, and the longer it lasts the more it refunds (4 EP per tier of its own duration). You can take <b>several self-debuffs</b>: each refunds its own tier, and they share one duration, which refunds once. The refund comes off before the timing multiplier, and a maneuver never costs less than 0.</p>
+<p>Going all in has a price. A self-debuff refunds 5 EP per tier, and its duration <b>multiplies</b> the refund: 1 round ×1, 1 minute ×2, 1 hour ×4, until a long rest ×8. You can take <b>several self-debuffs</b>: each refunds its own tier, and they share one duration that multiplies them all. The refund comes off before the timing multiplier, and a maneuver never costs less than 0.</p>
 <div class="two">
 <div>{table(['Tier', 'Refund', 'Self-debuffs'], [(ROMAN[t], f'−{t * 5}', e) for t, e in MAN_SELF.items()], 'compact')}</div>
-<div>{table(['Lasts', 'Tier', 'Refund'], [(l, t, f'−{t * 4}' if t else '0') for l, t in MAN_SELF_DURATION], 'compact')}</div>
+<div>{table(['Lasts', 'Refund'], [(l, f'× {m}') for l, m in MAN_SELF_DURATION], 'compact')}</div>
 </div>
 <p>Instead of a school and a medium, a maneuver draws on one of your <b>attack combat skills</b> (1-handed melee, 2-handed fired, Unarmed, Grapple, Tackle and so on) and that skill's attribute.</p>
 <ul>

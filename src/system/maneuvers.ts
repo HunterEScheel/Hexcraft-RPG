@@ -24,14 +24,18 @@ export const MANEUVER_SKILLS = COMBAT_SKILLS.filter((s) => s.category === 'actio
 export const MANEUVER_CRITERIA: readonly SpellCriterion[] = [
   SPELL_CRITERIA.find((c) => c.key === 'range')!,
   SPELL_CRITERIA.find((c) => c.key === 'aoe')!,
+  // How long the effects last: multiplies their EP rather than adding.
   {
     key: 'duration',
     label: 'Duration',
-    epPerTier: 4,
+    epPerTier: 0,
+    multiplies: 'buffDebuff',
+    onlyWith: 'buffDebuff',
     options: [
-      { label: 'instantaneous', tier: 0 },
-      { label: '1 round', tier: 1 },
-      { label: '1 minute', tier: 2 },
+      { label: 'instantaneous', tier: 0, multiplier: 1 },
+      { label: '1 round', tier: 0, multiplier: 1 },
+      { label: '1 minute', tier: 0, multiplier: 2 },
+      { label: '1 hour', tier: 0, multiplier: 4 },
     ],
   },
   {
@@ -130,14 +134,15 @@ export const MANEUVER_CRITERIA: readonly SpellCriterion[] = [
   {
     key: 'selfDuration',
     label: 'Self-debuff duration',
-    epPerTier: 4,
-    refund: true,
+    epPerTier: 0,
+    // Multiplies every self-debuff's refund.
+    multiplies: 'selfDebuff',
     onlyWith: 'selfDebuff',
     options: [
-      { label: '1 round', tier: 0 },
-      { label: '1 minute', tier: 1 },
-      { label: '1 hour', tier: 2 },
-      { label: 'until a long rest', tier: 3 },
+      { label: '1 round', tier: 0, multiplier: 1 },
+      { label: '1 minute', tier: 0, multiplier: 2 },
+      { label: '1 hour', tier: 0, multiplier: 4 },
+      { label: 'until a long rest', tier: 0, multiplier: 8 },
     ],
   },
 ]
