@@ -170,11 +170,19 @@ export function spellTargetingLabel(s: { draft: SpellDraft }, bonus: number): st
   return `${save} DC ${10 + bonus}`
 }
 
-// Maneuvers pass their own criteria; their dice add to the weapon's damage.
+/**
+ * The damage (or healing) dice, e.g. "4d6", or "+2d6" for a maneuver whose
+ * dice add to the weapon's. Null when it rolls none.
+ */
+export function spellDamage(s: { draft: SpellDraft }, extraDice = false): string | null {
+  const dice = s.draft.damageDice ?? 0
+  return dice > 0 ? `${extraDice ? '+' : ''}${dice}d6` : null
+}
+
+// Everything but the dice, which spellDamage shows on its own.
 export function spellFactors(
   s: { draft: SpellDraft },
   criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
-  extraDice = false,
 ): string[] {
   const factors: string[] = []
   for (const c of criteria) {
@@ -183,8 +191,6 @@ export function spellFactors(
     if (!opt || (c.key === 'selfDebuff' && opt.tier === 0)) continue
     factors.push(c.key === 'selfDebuff' ? `self: ${opt.label}` : opt.label)
   }
-  if (s.draft.damageDice > 0)
-    factors.push(`${extraDice ? '+' : ''}${s.draft.damageDice}d6`)
   const time = CASTING_TIMES.find((t) => t.key === s.draft.castingTime)
   if (time) factors.push(time.label)
   return factors

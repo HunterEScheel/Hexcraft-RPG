@@ -6,7 +6,7 @@ import {
   type MagicMedium,
   type MagicSchool,
 } from '../system/magicSchools'
-import { spellTargetingLabel, type MonsterSpell } from '../system/monster'
+import { spellDamage, spellFactors, spellTargetingLabel, type MonsterSpell } from '../system/monster'
 import { EffectBuilder, PickerSelect } from './EffectBuilder'
 
 interface Props {
@@ -135,8 +135,23 @@ export function MonsterSpellComposer({ schools, mediums, value, onChange }: Prop
               <span className="text-xs font-mono text-amber-300 whitespace-nowrap">
                 {spellTargetingLabel(s, bonus(s))}
               </span>
-              <span className="text-xs font-mono text-zinc-500 flex-1">
+              {spellDamage(s) && (
+                <span className="text-xs font-mono text-rose-300 whitespace-nowrap">
+                  {spellDamage(s)} damage
+                </span>
+              )}
+              <span className="text-xs font-mono text-zinc-500 whitespace-nowrap">
                 {spellCost(s.draft).totalEp} EP
+              </span>
+              <span className="flex flex-1 flex-wrap gap-1 min-w-0">
+                {spellFactors(s).map((label, i) => (
+                  <span
+                    key={i}
+                    className="rounded border border-zinc-700 bg-zinc-950 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                  >
+                    {label}
+                  </span>
+                ))}
               </span>
               <button
                 type="button"

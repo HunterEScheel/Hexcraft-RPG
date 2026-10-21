@@ -3,6 +3,7 @@ import { emptySpellDraft, isEmptyDraft, spellCost } from '../system/spells'
 import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from '../system/maneuvers'
 import {
   monsterManeuverBonus,
+  spellDamage,
   spellTargetingLabel,
   type Monster,
   type MonsterManeuver,
@@ -102,6 +103,11 @@ export function MonsterManeuverComposer({
               <span className="text-xs font-mono text-amber-300 whitespace-nowrap">
                 {spellTargetingLabel(m, monsterManeuverBonus(monster, m.skillId))}
               </span>
+              {spellDamage(m, true) && (
+                <span className="text-xs font-mono text-rose-300 whitespace-nowrap">
+                  weapon {spellDamage(m, true)}
+                </span>
+              )}
               <span className="text-xs font-mono text-zinc-500 flex-1">
                 {spellCost(m.draft, MANEUVER_CRITERIA).totalEp} EP
               </span>

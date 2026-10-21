@@ -9,6 +9,7 @@ import {
   monsterEvasion,
   monsterManeuverBonus,
   monsterSpellBonus,
+  spellDamage,
   spellFactors,
   spellTargetingLabel,
   type LairAction,
@@ -647,6 +648,9 @@ function StatBlock({ monster }: { monster: Monster }) {
                   <span className="font-mono text-amber-300">
                     {spellTargetingLabel(s, monsterSpellBonus(monster, s))}
                   </span>
+                  {spellDamage(s) && (
+                    <span className="font-mono text-rose-300">{spellDamage(s)} damage</span>
+                  )}
                   <span className="font-mono text-zinc-400">
                     {spellCost(s.draft).totalEp} EP
                   </span>
@@ -680,12 +684,17 @@ function StatBlock({ monster }: { monster: Monster }) {
                   <span className="font-mono text-amber-300">
                     {spellTargetingLabel(m, monsterManeuverBonus(monster, m.skillId))}
                   </span>
+                  {spellDamage(m, true) && (
+                    <span className="font-mono text-rose-300">
+                      weapon {spellDamage(m, true)} damage
+                    </span>
+                  )}
                   <span className="font-mono text-zinc-400">
                     {spellCost(m.draft, MANEUVER_CRITERIA).totalEp} EP
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {spellFactors(m, MANEUVER_CRITERIA, true).map((label, i) => (
+                  {spellFactors(m, MANEUVER_CRITERIA).map((label, i) => (
                     <span
                       key={i}
                       className="rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-300"
