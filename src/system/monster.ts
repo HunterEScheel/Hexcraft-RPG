@@ -16,6 +16,7 @@ import {
   CASTING_TIMES,
   SPELL_CRITERIA,
   criterionApplies,
+  effectLabels,
   selectedOption,
   selectionFor,
   type SpellCriterion,
@@ -190,6 +191,7 @@ export function spellFactors(
     const opt = selectedOption(c, selectionFor(s.draft, c.key))
     if (!opt || (c.key === 'selfDebuff' && opt.tier === 0)) continue
     factors.push(c.key === 'selfDebuff' ? `self: ${opt.label}` : opt.label)
+    if (c.key === 'buffDebuff') factors.push(...effectLabels(s.draft, criteria).slice(opt.tier > 0 ? 1 : 0))
   }
   const time = CASTING_TIMES.find((t) => t.key === s.draft.castingTime)
   if (time) factors.push(time.label)

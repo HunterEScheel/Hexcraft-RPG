@@ -270,6 +270,11 @@ export const SPELL_TARGETING_OPTIONS: readonly {
 
 export interface SpellDraft {
   selections: Record<CriterionKey, SpellSelection>
+  /**
+   * Buffs/debuffs beyond the first (selections.buffDebuff), each priced on
+   * its own. Drafts saved before there could be several have none.
+   */
+  extraEffects?: SpellSelection[]
   damageDice: number
   castingTime: CastingTimeKey
   targeting: SpellTargeting
@@ -317,8 +322,27 @@ export function selectedOption(
 export function isEmptyDraft(draft: SpellDraft): boolean {
   return (
     draft.damageDice === 0 &&
+    (draft.extraEffects?.length ?? 0) === 0 &&
     Object.values(draft.selections).every((s) => s.modeIndex === 0 && s.optionIndex === 0)
   )
+}
+
+/** Every buff/debuff pick on a draft: the first, then any extras. */
+export function effectSelections(draft: SpellDraft): SpellSelection[] {
+  return [selectionFor(draft, 'buffDebuff'), ...(draft.extraEffects ?? [])]
+}
+
+/** The labels of every buff/debuff a draft picks (none counts for nothing). */
+export function effectLabels(
+  draft: SpellDraft,
+  criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
+): string[] {
+  const effect = criteria.find((c) => c.key === 'buffDebuff')
+  if (!effect) return []
+  return effectSelections(draft)
+    .map((sel) => selectedOption(effect, sel))
+    .filter((o): o is SpellOption => o !== undefined && o.tier > 0)
+    .map((o) => o.label)
 }
 
 /** A draft's pick for a criterion; drafts saved before it existed pick option 0. */
@@ -367,9 +391,14 @@ export function spellCost(
         : sum,
     0,
   )
+  // Each extra buff/debuff is priced like the first.
+  const effect = criteria.find((c) => c.key === 'buffDebuff')
+  const extraEp = effect
+    ? (draft.extraEffects ?? []).reduce((sum, sel) => sum + criterionEp(effect, sel), 0)
+    : 0
   const damageEp = draft.damageDice * EP_PER_DAMAGE_DIE
   // Refunds can bring a maneuver down to free, never below.
-  const baseEp = Math.max(0, criteriaEp + damageEp)
+  const baseEp = Math.max(0, criteriaEp + extraEp + damageEp)
   const time =
     CASTING_TIMES.find((t) => t.key === draft.castingTime) ??
     CASTING_TIMES.find((t) => t.key === '2actions')!
@@ -400,15 +429,13 @@ export interface SavedSpell {
 }
 
 /**
- * A lasting spell needs concentration when its Buff/Debuff is one of
+ * A lasting spell needs concentration when any of its Buffs/Debuffs is one of
  * CONCENTRATION_EFFECTS, when it keeps dealing damage (or healing) dice, or
  * when it covers an area (a splash or a line).
  */
 export function needsConcentration(draft: SpellDraft): boolean {
-  const buff = SPELL_CRITERIA.find((c) => c.key === 'buffDebuff')
-  const effect = buff ? selectedOption(buff, selectionFor(draft, 'buffDebuff')) : undefined
   return (
-    (effect !== undefined && CONCENTRATION_EFFECTS.has(effect.label)) ||
+    effectLabels(draft).some((label) => CONCENTRATION_EFFECTS.has(label)) ||
     draft.damageDice > 0 ||
     isAreaSpell(draft)
   )

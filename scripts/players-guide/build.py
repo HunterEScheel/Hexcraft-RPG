@@ -262,7 +262,7 @@ section('magic', 'Magic', f'''
 ''')
 
 section('spellbuilding', 'Building a Spell', f'''
-<p>You build every spell from parts. Pick one option for each criterion, add damage dice, then pick a casting time.</p>
+<p>You build every spell from parts. Pick one option for each criterion, add damage dice, then pick a casting time. A spell (or maneuver) can carry <b>several Buffs/Debuffs</b>: each one adds its own cost, and the spell needs concentration if any of them does.</p>
 <div class="formula">EP = (criteria + 2 per damage die) × casting-time multiplier, rounded up</div>
 <div class="two">
 <div><h3>Range &middot; {EP['range']} EP per tier</h3>{opts([(r, i) for i, r in enumerate(RANGE)], EP['range'])}

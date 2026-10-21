@@ -6,6 +6,7 @@ import {
   emptySpellDraft,
   needsConcentration,
   selectedOption,
+  spellCost,
   type SpellDraft,
 } from './spells'
 import { MANEUVER_CRITERIA } from './maneuvers'
@@ -91,5 +92,24 @@ describe('concentration rule', () => {
   it('does not touch maneuvers', () => {
     const d = { ...emptySpellDraft(), damageDice: 3 }
     expect(applyConcentrationRule(d, MANEUVER_CRITERIA)).toBe(d)
+  })
+})
+
+describe('several buffs/debuffs', () => {
+  const withEffects = (first: SpellDraft['selections']['buffDebuff'], extras: SpellDraft['selections']['buffDebuff'][]) => ({
+    ...emptySpellDraft(),
+    selections: { ...emptySpellDraft().selections, buffDebuff: first },
+    extraEffects: extras,
+  })
+
+  it('prices each one', () => {
+    // Tier I (5) + Tier II (10).
+    expect(spellCost(withEffects({ modeIndex: 1, optionIndex: 0 }, [{ modeIndex: 2, optionIndex: 0 }])).baseEp).toBe(15)
+  })
+
+  it('needs concentration if any of them does', () => {
+    // darkvision (C) first is enough; languages alone is not.
+    expect(needsConcentration(withEffects({ modeIndex: 1, optionIndex: 2 }, []))).toBe(false)
+    expect(needsConcentration(withEffects({ modeIndex: 1, optionIndex: 2 }, [{ modeIndex: 1, optionIndex: 0 }]))).toBe(true)
   })
 })

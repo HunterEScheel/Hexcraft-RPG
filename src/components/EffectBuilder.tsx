@@ -83,6 +83,15 @@ export function EffectBuilder({
               }))
             }
           />
+        ) : c.key === 'buffDebuff' ? (
+          <EffectRows
+            key={c.key}
+            criterion={c}
+            draft={draft}
+            onModeChange={(idx) => setMode(c.key, idx)}
+            onOptionChange={(idx) => setOption(c.key, idx)}
+            onExtrasChange={(extraEffects) => onChange((d) => ({ ...d, extraEffects }))}
+          />
         ) : (
           <CriterionRow
             key={c.key}
@@ -212,11 +221,73 @@ export function PickerSelect({
   )
 }
 
+/**
+ * The Buff/Debuff criterion, which can be picked more than once: the first
+ * pick, then any extras, each priced on its own.
+ */
+function EffectRows({
+  criterion,
+  draft,
+  onModeChange,
+  onOptionChange,
+  onExtrasChange,
+}: {
+  criterion: SpellCriterion
+  draft: SpellDraft
+  onModeChange: (idx: number) => void
+  onOptionChange: (idx: number) => void
+  onExtrasChange: (next: SpellSelection[]) => void
+}) {
+  const extras = draft.extraEffects ?? []
+  const first = selectionFor(draft, criterion.key)
+  const hasFirst = (selectedOption(criterion, first)?.tier ?? 0) > 0
+  // A new extra starts on the first real effect, past "none".
+  const fresh: SpellSelection =
+    (criterion.modes?.length ?? 0) > 1 ? { modeIndex: 1, optionIndex: 0 } : { modeIndex: 0, optionIndex: 1 }
+  const setExtra = (i: number, patch: Partial<SpellSelection>) =>
+    onExtrasChange(extras.map((e, j) => (j === i ? { ...e, ...patch } : e)))
+
+  return (
+    <div className="space-y-3">
+      <CriterionRow
+        criterion={criterion}
+        selection={first}
+        onModeChange={onModeChange}
+        onOptionChange={onOptionChange}
+      />
+      {extras.map((sel, i) => (
+        <CriterionRow
+          key={i}
+          criterion={criterion}
+          label={`${criterion.label} ${i + 2}`}
+          selection={sel}
+          onModeChange={(modeIndex) => setExtra(i, { modeIndex, optionIndex: 0 })}
+          onOptionChange={(optionIndex) => setExtra(i, { optionIndex })}
+          onRemove={() => onExtrasChange(extras.filter((_, j) => j !== i))}
+        />
+      ))}
+      <button
+        type="button"
+        onClick={() => onExtrasChange([...extras, fresh])}
+        disabled={!hasFirst}
+        title={hasFirst ? undefined : `Pick the first ${criterion.label.toLowerCase()} before adding another`}
+        className="rounded border border-dashed border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        + Add another {criterion.label.toLowerCase()}
+      </button>
+    </div>
+  )
+}
+
 interface CriterionRowProps {
   criterion: SpellCriterion
   selection: SpellSelection
   onModeChange: (idx: number) => void
   onOptionChange: (idx: number) => void
+  /** Overrides the criterion's own label (e.g. "Buff / Debuff 2"). */
+  label?: string
+  /** Shows a remove button, for a repeated pick. */
+  onRemove?: () => void
 }
 
 export function CriterionRow({
@@ -224,6 +295,8 @@ export function CriterionRow({
   selection,
   onModeChange,
   onOptionChange,
+  label,
+  onRemove,
 }: CriterionRowProps) {
   const ep = criterionEp(criterion, selection)
   const hasModes = (criterion.modes?.length ?? 0) > 1
@@ -234,10 +307,20 @@ export function CriterionRow({
     <div>
       <div className="flex items-baseline justify-between mb-1">
         <span className="text-xs uppercase tracking-wide text-zinc-400">
-          {criterion.label}
+          {label ?? criterion.label}
         </span>
-        <span className="text-xs text-zinc-500 font-mono">
+        <span className="flex items-baseline gap-2 text-xs text-zinc-500 font-mono">
           {currentOption ? currentOption.label : '—'} · {formatEp(ep)}
+          {onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              aria-label={`Remove ${label ?? criterion.label}`}
+              className="text-zinc-500 hover:text-rose-400"
+            >
+              ✕
+            </button>
+          )}
         </span>
       </div>
       {hasModes && criterion.modes && (
