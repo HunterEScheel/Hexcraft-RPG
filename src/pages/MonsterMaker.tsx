@@ -8,6 +8,7 @@ import {
   monsterBpBreakdown,
   monsterEvasion,
   monsterManeuverBonus,
+  monsterSpellBonus,
   spellFactors,
   spellTargetingLabel,
   type LairAction,
@@ -20,6 +21,9 @@ import { spellCost } from '../system/spells'
 import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from '../system/maneuvers'
 import { AttributesEditor } from '../components/AttributesEditor'
 import { MonsterSpellComposer } from '../components/MonsterSpellComposer'
+import { MagicSchoolsEditor } from '../components/MagicSchoolsEditor'
+import { MagicMediumsEditor } from '../components/MagicMediumsEditor'
+import { MAGIC_MEDIUMS, MAGIC_SCHOOLS } from '../system/magicSchools'
 import { MonsterManeuverComposer } from '../components/MonsterManeuverComposer'
 import { NumberStepper } from '../components/NumberStepper'
 import { Section } from '../components/Section'
@@ -181,27 +185,40 @@ export function MonsterMaker() {
       </Section>
 
       <Section
-        title="Spells"
-        subtitle="Monsters know spells innately — no training gates or save slots. Casting still costs EP."
+        title="Magic"
+        subtitle="Schools and mediums the monster knows. The GM can cast any spell built from them on the fly; the bonus is school + medium."
+        cost={breakdown.magic}
       >
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <NumberStepper
-              label="Spell bonus"
-              value={monster.spellBonus}
-              onChange={(spellBonus) => patch({ spellBonus })}
-              min={-Infinity}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <span className="text-xs uppercase tracking-wide text-zinc-400 block mb-2">Schools</span>
+            <MagicSchoolsEditor
+              value={monster.magicSchools}
+              onChange={(magicSchools) => patch({ magicSchools })}
+              max={MAX_SKILL_LEVEL}
             />
-            <span className="text-xs text-zinc-500">
-              Sets spell hit bonus; save DC is 10 + bonus.
-            </span>
           </div>
-          <MonsterSpellComposer
-            spellBonus={monster.spellBonus}
-            value={monster.spells}
-            onChange={(spells) => patch({ spells })}
-          />
+          <div>
+            <span className="text-xs uppercase tracking-wide text-zinc-400 block mb-2">Mediums</span>
+            <MagicMediumsEditor
+              value={monster.magicMediums}
+              onChange={(magicMediums) => patch({ magicMediums })}
+              max={MAX_SKILL_LEVEL}
+            />
+          </div>
         </div>
+      </Section>
+
+      <Section
+        title="Spells"
+        subtitle="Prepared spells for the stat block, each from a school and medium the monster knows. No limit on how many. Casting still costs EP."
+      >
+        <MonsterSpellComposer
+          schools={monster.magicSchools}
+          mediums={monster.magicMediums}
+          value={monster.spells}
+          onChange={(spells) => patch({ spells })}
+        />
       </Section>
 
       <Section
@@ -496,6 +513,10 @@ function StatBlock({ monster }: { monster: Monster }) {
   const otherActions = COMBAT_SKILLS.filter(
     (d) => d.category === 'action' && skillLv(d.id) > 0,
   )
+  const knownMagic = [
+    ...MAGIC_SCHOOLS.map((n) => ({ name: n, level: monster.magicSchools[n] ?? 0 })),
+    ...MAGIC_MEDIUMS.map((n) => ({ name: n, level: monster.magicMediums[n] ?? 0 })),
+  ].filter((k) => k.level > 0)
 
   return (
     <div className="rounded-lg border border-amber-700/40 bg-zinc-950 p-5 space-y-4 max-w-2xl">
@@ -598,15 +619,33 @@ function StatBlock({ monster }: { monster: Monster }) {
         </BlockSection>
       )}
 
+      {knownMagic.length > 0 && (
+        <BlockSection title="Magic" meta="casts any spell from these">
+          <div className="flex flex-wrap gap-1">
+            {knownMagic.map((k) => (
+              <span
+                key={k.name}
+                className="rounded border border-violet-800/60 bg-violet-950/40 px-2 py-0.5 text-[11px] text-violet-200"
+              >
+                {k.name} <span className="font-mono text-violet-400">{k.level}</span>
+              </span>
+            ))}
+          </div>
+        </BlockSection>
+      )}
+
       {monster.spells.length > 0 && (
-        <BlockSection title="Spells" meta={`spell bonus ${fmt(monster.spellBonus)}`}>
+        <BlockSection title="Spells">
           <ul className="space-y-2">
             {monster.spells.map((s) => (
               <li key={s.id} className="text-sm">
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   <span className="text-zinc-100 font-medium">{s.name}</span>
+                  <span className="text-xs text-violet-300">
+                    {s.school} · {s.medium}
+                  </span>
                   <span className="font-mono text-amber-300">
-                    {spellTargetingLabel(s, monster.spellBonus)}
+                    {spellTargetingLabel(s, monsterSpellBonus(monster, s))}
                   </span>
                   <span className="font-mono text-zinc-400">
                     {spellCost(s.draft).totalEp} EP

@@ -5,9 +5,12 @@ import {
   DEFAULT_SPEED,
   epCost,
   hpCost,
+  magicMediumCost,
+  magicSchoolCost,
   skillCost,
   speedCost,
 } from './costs'
+import { MAGIC_MEDIUMS, MAGIC_SCHOOLS, type MagicMedium, type MagicSchool } from './magicSchools'
 import type { DamageType } from './inventory'
 import {
   CASTING_TIMES,
@@ -28,9 +31,13 @@ export interface MonsterAttack {
   note: string
 }
 
+// Built like a character's spell from a school and medium the monster knows;
+// its bonus is the two levels added. Monsters have no limit on saved spells.
 export interface MonsterSpell {
   id: string
   name: string
+  school: MagicSchool
+  medium: MagicMedium
   draft: SpellDraft
 }
 
@@ -65,7 +72,8 @@ export interface Monster {
   speed: number
   attributes: Record<AttributeName, number>
   combatSkills: Record<string, number>
-  spellBonus: number
+  magicSchools: Record<MagicSchool, number>
+  magicMediums: Record<MagicMedium, number>
   multiattack: string
   attacks: MonsterAttack[]
   spells: MonsterSpell[]
@@ -88,7 +96,8 @@ export function emptyMonster(tierName: string, bpBudget: number): Monster {
       number
     >,
     combatSkills: Object.fromEntries(COMBAT_SKILLS.map((c) => [c.id, 0])),
-    spellBonus: 0,
+    magicSchools: Object.fromEntries(MAGIC_SCHOOLS.map((s) => [s, 0])) as Record<MagicSchool, number>,
+    magicMediums: Object.fromEntries(MAGIC_MEDIUMS.map((m) => [m, 0])) as Record<MagicMedium, number>,
     multiattack: '',
     attacks: [],
     spells: [],
@@ -105,6 +114,7 @@ export interface MonsterBPBreakdown {
   speed: number
   attributes: number
   skills: number
+  magic: number
   total: number
   remaining: number
 }
@@ -121,13 +131,17 @@ export function monsterBpBreakdown(m: Monster): MonsterBPBreakdown {
     (sum, lv) => sum + skillCost(lv),
     0,
   )
-  const total = hp + ep + speed + attributes + skills
+  const magic =
+    MAGIC_SCHOOLS.reduce((sum, s) => sum + magicSchoolCost(m.magicSchools[s] ?? 0), 0) +
+    MAGIC_MEDIUMS.reduce((sum, md) => sum + magicMediumCost(m.magicMediums[md] ?? 0), 0)
+  const total = hp + ep + speed + attributes + skills + magic
   return {
     hp,
     ep,
     speed,
     attributes,
     skills,
+    magic,
     total,
     remaining: m.bpBudget - total,
   }
@@ -135,6 +149,11 @@ export function monsterBpBreakdown(m: Monster): MonsterBPBreakdown {
 
 export function monsterEvasion(m: Monster): number {
   return 10 + m.attributes.Agility + (m.combatSkills['combat-dodge'] ?? 0)
+}
+
+/** A monster spell's hit bonus: its school plus its medium (save DC is 10 + this). */
+export function monsterSpellBonus(m: Monster, s: { school: MagicSchool; medium: MagicMedium }): number {
+  return (m.magicSchools[s.school] ?? 0) + (m.magicMediums[s.medium] ?? 0)
 }
 
 export function monsterManeuverBonus(m: Monster, skillId: string): number {

@@ -8,9 +8,11 @@ import { NumberStepper } from './NumberStepper'
 interface Props {
   value: Record<MagicMedium, number>
   onChange: (next: Record<MagicMedium, number>) => void
+  /** Characters stop at 5; monsters can go higher. */
+  max?: number
 }
 
-export function MagicMediumsEditor({ value, onChange }: Props) {
+export function MagicMediumsEditor({ value, onChange, max = 5 }: Props) {
   return (
     <ul className="space-y-2">
       {MAGIC_MEDIUMS.map((medium) => (
@@ -28,7 +30,7 @@ export function MagicMediumsEditor({ value, onChange }: Props) {
             value={value[medium]}
             onChange={(v) => onChange({ ...value, [medium]: v })}
             min={0}
-            max={5}
+            max={max}
           />
         </li>
       ))}
