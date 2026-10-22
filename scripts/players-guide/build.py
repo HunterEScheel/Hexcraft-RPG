@@ -320,12 +320,12 @@ section('maneuvers', 'Maneuvers', f'''
     ('II', 4, 'Beyond max range'),
     ('III', 8, '2× max range'),
     ('IV', 16, '3× max range')], 'compact')}
-<h3>AOE &middot; {EP['aoe']} EP per tier</h3>
-{table(['Tier', 'EP', 'Splash (close)', 'Splash (fired, Throw)', 'Line'], [
-    ('I', 5, '5 ft', '20 ft', 'speed × actions (or max range)'),
-    ('II', 10, '10 ft', '60 ft', '2×'),
-    ('III', 15, '15 ft', '120 ft', '4×'),
-    ('IV', 20, '—', '300 ft', '8×')], 'compact')}
+<h3>AOE</h3>
+{table(['Tier', 'Splash EP', 'Splash (close)', 'Splash (fired, Throw)', 'Line', 'Line EP'], [
+    ('I', 5, '5 ft', '20 ft', 'speed × actions (or max range)', 5),
+    ('II', 10, '10 ft', '60 ft', '2×', 10),
+    ('III', 15, '15 ft', '120 ft', '4×', 20),
+    ('IV', 20, '—', '300 ft', '8×', 40)], 'compact')}
 <div class="example"><b>Example.</b> With a 25 ft speed, a one-action sword maneuver's lines run 25, 50, 100 or 200 ft; at 2 Actions, 50, 100, 200 or 400 ft. With a short-range rifle (max 800 ft), a shot at 1,000 ft is Range tier II (4 EP), and one at 1,700 ft is tier III (8 EP).</div>
 <div class="two">
 <div><h3>Duration &middot; multiplies Effect EP</h3>{table(['Lasts', 'Effect EP'], [(l, f'× {m}') for l, m in MAN_DURATION], 'compact')}</div>

@@ -156,6 +156,9 @@ describe('maneuver reach', () => {
     expect(c.map((x) => x.key)).not.toContain('range')
     expect(labels(c, 'aoe', 'line')).toEqual(['25 ft line', '50 ft line', '100 ft line', '200 ft line'])
     expect(labels(c, 'aoe', 'splash')).toEqual(['5 ft splash', '10 ft splash', '15 ft splash'])
+    const aoe = c.find((x) => x.key === 'aoe')!
+    const line = aoe.modes!.find((m) => m.key === 'line')!
+    expect(line.options.map((o) => o.tier * aoe.epPerTier)).toEqual([5, 10, 20, 40])
   })
 
   it('run a close line a move per action the timing takes', () => {

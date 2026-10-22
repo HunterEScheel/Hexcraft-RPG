@@ -95,17 +95,18 @@ function aoeCriterion(ranged: boolean, reach: ManeuverReach, actions: number): S
         options: [5, 10, 15].map((n, i) => ({ label: `${n} ft splash`, tier: i + 1 })),
       }
   // A line doubles each tier from the weapon's reach, or from as far as the
-  // user moves in the actions the maneuver takes: a charge.
+  // user moves in the actions the maneuver takes: a charge. Its EP doubles
+  // too: 5, 10, 20, 40.
   const base = ranged ? reach.maxRange : reach.speed && reach.speed * actions
   const line = {
     key: 'line',
     label: 'Line',
-    options: [1, 2, 4, 8].map((m, i) => {
+    options: [1, 2, 4, 8].map((m) => {
       const times = ranged ? m : m * actions
       const unit = ranged ? 'range' : 'speed'
       return {
         label: base ? `${ft(base * m)} line` : `${times === 1 ? '' : `${times}× `}${unit} line`,
-        tier: i + 1,
+        tier: m,
       }
     }),
   }
