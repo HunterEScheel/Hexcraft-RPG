@@ -60,18 +60,15 @@ export const TIMING_ACTIONS: Record<CastingTimeKey, number> = {
 const ft = (n: number) => `${n.toLocaleString('en-US')} ft`
 
 // A fired or thrown maneuver's range, by its weapon's: within it is free, then
-// 4, 8 and 16 EP past it, twice it and three times it (tier 4 skips 3 on
+// 4, 8 and 16 EP past twice, three and four times it (tier 4 skips 3 on
 // purpose). Close maneuvers have no range: how far they go is their line.
 function rangeCriterion(reach: ManeuverReach): SpellCriterion {
   const max = reach.maxRange
-  const labels = max
-    ? [
-        `${reach.minRange ? `${reach.minRange.toLocaleString('en-US')}–` : 'up to '}${ft(max)}`,
-        `${ft(max)}–${ft(max * 2)}`,
-        `${ft(max * 2)}–${ft(max * 3)}`,
-        `${ft(max * 3)}+`,
-      ]
-    : ['within max range', 'beyond max range', '2× max range', '3× max range']
+  const span = max ? ` (${reach.minRange ? `${reach.minRange.toLocaleString('en-US')}–` : 'up to '}${ft(max)})` : ''
+  const labels = [
+    `within range${span}`,
+    ...[2, 3, 4].map((m) => `>${m}× max range${max ? ` (${ft(max * m)})` : ''}`),
+  ]
   const tiers = [0, 1, 2, 4]
   return {
     key: 'range',

@@ -174,7 +174,12 @@ describe('maneuver reach', () => {
 
   it('goes by weapon range for fired skills', () => {
     const c = maneuverCriteria('combat-fired-2h', { minRange: 30, maxRange: 800 })
-    expect(labels(c, 'range')).toEqual(['30–800 ft', '800 ft–1,600 ft', '1,600 ft–2,400 ft', '2,400 ft+'])
+    expect(labels(c, 'range')).toEqual([
+      'within range (30–800 ft)', '>2× max range (1,600 ft)', '>3× max range (2,400 ft)', '>4× max range (3,200 ft)',
+    ])
+    expect(labels(maneuverCriteria('combat-fired-1h'), 'range')).toEqual([
+      'within range', '>2× max range', '>3× max range', '>4× max range',
+    ])
     expect(labels(c, 'aoe', 'splash')).toContain('300 ft splash')
   })
 

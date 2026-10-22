@@ -316,17 +316,17 @@ section('maneuvers', 'Maneuvers', f'''
 <h3>Range &middot; fired and thrown</h3>
 <p>A <b>fired or thrown</b> maneuver reaches as far as its weapon (or throw), and pays to reach further. A <b>close</b> maneuver (melee, Unarmed, Grapple, Tackle) has no range: how far it goes is its <b>line</b>, a charge that runs your speed for each action its timing takes (1 for None, Reaction or Action, 2 for 2 Actions, 4 for 1 Round or longer).</p>
 {table(['Tier', 'EP', 'Reach'], [
-    ('I', 0, 'Within max range'),
-    ('II', 4, 'Beyond max range'),
-    ('III', 8, '2× max range'),
-    ('IV', 16, '3× max range')], 'compact')}
+    ('I', 0, 'Within range'),
+    ('II', 4, '&gt;2× max range'),
+    ('III', 8, '&gt;3× max range'),
+    ('IV', 16, '&gt;4× max range')], 'compact')}
 <h3>AOE</h3>
 {table(['Tier', 'Splash EP', 'Splash (close)', 'Splash (fired, Throw)', 'Line', 'Line EP'], [
     ('I', 5, '5 ft', '20 ft', 'speed × actions (or max range)', 5),
     ('II', 10, '10 ft', '60 ft', '2×', 10),
     ('III', 15, '15 ft', '120 ft', '4×', 20),
     ('IV', 20, '—', '300 ft', '8×', 40)], 'compact')}
-<div class="example"><b>Example.</b> With a 25 ft speed, a one-action sword maneuver's lines run 25, 50, 100 or 200 ft; at 2 Actions, 50, 100, 200 or 400 ft. With a short-range rifle (max 800 ft), a shot at 1,000 ft is Range tier II (4 EP), and one at 1,700 ft is tier III (8 EP).</div>
+<div class="example"><b>Example.</b> With a 25 ft speed, a one-action sword maneuver's lines run 25, 50, 100 or 200 ft; at 2 Actions, 50, 100, 200 or 400 ft. With a short-range rifle (max 800 ft), a shot past 1,600 ft is Range tier II (4 EP), and one past 2,400 ft is tier III (8 EP).</div>
 <div class="two">
 <div><h3>Duration &middot; multiplies Effect EP</h3>{table(['Lasts', 'Effect EP'], [(l, f'× {m}') for l, m in MAN_DURATION], 'compact')}</div>
 <div><h3>Effect &middot; {EP['buff']} EP per tier</h3>
