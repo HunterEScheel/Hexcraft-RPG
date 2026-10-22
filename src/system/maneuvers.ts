@@ -243,10 +243,10 @@ const SHARED_CRITERIA: readonly SpellCriterion[] = [
     multiplies: 'selfDebuff',
     onlyWith: 'selfDebuff',
     options: [
-      { label: '1 round', tier: 0, multiplier: 1 },
-      { label: '1 minute', tier: 0, multiplier: 2 },
-      { label: '1 hour', tier: 0, multiplier: 4 },
-      { label: 'until a long rest', tier: 0, multiplier: 8 },
+      { label: '2 rounds', tier: 0, multiplier: 1 },
+      { label: '5 rounds', tier: 0, multiplier: 2 },
+      { label: '1 minute', tier: 0, multiplier: 4 },
+      { label: '1 hour', tier: 0, multiplier: 8 },
     ],
   },
 ]

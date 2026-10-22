@@ -301,7 +301,7 @@ MAN_SELF = {1: 'rooted, exposed, off-balance',
             2: 'poisoned, burned, prone, exhaustion',
             3: 'blinded, restrained',
             4: 'debilitated'}
-MAN_SELF_DURATION = [('1 round', 1), ('1 minute', 2), ('1 hour', 4), ('until a long rest', 8)]
+MAN_SELF_DURATION = [('2 rounds', 1), ('5 rounds', 2), ('1 minute', 4), ('1 hour', 8)]
 
 section('maneuvers', 'Maneuvers', f'''
 <p>Maneuvers are the martial side of the same system: signature strikes, sweeps, trips, disarms and feints. You build one the way you build a spell and pay for it in EP, but from a shorter list of parts:</p>
@@ -333,7 +333,7 @@ section('maneuvers', 'Maneuvers', f'''
 {table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], e) for t, e in MAN_EFFECTS.items()], 'compact')}</div>
 </div>
 <h3>Self-debuffs</h3>
-<p>Going all in has a price. A self-debuff refunds 5 EP per tier, and its duration <b>multiplies</b> the refund: 1 round ×1, 1 minute ×2, 1 hour ×4, until a long rest ×8. You can take <b>several self-debuffs</b>: each refunds its own tier, and they share one duration that multiplies them all. The refund comes off before the timing multiplier, and a maneuver never costs less than 0.</p>
+<p>Going all in has a price. A self-debuff refunds 5 EP per tier, and its duration <b>multiplies</b> the refund: 2 rounds ×1, 5 rounds ×2, 1 minute ×4, 1 hour ×8. You can take <b>several self-debuffs</b>: each refunds its own tier, and they share one duration that multiplies them all. The refund comes off before the timing multiplier, and a maneuver never costs less than 0.</p>
 <div class="two">
 <div>{table(['Tier', 'Refund', 'Self-debuffs'], [(ROMAN[t], f'−{t * 5}', e) for t, e in MAN_SELF.items()], 'compact')}</div>
 <div>{table(['Lasts', 'Refund'], [(l, f'× {m}') for l, m in MAN_SELF_DURATION], 'compact')}</div>
@@ -346,7 +346,7 @@ section('maneuvers', 'Maneuvers', f'''
 <li><b>Amping</b> works the same: 5 more EP for +1 to hit or +1 DC.</li>
 </ul>
 <div class="example"><b>Example: Hamstring.</b> Mira (1-handed melee 3, Agility 3) builds a two-action cut at a single target within reach that leaves it <i>slowed</i> for 1 minute and deals her sword's damage +1d6. Slowed is a Tier I effect (5 EP), 1 minute is duration tier 2 (8 EP) and the extra die is 2 EP: <b>15 EP</b>, or <b>11 EP</b> saved. She rolls d20 + 6 against the target's Evasion.</div>
-<div class="example"><b>Example: Reckless Strike.</b> Mira throws everything into one blow: advantage on the attack (5 EP) and +4d6 (8 EP), 13 EP. She plants her feet to do it and is <i>rooted</i> (−5 EP) for 1 minute (−4 EP), bringing it down to <b>4 EP</b>.</div>
+<div class="example"><b>Example: Reckless Strike.</b> Mira throws everything into one blow: advantage on the attack (5 EP) and +4d6 (8 EP), 13 EP. She plants her feet to do it and is <i>rooted</i> (−5 EP) for 5 rounds (refund ×2, so −10 EP), bringing it down to <b>3 EP</b>.</div>
 ''')
 
 CONDITIONS = [

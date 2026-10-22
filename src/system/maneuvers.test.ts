@@ -52,15 +52,15 @@ describe('maneuvers', () => {
     draft.selections.buffDebuff = { modeIndex: 1, optionIndex: 0 } // advantage, 5 EP
     draft.damageDice = 4 // 8 EP
     draft.selections.selfDebuff = { modeIndex: 1, optionIndex: 0 } // rooted, −5 EP
-    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(8) // 1 round: no extra refund
-    draft.selections.selfDuration = { modeIndex: 0, optionIndex: 1 } // 1 minute: refund ×2
+    expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(8) // 2 rounds: no extra refund
+    draft.selections.selfDuration = { modeIndex: 0, optionIndex: 1 } // 5 rounds: refund ×2
     expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(3)
   })
 
   it('ignore a self-debuff duration without a self-debuff, and never go below 0', () => {
     const draft = emptySpellDraft()
     draft.damageDice = 1 // 2 EP
-    draft.selections.selfDuration = { modeIndex: 0, optionIndex: 3 } // until a long rest
+    draft.selections.selfDuration = { modeIndex: 0, optionIndex: 3 } // 1 hour
     expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(2)
     draft.selections.selfDebuff = { modeIndex: 4, optionIndex: 0 } // debilitated, −20 EP
     expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(0)
