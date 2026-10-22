@@ -338,7 +338,7 @@ section('maneuvers', 'Maneuvers', f'''
 <div>{table(['Tier', 'Refund', 'Self-debuffs'], [(ROMAN[t], f'−{t * 5}', e) for t, e in MAN_SELF.items()], 'compact')}</div>
 <div>{table(['Lasts', 'Refund'], [(l, f'× {m}') for l, m in MAN_SELF_DURATION], 'compact')}</div>
 </div>
-<p>Instead of a school and a medium, a maneuver draws on one of your <b>attack combat skills</b> (1-handed melee, 2-handed fired, Throw, Unarmed, Grapple, Tackle and so on) and that skill's attribute.</p>
+<p>Instead of a school and a medium, a maneuver draws on one of your <b>attack combat skills</b> (1-handed melee, 2-handed fired, Throw, Unarmed, Grapple, Tackle and so on) and that skill's attribute, trained or not: an untrained skill just adds nothing to the roll.</p>
 <ul>
 <li><b>Roll to hit</b>: d20 + combat skill + attribute vs the target's Evasion.</li>
 <li><b>Save</b>: the target saves against DC 10 + combat skill + attribute.</li>

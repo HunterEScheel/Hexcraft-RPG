@@ -5,7 +5,10 @@ import type { SpellDraft } from '../system/spells'
 import { PickerSelect } from './EffectBuilder'
 import { QuickEffect } from './QuickEffect'
 
-/** Build and use a maneuver: a trained attack skill sets its bonus. */
+/**
+ * Build and use a maneuver from any attack skill, trained or not: the skill
+ * sets its bonus. Saving one still takes a slot per level in the skill.
+ */
 export function QuickManeuver({
   character,
   onUse,
@@ -16,17 +19,7 @@ export function QuickManeuver({
   onSave: (maneuver: { name: string; skillId: string; draft: SpellDraft }) => void
 }) {
   const [skillId, setSkillId] = useState('')
-  const trained = MANEUVER_SKILLS.filter((s) => combatSkillLevel(character, s.id) > 0)
-
-  if (trained.length === 0) {
-    return (
-      <p className="text-sm text-zinc-500 italic">
-        Train an attack skill (1-handed melee, Grapple, …) to use maneuvers.
-      </p>
-    )
-  }
-
-  const skill = trained.find((s) => s.id === skillId)
+  const skill = MANEUVER_SKILLS.find((s) => s.id === skillId)
   const saved = character.savedManeuvers ?? []
   return (
     <QuickEffect
@@ -39,7 +32,7 @@ export function QuickManeuver({
         <PickerSelect
           label="Combat skill"
           value={skillId}
-          options={trained.map((s) => ({
+          options={MANEUVER_SKILLS.map((s) => ({
             value: s.id,
             label: `${s.name} (Lv ${combatSkillLevel(character, s.id)}${s.attribute ? ` + ${s.attribute}` : ''})`,
           }))}
