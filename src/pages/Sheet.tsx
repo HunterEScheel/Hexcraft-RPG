@@ -764,7 +764,7 @@ function CombatTab({
           draft: m.draft,
         }}
         verb="Use"
-        criteria={maneuverCriteria(m.skillId, maneuverReach(character, m.skillId, weapon))}
+        criteria={maneuverCriteria(m.skillId, maneuverReach(character, m.skillId, weapon), m.draft.castingTime)}
         extraDice
         currentEp={character.currentEp}
         onUse={onUseManeuver}

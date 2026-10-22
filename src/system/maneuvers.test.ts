@@ -151,13 +151,22 @@ describe('maneuver reach', () => {
     return opts.map((o) => o.label)
   }
 
-  it('moves by speed for close skills, at 0, 4, 8 and 16 EP', () => {
+  it('have no range for close skills, just a line by speed and 5–15 ft splashes', () => {
     const c = maneuverCriteria('combat-melee-1h', { speed: 25 })
-    expect(labels(c, 'range')).toEqual(['no movement', 'move up to 25 ft', 'move up to 50 ft', 'move up to 100 ft'])
-    const range = c.find((x) => x.key === 'range')!
-    expect(range.options!.map((o) => o.tier * range.epPerTier)).toEqual([0, 4, 8, 16])
+    expect(c.map((x) => x.key)).not.toContain('range')
     expect(labels(c, 'aoe', 'line')).toEqual(['25 ft line', '50 ft line', '100 ft line', '200 ft line'])
     expect(labels(c, 'aoe', 'splash')).toEqual(['5 ft splash', '10 ft splash', '15 ft splash'])
+  })
+
+  it('run a close line a move per action the timing takes', () => {
+    const line = (time: Parameters<typeof maneuverCriteria>[2], speed?: number) =>
+      labels(maneuverCriteria('combat-tackle', speed ? { speed } : {}, time), 'aoe', 'line')
+    expect(line('2actions', 25)).toEqual(['50 ft line', '100 ft line', '200 ft line', '400 ft line'])
+    expect(line('1round', 25)[0]).toBe('100 ft line')
+    expect(line('2actions')[0]).toBe('2× speed line')
+    // A fired maneuver's reach doesn't care how long it takes.
+    const fired = maneuverCriteria('combat-fired-1h', { maxRange: 80 }, '1round')
+    expect(labels(fired, 'aoe', 'line')[0]).toBe('80 ft line')
   })
 
   it('goes by weapon range for fired skills', () => {
@@ -181,12 +190,14 @@ describe('maneuver reach', () => {
     expect(maneuverReach(c, 'combat-fired-1h')).toEqual({ minRange: 0, maxRange: 80 })
   })
 
-  it('prices the same whatever reach drew the labels', () => {
+  it('price range at 0, 4, 8 and 16 EP for fired skills, and not at all for close ones', () => {
+    const fired = maneuverCriteria('combat-fired-2h', { maxRange: 800 })
+    const range = fired.find((x) => x.key === 'range')!
+    expect(range.options!.map((o) => o.tier * range.epPerTier)).toEqual([0, 4, 8, 16])
     const draft = emptySpellDraft()
     draft.selections.range = { modeIndex: 0, optionIndex: 3 } // 16 EP
     draft.selections.aoe = { modeIndex: 1, optionIndex: 2 } // 15 ft or 120 ft splash, 15 EP
-    for (const c of [MANEUVER_CRITERIA, maneuverCriteria('combat-melee-2h', { speed: 30 })]) {
-      expect(spellCost(draft, c).baseEp).toBe(31)
-    }
+    expect(spellCost(draft, fired).baseEp).toBe(31)
+    expect(spellCost(draft, maneuverCriteria('combat-melee-2h', { speed: 30 })).baseEp).toBe(15)
   })
 })

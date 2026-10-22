@@ -28,7 +28,10 @@ export function MonsterManeuverComposer({
   const [draft, setDraft] = useState(emptySpellDraft)
   const [name, setName] = useState('')
   const [skillId, setSkillId] = useState('')
-  const cost = useMemo(() => spellCost(draft, MANEUVER_CRITERIA), [draft])
+  const cost = useMemo(
+    () => spellCost(draft, skillId ? maneuverCriteria(skillId) : MANEUVER_CRITERIA),
+    [draft, skillId],
+  )
   const skillName = (id: string) => MANEUVER_SKILLS.find((s) => s.id === id)?.name ?? id
 
   const canAdd = name.trim().length > 0 && skillId !== '' && !isEmptyDraft(draft)
@@ -58,7 +61,7 @@ export function MonsterManeuverComposer({
         draft={draft}
         onChange={setDraft}
         timingLabel="Timing"
-        criteria={skillId ? maneuverCriteria(skillId, monsterManeuverReach(monster, skillId)) : MANEUVER_CRITERIA}
+        criteria={skillId ? maneuverCriteria(skillId, monsterManeuverReach(monster, skillId), draft.castingTime) : MANEUVER_CRITERIA}
         damageLabel="Extra damage (d6, on top of the weapon's)"
       />
 
@@ -110,7 +113,7 @@ export function MonsterManeuverComposer({
                 </span>
               )}
               <span className="text-xs font-mono text-zinc-500 flex-1">
-                {spellCost(m.draft, MANEUVER_CRITERIA).totalEp} EP
+                {spellCost(m.draft, maneuverCriteria(m.skillId)).totalEp} EP
               </span>
               <button
                 type="button"

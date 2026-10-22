@@ -20,7 +20,7 @@ import {
 } from '../system/monster'
 import { POWER_TIERS } from '../system/powerTiers'
 import { spellCost } from '../system/spells'
-import { MANEUVER_CRITERIA, MANEUVER_SKILLS, maneuverCriteria } from '../system/maneuvers'
+import { MANEUVER_SKILLS, maneuverCriteria } from '../system/maneuvers'
 import { AttributesEditor } from '../components/AttributesEditor'
 import { MonsterSpellComposer } from '../components/MonsterSpellComposer'
 import { MagicSchoolsEditor } from '../components/MagicSchoolsEditor'
@@ -691,11 +691,11 @@ function StatBlock({ monster }: { monster: Monster }) {
                     </span>
                   )}
                   <span className="font-mono text-zinc-400">
-                    {spellCost(m.draft, MANEUVER_CRITERIA).totalEp} EP
+                    {spellCost(m.draft, maneuverCriteria(m.skillId)).totalEp} EP
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {spellFactors(m, maneuverCriteria(m.skillId, monsterManeuverReach(monster, m.skillId))).map((label, i) => (
+                  {spellFactors(m, maneuverCriteria(m.skillId, monsterManeuverReach(monster, m.skillId), m.draft.castingTime)).map((label, i) => (
                     <span
                       key={i}
                       className="rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-300"

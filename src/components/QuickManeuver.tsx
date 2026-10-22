@@ -26,7 +26,9 @@ export function QuickManeuver({
       noun="maneuver"
       verb="Use"
       timingLabel="Timing"
-      criteria={skill ? maneuverCriteria(skill.id, maneuverReach(character, skill.id)) : MANEUVER_CRITERIA}
+      criteria={(draft) =>
+        skill ? maneuverCriteria(skill.id, maneuverReach(character, skill.id), draft.castingTime) : MANEUVER_CRITERIA
+      }
       damageLabel="Extra damage (d6, on top of the weapon's)"
       pickers={
         <PickerSelect

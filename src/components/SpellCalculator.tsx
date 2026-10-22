@@ -33,7 +33,10 @@ export function SpellCalculator() {
   const [skillId, setSkillId] = useState<string>(MANEUVER_SKILLS[0].id)
   const skill = MANEUVER_SKILLS.find((s) => s.id === skillId) ?? MANEUVER_SKILLS[0]
 
-  const criteria = useMemo(() => (maneuver ? maneuverCriteria(skillId) : undefined), [maneuver, skillId])
+  const criteria = useMemo(
+    () => (maneuver ? maneuverCriteria(skillId, {}, draft.castingTime) : undefined),
+    [maneuver, skillId, draft.castingTime],
+  )
   const cost = useMemo(() => spellCost(draft, criteria), [draft, criteria])
   const saved = useMemo(() => savedSpellCost(draft, criteria), [draft, criteria])
   const bonus = school + medium

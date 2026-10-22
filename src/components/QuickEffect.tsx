@@ -18,7 +18,7 @@ export function QuickEffect({
   noun,
   verb,
   timingLabel,
-  criteria,
+  criteria: criteriaProp,
   damageLabel,
   pickers,
   pickerHint,
@@ -31,7 +31,8 @@ export function QuickEffect({
   noun: string
   verb: string
   timingLabel?: string
-  criteria?: readonly SpellCriterion[]
+  /** Fixed, or worked out from the draft (a maneuver's movement follows its timing). */
+  criteria?: readonly SpellCriterion[] | ((draft: SpellDraft) => readonly SpellCriterion[])
   damageLabel?: string
   pickers: ReactNode
   /** Why the effect can't be used yet (e.g. "Pick a school"), or null. */
@@ -46,6 +47,7 @@ export function QuickEffect({
 }) {
   const [draft, setDraft] = useState(emptySpellDraft)
   const [name, setName] = useState('')
+  const criteria = typeof criteriaProp === 'function' ? criteriaProp(draft) : criteriaProp
   const cost = useMemo(() => spellCost(draft, criteria), [draft, criteria])
   const reset = () => setDraft(emptySpellDraft())
 

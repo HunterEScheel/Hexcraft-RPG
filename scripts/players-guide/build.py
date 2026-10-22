@@ -306,27 +306,27 @@ MAN_SELF_DURATION = [('1 round', 1), ('1 minute', 2), ('1 hour', 4), ('until a l
 section('maneuvers', 'Maneuvers', f'''
 <p>Maneuvers are the martial side of the same system: signature strikes, sweeps, trips, disarms and feints. You build one the way you build a spell and pay for it in EP, but from a shorter list of parts:</p>
 <ul>
-<li><b>Range</b> and <b>AOE / targets</b>: fit to the combat skill, below. Targets cost what a spell's do.</li>
+<li><b>Range</b> (fired and thrown only) and <b>AOE / targets</b>: fit to the combat skill, below. Targets cost what a spell's do.</li>
 <li><b>Duration</b>: how long the effects last, which <b>multiplies</b> their EP: instantaneous or 1 round ×1, 1 minute ×2, 1 hour ×4. There's no concentration.</li>
 <li><b>Effect</b>: non-magical effects only, listed below. There's no Challenge.</li>
 <li><b>Extra damage</b>: d6s added to the weapon's own damage, 2 EP per die.</li>
 <li><b>Self-debuff</b> (optional): a drawback you take on to pay for the move, which <b>takes EP off</b> its cost.</li>
 <li><b>Timing</b>: the same multipliers as a spell's casting time, plus <b>None (no action) at ×8</b>: a maneuver that costs no action at all.</li>
 </ul>
-<h3>Range &middot; by combat skill</h3>
-<p>A <b>fired or thrown</b> maneuver reaches as far as its weapon (or throw); <b>everything else</b> goes by how far you move in one action.</p>
-{table(['Tier', 'EP', 'Melee, Unarmed, Grapple, Tackle', 'Fired and Throw'], [
-    ('I', 0, 'No movement', 'Within max range'),
-    ('II', 4, 'Move up to your speed', 'Beyond max range'),
-    ('III', 8, 'Move up to 2× speed', '2× max range'),
-    ('IV', 16, 'Move up to 4× speed', '3× max range')], 'compact')}
+<h3>Range &middot; fired and thrown</h3>
+<p>A <b>fired or thrown</b> maneuver reaches as far as its weapon (or throw), and pays to reach further. A <b>close</b> maneuver (melee, Unarmed, Grapple, Tackle) has no range: how far it goes is its <b>line</b>, a charge that runs your speed for each action its timing takes (1 for None, Reaction or Action, 2 for 2 Actions, 4 for 1 Round or longer).</p>
+{table(['Tier', 'EP', 'Reach'], [
+    ('I', 0, 'Within max range'),
+    ('II', 4, 'Beyond max range'),
+    ('III', 8, '2× max range'),
+    ('IV', 16, '3× max range')], 'compact')}
 <h3>AOE &middot; {EP['aoe']} EP per tier</h3>
 {table(['Tier', 'EP', 'Splash (close)', 'Splash (fired, Throw)', 'Line'], [
-    ('I', 5, '5 ft', '20 ft', 'speed (or max range)'),
+    ('I', 5, '5 ft', '20 ft', 'speed × actions (or max range)'),
     ('II', 10, '10 ft', '60 ft', '2×'),
     ('III', 15, '15 ft', '120 ft', '4×'),
     ('IV', 20, '—', '300 ft', '8×')], 'compact')}
-<div class="example"><b>Example.</b> With a 25 ft speed, a sword maneuver's lines run 25, 50, 100 or 200 ft. With a short-range rifle (max 800 ft), a shot at 1,000 ft is Range tier II (4 EP), and one at 1,700 ft is tier III (8 EP).</div>
+<div class="example"><b>Example.</b> With a 25 ft speed, a one-action sword maneuver's lines run 25, 50, 100 or 200 ft; at 2 Actions, 50, 100, 200 or 400 ft. With a short-range rifle (max 800 ft), a shot at 1,000 ft is Range tier II (4 EP), and one at 1,700 ft is tier III (8 EP).</div>
 <div class="two">
 <div><h3>Duration &middot; multiplies Effect EP</h3>{table(['Lasts', 'Effect EP'], [(l, f'× {m}') for l, m in MAN_DURATION], 'compact')}</div>
 <div><h3>Effect &middot; {EP['buff']} EP per tier</h3>
