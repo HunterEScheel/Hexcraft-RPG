@@ -9,7 +9,7 @@ OUT = pathlib.Path(__file__).with_name('sheet.html')
 ATTRIBUTES = ['Power', 'Agility', 'Intelligence', 'Sense', 'Influence']
 SAVES = ['Dodge', 'Grit', 'Resolve']
 ATTACKS = [('1-handed melee', 'AGI'), ('1-handed fired', 'AGI'), ('2-handed melee', 'POW'),
-           ('2-handed fired', 'POW'), ('Unarmed', 'AGI'), ('Grapple', 'AGI'), ('Tackle', 'POW')]
+           ('2-handed fired', 'POW'), ('Throw', 'AGI'), ('Unarmed', 'AGI'), ('Grapple', 'AGI'), ('Tackle', 'POW')]
 SCHOOLS = ['Destroy', 'Create', 'Alter', 'Restore', 'Divine', 'Control', 'Summon']
 MEDIUMS = ['Elemental', 'Magic', 'Kinetic', 'Cognition', 'Space', 'Toxicity', 'Material', 'Vitality']
 

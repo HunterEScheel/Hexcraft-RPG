@@ -34,6 +34,7 @@ COMBAT = [('Dodge', 'Passive', '+1 Evasion per level; save vs. agility-based eff
           ('1-handed fired', 'Action', 'Attack bonus with 1H fired weapons', 'Agility'),
           ('2-handed melee', 'Action', 'Attack bonus with 2H melee weapons', 'Power'),
           ('2-handed fired', 'Action', 'Attack bonus with 2H fired weapons', 'Power'),
+          ('Throw', 'Action', 'Attack bonus to throw anything; it carries (Throw + Power) × 10 ft', 'Agility'),
           ('Unarmed', 'Action', 'Attack bonus with fists or natural weapons (claws, horns, bite)', 'Agility'),
           ('Grapple', 'Action', 'Attack bonus to seize and hold', 'Agility'),
           ('Tackle', 'Action', 'Attack bonus to knock down or drive back', 'Power')]
@@ -213,6 +214,14 @@ section('combat', 'Combat', f'''
 <p>On a hit, roll the weapon's damage (for example a shortsword: 1d6 Physical). The GM may add damage types for the situation: a torch deals Fire.</p>
 <p><b>Natural weapons.</b> Claws, horns, a bite or a tail are weapons that are part of you. Add one to your inventory with the category <i>Natural (Unarmed)</i>, its damage in the notes (for example claws: 1d6 Physical). It attacks with the Unarmed skill plus your choice of <b>Agility</b> (quick claws, a snapping bite) or <b>Power</b> (goring horns, a crushing tail), picked per weapon. It can't be dropped or disarmed, and sits beside your plain fists in your attacks.</p>
 <div class="example"><b>Example.</b> A bandit with 1-handed melee +3 and Power +2 swings at Mira (Evasion 14): d20 + 5, rolls 13, total 18. Hit, 1d6 + 2 Physical.</div>
+<h3>Weapon range</h3>
+<p>A fired weapon shoots between its <b>min</b> and <b>max range</b>, set on the item in your inventory. A thrown object carries <b>(Throw + Power) × 10 ft</b>.</p>
+{table(['Firearm', 'Damage / shot', 'Min range', 'Max range', 'Capacity', 'Reload'], [
+    ('Double barrel shotgun', '5d6', '0 ft', '100 ft', 2, '1 action / shell'),
+    ('Pump shotgun', '5d6', '0 ft', '100 ft', 4, '1 action / shell'),
+    ('Short-range rifle', '2d6', '30 ft', '800 ft', 20, '1 action / bullet'),
+    ('Long-range rifle', '3d6', '80 ft', '4,500 ft', 4, '1 action / bullet'),
+    ('Revolver', '2d6', '0 ft', '80 ft', 8, '1 action / bullet')], 'compact')}
 <h3>Damage types</h3>
 <p>All damage has a type: {DAMAGE_TYPES}.</p>
 <h3>Armor</h3>
@@ -297,13 +306,27 @@ MAN_SELF_DURATION = [('1 round', 1), ('1 minute', 2), ('1 hour', 4), ('until a l
 section('maneuvers', 'Maneuvers', f'''
 <p>Maneuvers are the martial side of the same system: signature strikes, sweeps, trips, disarms and feints. You build one the way you build a spell and pay for it in EP, but from a shorter list of parts:</p>
 <ul>
-<li><b>Range</b> and <b>AOE / targets</b>: the same options and EP as spells.</li>
+<li><b>Range</b> and <b>AOE / targets</b>: fit to the combat skill, below. Targets cost what a spell's do.</li>
 <li><b>Duration</b>: how long the effects last, which <b>multiplies</b> their EP: instantaneous or 1 round ×1, 1 minute ×2, 1 hour ×4. There's no concentration.</li>
 <li><b>Effect</b>: non-magical effects only, listed below. There's no Challenge.</li>
 <li><b>Extra damage</b>: d6s added to the weapon's own damage, 2 EP per die.</li>
 <li><b>Self-debuff</b> (optional): a drawback you take on to pay for the move, which <b>takes EP off</b> its cost.</li>
 <li><b>Timing</b>: the same multipliers as a spell's casting time, plus <b>None (no action) at ×8</b>: a maneuver that costs no action at all.</li>
 </ul>
+<h3>Range &middot; by combat skill</h3>
+<p>A <b>fired or thrown</b> maneuver reaches as far as its weapon (or throw); <b>everything else</b> goes by how far you move in one action.</p>
+{table(['Tier', 'EP', 'Melee, Unarmed, Grapple, Tackle', 'Fired and Throw'], [
+    ('I', 0, 'No movement', 'Within max range'),
+    ('II', 4, 'Move up to your speed', 'Beyond max range'),
+    ('III', 8, 'Move up to 2× speed', '2× max range'),
+    ('IV', 16, 'Move up to 4× speed', '3× max range')], 'compact')}
+<h3>AOE &middot; {EP['aoe']} EP per tier</h3>
+{table(['Tier', 'EP', 'Splash (close)', 'Splash (fired, Throw)', 'Line'], [
+    ('I', 5, '5 ft', '20 ft', 'speed (or max range)'),
+    ('II', 10, '10 ft', '60 ft', '2×'),
+    ('III', 15, '15 ft', '120 ft', '4×'),
+    ('IV', 20, '—', '300 ft', '8×')], 'compact')}
+<div class="example"><b>Example.</b> With a 25 ft speed, a sword maneuver's lines run 25, 50, 100 or 200 ft. With a short-range rifle (max 800 ft), a shot at 1,000 ft is Range tier II (4 EP), and one at 1,700 ft is tier III (8 EP).</div>
 <div class="two">
 <div><h3>Duration &middot; multiplies Effect EP</h3>{table(['Lasts', 'Effect EP'], [(l, f'× {m}') for l, m in MAN_DURATION], 'compact')}</div>
 <div><h3>Effect &middot; {EP['buff']} EP per tier</h3>
@@ -315,7 +338,7 @@ section('maneuvers', 'Maneuvers', f'''
 <div>{table(['Tier', 'Refund', 'Self-debuffs'], [(ROMAN[t], f'−{t * 5}', e) for t, e in MAN_SELF.items()], 'compact')}</div>
 <div>{table(['Lasts', 'Refund'], [(l, f'× {m}') for l, m in MAN_SELF_DURATION], 'compact')}</div>
 </div>
-<p>Instead of a school and a medium, a maneuver draws on one of your <b>attack combat skills</b> (1-handed melee, 2-handed fired, Unarmed, Grapple, Tackle and so on) and that skill's attribute.</p>
+<p>Instead of a school and a medium, a maneuver draws on one of your <b>attack combat skills</b> (1-handed melee, 2-handed fired, Throw, Unarmed, Grapple, Tackle and so on) and that skill's attribute.</p>
 <ul>
 <li><b>Roll to hit</b>: d20 + combat skill + attribute vs the target's Evasion.</li>
 <li><b>Save</b>: the target saves against DC 10 + combat skill + attribute.</li>

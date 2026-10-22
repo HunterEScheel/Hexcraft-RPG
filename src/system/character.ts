@@ -43,7 +43,7 @@ import {
   tetherRefundTotal,
   type Tether,
 } from './tethers'
-import type { SavedManeuver } from './maneuvers'
+import { RANGED_MANEUVER_SKILLS, throwDistance, type ManeuverReach, type SavedManeuver } from './maneuvers'
 import type { CriterionKey, SavedSpell, SpellDraft, SpellSelection } from './spells'
 
 export interface CharacterSkill {
@@ -608,6 +608,28 @@ export function maneuverBonus(c: Character, skillId: string, attribute?: Attribu
   const def = COMBAT_SKILLS.find((s) => s.id === skillId)
   const attr = attribute ?? def?.attribute
   return combatSkillLevel(c, skillId) + (attr ? (c.attributes[attr] ?? 0) : 0)
+}
+
+/**
+ * How far a maneuver from this skill reaches: a throw by Throw + Power, a fired
+ * weapon by its range (`weapon`, or the first equipped one with a range), and
+ * anything else by movement speed.
+ */
+export function maneuverReach(
+  c: Character,
+  skillId: string,
+  weapon?: { minRange?: number; maxRange?: number },
+): ManeuverReach {
+  if (skillId === 'combat-throw') {
+    return { minRange: 0, maxRange: throwDistance(combatSkillLevel(c, skillId), c.attributes.Power ?? 0) }
+  }
+  if (RANGED_MANEUVER_SKILLS.has(skillId)) {
+    const category = COMBAT_SKILLS.find((s) => s.id === skillId)?.requiresWeapon
+    const w =
+      weapon ?? c.inventory.find((i) => i.equipped && i.weaponCategory === category && i.maxRange)
+    return { minRange: w?.minRange, maxRange: w?.maxRange }
+  }
+  return { speed: c.speed ?? DEFAULT_SPEED }
 }
 
 // Migrate legacy armor (flat reductionDie / damageThreshold / durability /

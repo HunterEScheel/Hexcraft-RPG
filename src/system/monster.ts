@@ -12,6 +12,7 @@ import {
 } from './costs'
 import { MAGIC_MEDIUMS, MAGIC_SCHOOLS, type MagicMedium, type MagicSchool } from './magicSchools'
 import type { DamageType } from './inventory'
+import { RANGED_MANEUVER_SKILLS, throwDistance, type ManeuverReach } from './maneuvers'
 import {
   CASTING_TIMES,
   SPELL_CRITERIA,
@@ -161,6 +162,16 @@ export function monsterManeuverBonus(m: Monster, skillId: string): number {
   const def = COMBAT_SKILLS.find((c) => c.id === skillId)
   const attribute = def?.attribute ? m.attributes[def.attribute] : 0
   return (m.combatSkills[skillId] ?? 0) + attribute
+}
+
+/** How far a monster's maneuver reaches: a throw by Throw + Power, the rest by speed. */
+export function monsterManeuverReach(m: Monster, skillId: string): ManeuverReach {
+  if (skillId === 'combat-throw') {
+    return { minRange: 0, maxRange: throwDistance(m.combatSkills[skillId] ?? 0, m.attributes.Power) }
+  }
+  // A monster's weapons carry no range, so fired maneuvers read in multiples.
+  if (RANGED_MANEUVER_SKILLS.has(skillId)) return {}
+  return { speed: m.speed }
 }
 
 export function spellTargetingLabel(s: { draft: SpellDraft }, bonus: number): string {

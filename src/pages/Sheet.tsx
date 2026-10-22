@@ -7,6 +7,7 @@ import {
   equippedArmorEvasionReduction,
   evasion,
   maneuverBonus,
+  maneuverReach,
   normalizeCurrentValues,
   restAttributeFor,
   spellcastingAttributeFor,
@@ -33,7 +34,7 @@ import { InventoryEditor } from '../components/InventoryEditor'
 import { QuickCast } from '../components/QuickCast'
 import { QuickManeuver } from '../components/QuickManeuver'
 import { SavedEffectRow } from '../components/SavedEffects'
-import { MANEUVER_CRITERIA } from '../system/maneuvers'
+import { maneuverCriteria } from '../system/maneuvers'
 import { SavedSpells } from '../components/SavedSpells'
 import { TakeDamagePanel } from '../components/TakeDamagePanel'
 import { DeathSavePanel } from '../components/DeathSavePanel'
@@ -746,7 +747,11 @@ function CombatTab({
   const isReaction = (m: (typeof maneuvers)[number]) =>
     m.draft.castingTime === 'reaction'
   const reactionManeuvers = maneuvers.filter(isReaction)
-  const maneuverRow = (m: (typeof maneuvers)[number], attribute?: AttributeName) => {
+  const maneuverRow = (
+    m: (typeof maneuvers)[number],
+    attribute?: AttributeName,
+    weapon?: { minRange?: number; maxRange?: number },
+  ) => {
     const def = COMBAT_SKILLS.find((d) => d.id === m.skillId)
     return (
       <SavedEffectRow
@@ -759,7 +764,7 @@ function CombatTab({
           draft: m.draft,
         }}
         verb="Use"
-        criteria={MANEUVER_CRITERIA}
+        criteria={maneuverCriteria(m.skillId, maneuverReach(character, m.skillId, weapon))}
         extraDice
         currentEp={character.currentEp}
         onUse={onUseManeuver}
@@ -787,6 +792,8 @@ function CombatTab({
     attribute?: AttributeName
     attrValue: number
     total: number
+    /** The weapon behind the attack, whose range a fired maneuver goes by. */
+    weapon?: { minRange?: number; maxRange?: number }
   }
 
   const actions: ActionRow[] = []
@@ -809,6 +816,7 @@ function CombatTab({
           attribute: def.attribute,
           attrValue,
           total,
+          weapon: w,
         })
       }
     } else {
@@ -897,7 +905,7 @@ function CombatTab({
                 1 action · weapon damage · no EP
               </span>
             </li>
-            {own.map((m) => maneuverRow(m, a.attribute))}
+            {own.map((m) => maneuverRow(m, a.attribute, a.weapon))}
           </ul>
         )}
       </li>

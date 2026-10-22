@@ -3,6 +3,7 @@ import {
   ARMOR_CLASSES,
   ARMOR_CLASS_STATS,
   DAMAGE_TYPES,
+  FIREARMS,
   NATURAL_WEAPON_ATTRIBUTES,
   WEAPON_CATEGORIES,
   armorEvasionReduction,
@@ -275,6 +276,53 @@ function ItemEditor({ item, onChange, onRemove, onClose }: ItemEditorProps) {
           </div>
         )}
       </div>
+      {(item.weaponCategory === 'fired-1h' || item.weaponCategory === 'fired-2h') && (
+        <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+          {(['minRange', 'maxRange'] as const).map((key) => (
+            <label key={key} className="flex items-center gap-1">
+              {key === 'minRange' ? 'Min range' : 'Max range'}
+              <input
+                type="number"
+                min={0}
+                step={5}
+                value={item[key] ?? ''}
+                onChange={(e) =>
+                  onChange({
+                    [key]: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value) || 0),
+                  })
+                }
+                className="w-20 bg-zinc-950 border border-zinc-700 rounded px-2 py-0.5 text-zinc-100 text-right font-mono"
+              />
+              ft
+            </label>
+          ))}
+          <label className="flex items-center gap-1">
+            Firearm
+            <select
+              value=""
+              onChange={(e) => {
+                const gun = FIREARMS.find((g) => g.name === e.target.value)
+                if (!gun) return
+                onChange({
+                  name: item.name || gun.name,
+                  weaponCategory: gun.category,
+                  minRange: gun.minRange,
+                  maxRange: gun.maxRange,
+                  notes: `${gun.damage} Physical · ${gun.capacity} rounds · reload ${gun.reload}`,
+                })
+              }}
+              className="bg-zinc-950 border border-zinc-700 rounded px-2 py-0.5 text-zinc-100"
+            >
+              <option value="">— fill from —</option>
+              {FIREARMS.map((g) => (
+                <option key={g.name} value={g.name}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
       {itemKind === 'armor' && item.armor && (
         <ArmorEditor
           armor={item.armor}

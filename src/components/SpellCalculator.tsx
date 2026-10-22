@@ -5,7 +5,7 @@ import {
   savedSpellCost,
   spellCost,
 } from '../system/spells'
-import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from '../system/maneuvers'
+import { MANEUVER_SKILLS, maneuverCriteria } from '../system/maneuvers'
 import {
   MAGIC_MEDIUMS,
   MAGIC_MEDIUM_DESCRIPTIONS,
@@ -33,7 +33,7 @@ export function SpellCalculator() {
   const [skillId, setSkillId] = useState<string>(MANEUVER_SKILLS[0].id)
   const skill = MANEUVER_SKILLS.find((s) => s.id === skillId) ?? MANEUVER_SKILLS[0]
 
-  const criteria = maneuver ? MANEUVER_CRITERIA : undefined
+  const criteria = useMemo(() => (maneuver ? maneuverCriteria(skillId) : undefined), [maneuver, skillId])
   const cost = useMemo(() => spellCost(draft, criteria), [draft, criteria])
   const saved = useMemo(() => savedSpellCost(draft, criteria), [draft, criteria])
   const bonus = school + medium

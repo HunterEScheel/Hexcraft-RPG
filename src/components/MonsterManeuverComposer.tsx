@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { emptySpellDraft, isEmptyDraft, spellCost } from '../system/spells'
-import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from '../system/maneuvers'
+import { MANEUVER_CRITERIA, MANEUVER_SKILLS, maneuverCriteria } from '../system/maneuvers'
 import {
   monsterManeuverBonus,
+  monsterManeuverReach,
   spellDamage,
   spellTargetingLabel,
   type Monster,
@@ -57,7 +58,7 @@ export function MonsterManeuverComposer({
         draft={draft}
         onChange={setDraft}
         timingLabel="Timing"
-        criteria={MANEUVER_CRITERIA}
+        criteria={skillId ? maneuverCriteria(skillId, monsterManeuverReach(monster, skillId)) : MANEUVER_CRITERIA}
         damageLabel="Extra damage (d6, on top of the weapon's)"
       />
 

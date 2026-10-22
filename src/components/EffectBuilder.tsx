@@ -25,7 +25,7 @@ import {
 } from '../system/spells'
 import { conditionDescription } from '../system/conditions'
 // Maneuvers alone may take no action at all.
-import { MANEUVER_CRITERIA } from '../system/maneuvers'
+import { isManeuverCriteria } from '../system/maneuvers'
 
 /**
  * The parts every spell and maneuver is built from: the scaling criteria,
@@ -152,7 +152,7 @@ export function EffectBuilder({
             onChange={(e) => setTime(e.target.value as CastingTimeKey)}
             className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-100"
           >
-            {(criteria === MANEUVER_CRITERIA ? CASTING_TIMES : SPELL_CASTING_TIMES).map((t) => (
+            {(isManeuverCriteria(criteria) ? CASTING_TIMES : SPELL_CASTING_TIMES).map((t) => (
               <option key={t.key} value={t.key}>
                 {t.label} (×{t.multiplier})
               </option>

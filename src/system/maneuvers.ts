@@ -17,13 +17,102 @@ export interface SavedManeuver {
 /** The combat skills a maneuver can be drawn from: the attacks. */
 export const MANEUVER_SKILLS = COMBAT_SKILLS.filter((s) => s.category === 'action')
 
-// A maneuver prices range and targets the way a spell does, but its duration
-// is short and its effects are the non-magical kind a fighter can pull off.
-// There is no concentration and no Challenge. The keys match the spell
-// criteria, so a maneuver is still a SpellDraft.
-export const MANEUVER_CRITERIA: readonly SpellCriterion[] = [
-  SPELL_CRITERIA.find((c) => c.key === 'range')!,
-  SPELL_CRITERIA.find((c) => c.key === 'aoe')!,
+/** Combat skills whose maneuvers reach as far as a weapon or a throw, not a run. */
+export const RANGED_MANEUVER_SKILLS: ReadonlySet<string> = new Set([
+  'combat-fired-1h',
+  'combat-fired-2h',
+  'combat-throw',
+])
+
+/**
+ * How far a maneuver can reach. Ranged and thrown ones go by the weapon's (or
+ * the throw's) range in feet; the rest by the user's movement speed. Either can
+ * be unknown, and the options then read in multiples instead of feet.
+ */
+export interface ManeuverReach {
+  /** Movement speed per action, for melee and other close maneuvers. */
+  speed?: number
+  /** A ranged or thrown maneuver's weapon range. */
+  minRange?: number
+  maxRange?: number
+}
+
+/** A throw carries (Throw + Power) × 10 ft. */
+export function throwDistance(throwLevel: number, power: number): number {
+  return Math.max(0, (throwLevel + power) * 10)
+}
+
+const ft = (n: number) => `${n.toLocaleString('en-US')} ft`
+
+// Range costs 0, 4, 8 then 16 EP: tier 4 skips 3 on purpose. Every maneuver's
+// range and AOE share one shape, option for option and tier for tier, so a
+// draft prices the same whatever reach its labels were drawn with.
+function rangeCriterion(ranged: boolean, reach: ManeuverReach): SpellCriterion {
+  const tiers = [0, 1, 2, 4]
+  let labels: string[]
+  if (ranged) {
+    const max = reach.maxRange
+    labels = max
+      ? [
+          `${reach.minRange ? `${reach.minRange.toLocaleString('en-US')}–` : 'up to '}${ft(max)}`,
+          `${ft(max)}–${ft(max * 2)}`,
+          `${ft(max * 2)}–${ft(max * 3)}`,
+          `${ft(max * 3)}+`,
+        ]
+      : ['within max range', 'beyond max range', '2× max range', '3× max range']
+  } else {
+    const s = reach.speed
+    labels = s
+      ? ['no movement', `move up to ${ft(s)}`, `move up to ${ft(s * 2)}`, `move up to ${ft(s * 4)}`]
+      : ['no movement', 'move up to speed', 'move up to 2× speed', 'move up to 4× speed']
+  }
+  return {
+    key: 'range',
+    label: ranged ? 'Range' : 'Movement',
+    epPerTier: 4,
+    options: labels.map((label, i) => ({ label, tier: tiers[i] })),
+  }
+}
+
+function aoeCriterion(ranged: boolean, reach: ManeuverReach): SpellCriterion {
+  const spellAoe = SPELL_CRITERIA.find((c) => c.key === 'aoe')!
+  const spellMode = (key: string) => spellAoe.modes!.find((m) => m.key === key)!
+  // A melee sweep reaches 5, 10 or 15 ft around; a ranged one bursts like a spell.
+  const splash = ranged
+    ? spellMode('splash')
+    : {
+        key: 'splash',
+        label: 'Splash',
+        options: [5, 10, 15].map((n, i) => ({ label: `${n} ft splash`, tier: i + 1 })),
+      }
+  // A line runs as far as the user moves (or the weapon reaches), doubling
+  // each tier.
+  const base = ranged ? reach.maxRange : reach.speed
+  const unit = ranged ? 'range' : 'speed'
+  const line = {
+    key: 'line',
+    label: 'Line',
+    options: [1, 2, 4, 8].map((m, i) => ({
+      label: base ? `${ft(base * m)} line` : `${m === 1 ? '' : `${m}× `}${unit} line`,
+      tier: i + 1,
+    })),
+  }
+  return { ...spellAoe, modes: [spellMode('targets'), splash, line] }
+}
+
+/**
+ * The criteria for a maneuver drawn from this combat skill: range and AOE fit
+ * to its reach, the rest the same for all.
+ */
+export function maneuverCriteria(skillId: string, reach: ManeuverReach = {}): readonly SpellCriterion[] {
+  const ranged = RANGED_MANEUVER_SKILLS.has(skillId)
+  return [rangeCriterion(ranged, reach), aoeCriterion(ranged, reach), ...SHARED_CRITERIA]
+}
+
+// The duration is short and the effects are the non-magical kind a fighter can
+// pull off. There is no concentration and no Challenge. The keys match the
+// spell criteria, so a maneuver is still a SpellDraft.
+const SHARED_CRITERIA: readonly SpellCriterion[] = [
   // How long the effects last: multiplies their EP rather than adding.
   {
     key: 'duration',
@@ -146,3 +235,15 @@ export const MANEUVER_CRITERIA: readonly SpellCriterion[] = [
     ],
   },
 ]
+
+/**
+ * Maneuver criteria with no skill or reach in mind. Ranged options are a
+ * superset of the rest, so it prices any maneuver; show a skill's own
+ * maneuverCriteria where the labels matter.
+ */
+export const MANEUVER_CRITERIA: readonly SpellCriterion[] = maneuverCriteria('combat-fired-2h')
+
+/** Whether these criteria are a maneuver's rather than a spell's. */
+export function isManeuverCriteria(criteria: readonly SpellCriterion[]): boolean {
+  return criteria.some((c) => c.key === 'selfDebuff')
+}

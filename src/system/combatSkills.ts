@@ -75,6 +75,13 @@ export const COMBAT_SKILLS: readonly CombatSkillDef[] = [
     attribute: 'Power',
   },
   {
+    id: 'combat-throw',
+    name: 'Throw',
+    effect: 'Attack (action) +1 · carries (Throw + Power) × 10 ft',
+    category: 'action',
+    attribute: 'Agility',
+  },
+  {
     id: 'combat-unarmed',
     name: 'Unarmed',
     effect: 'Attack (action) +1 · fists or natural weapons (claws, horns, bite)',

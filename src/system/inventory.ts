@@ -152,9 +152,30 @@ export interface InventoryItem {
    * (Agility) and horns brutal (Power). Agility when unset, like the skill.
    */
   attackAttribute?: NaturalWeaponAttribute
+  /** Fired weapons: the closest and farthest they shoot, in feet. */
+  minRange?: number
+  maxRange?: number
   armor?: ArmorStats
   equipped?: boolean
 }
+
+// Firearms for a setting that has them: the numbers behind a fired weapon's
+// range and reload.
+export const FIREARMS: readonly {
+  name: string
+  category: WeaponCategory
+  damage: string
+  minRange: number
+  maxRange: number
+  capacity: number
+  reload: string
+}[] = [
+  { name: 'Double barrel shotgun', category: 'fired-2h', damage: '5d6', minRange: 0, maxRange: 100, capacity: 2, reload: '1 action/shell' },
+  { name: 'Pump shotgun', category: 'fired-2h', damage: '5d6', minRange: 0, maxRange: 100, capacity: 4, reload: '1 action/shell' },
+  { name: 'Short-range rifle', category: 'fired-2h', damage: '2d6', minRange: 30, maxRange: 800, capacity: 20, reload: '1 action/bullet' },
+  { name: 'Long-range rifle', category: 'fired-2h', damage: '3d6', minRange: 80, maxRange: 4500, capacity: 4, reload: '1 action/bullet' },
+  { name: 'Revolver', category: 'fired-1h', damage: '2d6', minRange: 0, maxRange: 80, capacity: 8, reload: '1 action/bullet' },
+]
 
 export function newInventoryItem(): InventoryItem {
   return {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { emptyCharacter, ensureCombatSkills, maneuverBonus } from './character'
-import { MANEUVER_CRITERIA, MANEUVER_SKILLS } from './maneuvers'
+import { emptyCharacter, ensureCombatSkills, maneuverBonus, maneuverReach } from './character'
+import { MANEUVER_CRITERIA, MANEUVER_SKILLS, maneuverCriteria } from './maneuvers'
 import { SPELL_CASTING_TIMES, emptySpellDraft, savedSpellCost, selectedOption, spellCost } from './spells'
 import { conditionDescription } from './conditions'
 
@@ -141,5 +141,52 @@ describe('several self-debuffs', () => {
     expect(spellCost(lasting, MANEUVER_CRITERIA).baseEp).toBe(10) // 20 − 5 × 2
     const both = { ...two, selections: { ...two.selections, selfDuration: { modeIndex: 0, optionIndex: 2 } } }
     expect(spellCost(both, MANEUVER_CRITERIA).baseEp).toBe(0) // 20 − 15 × 4, floored at 0
+  })
+})
+
+describe('maneuver reach', () => {
+  const labels = (criteria: ReturnType<typeof maneuverCriteria>, key: string, mode?: string) => {
+    const c = criteria.find((x) => x.key === key)!
+    const opts = mode ? c.modes!.find((m) => m.key === mode)!.options : c.options!
+    return opts.map((o) => o.label)
+  }
+
+  it('moves by speed for close skills, at 0, 4, 8 and 16 EP', () => {
+    const c = maneuverCriteria('combat-melee-1h', { speed: 25 })
+    expect(labels(c, 'range')).toEqual(['no movement', 'move up to 25 ft', 'move up to 50 ft', 'move up to 100 ft'])
+    const range = c.find((x) => x.key === 'range')!
+    expect(range.options!.map((o) => o.tier * range.epPerTier)).toEqual([0, 4, 8, 16])
+    expect(labels(c, 'aoe', 'line')).toEqual(['25 ft line', '50 ft line', '100 ft line', '200 ft line'])
+    expect(labels(c, 'aoe', 'splash')).toEqual(['5 ft splash', '10 ft splash', '15 ft splash'])
+  })
+
+  it('goes by weapon range for fired skills', () => {
+    const c = maneuverCriteria('combat-fired-2h', { minRange: 30, maxRange: 800 })
+    expect(labels(c, 'range')).toEqual(['30–800 ft', '800 ft–1,600 ft', '1,600 ft–2,400 ft', '2,400 ft+'])
+    expect(labels(c, 'aoe', 'splash')).toContain('300 ft splash')
+  })
+
+  it('throws (Throw + Power) × 10 ft', () => {
+    const c = ensureCombatSkills(emptyCharacter('New Adventurers', 400))
+    c.attributes.Power = 2
+    c.skills = c.skills.map((s) => (s.id === 'combat-throw' ? { ...s, level: 3 } : s))
+    expect(maneuverReach(c, 'combat-throw')).toEqual({ minRange: 0, maxRange: 50 })
+    expect(maneuverBonus(c, 'combat-throw')).toBe(3 + c.attributes.Agility)
+    expect(maneuverReach(c, 'combat-tackle')).toEqual({ speed: c.speed })
+  })
+
+  it('reads a fired skill off the equipped weapon', () => {
+    const c = ensureCombatSkills(emptyCharacter('New Adventurers', 400))
+    c.inventory = [{ id: 'r', name: 'Revolver', quantity: 1, weaponCategory: 'fired-1h', equipped: true, minRange: 0, maxRange: 80 }]
+    expect(maneuverReach(c, 'combat-fired-1h')).toEqual({ minRange: 0, maxRange: 80 })
+  })
+
+  it('prices the same whatever reach drew the labels', () => {
+    const draft = emptySpellDraft()
+    draft.selections.range = { modeIndex: 0, optionIndex: 3 } // 16 EP
+    draft.selections.aoe = { modeIndex: 1, optionIndex: 2 } // 15 ft or 120 ft splash, 15 EP
+    for (const c of [MANEUVER_CRITERIA, maneuverCriteria('combat-melee-2h', { speed: 30 })]) {
+      expect(spellCost(draft, c).baseEp).toBe(31)
+    }
   })
 })
