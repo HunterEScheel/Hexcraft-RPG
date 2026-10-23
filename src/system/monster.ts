@@ -12,6 +12,7 @@ import {
 } from './costs'
 import { MAGIC_MEDIUMS, MAGIC_SCHOOLS, type MagicMedium, type MagicSchool } from './magicSchools'
 import type { DamageType } from './inventory'
+import type { CharacterSkill } from './character'
 import { RANGED_MANEUVER_SKILLS, throwDistance, type ManeuverReach } from './maneuvers'
 import {
   CASTING_TIMES,
@@ -74,6 +75,8 @@ export interface Monster {
   speed: number
   attributes: Record<AttributeName, number>
   combatSkills: Record<string, number>
+  /** Non-combat skills (Stealth, Tracking (Scent), …), bought like a character's. */
+  skills: CharacterSkill[]
   magicSchools: Record<MagicSchool, number>
   magicMediums: Record<MagicMedium, number>
   multiattack: string
@@ -98,6 +101,7 @@ export function emptyMonster(tierName: string, bpBudget: number): Monster {
       number
     >,
     combatSkills: Object.fromEntries(COMBAT_SKILLS.map((c) => [c.id, 0])),
+    skills: [],
     magicSchools: Object.fromEntries(MAGIC_SCHOOLS.map((s) => [s, 0])) as Record<MagicSchool, number>,
     magicMediums: Object.fromEntries(MAGIC_MEDIUMS.map((m) => [m, 0])) as Record<MagicMedium, number>,
     multiattack: '',
@@ -116,6 +120,7 @@ export interface MonsterBPBreakdown {
   speed: number
   attributes: number
   skills: number
+  otherSkills: number
   magic: number
   total: number
   remaining: number
@@ -133,16 +138,18 @@ export function monsterBpBreakdown(m: Monster): MonsterBPBreakdown {
     (sum, lv) => sum + skillCost(lv),
     0,
   )
+  const otherSkills = (m.skills ?? []).reduce((sum, s) => sum + skillCost(s.level), 0)
   const magic =
     MAGIC_SCHOOLS.reduce((sum, s) => sum + magicSchoolCost(m.magicSchools[s] ?? 0), 0) +
     MAGIC_MEDIUMS.reduce((sum, md) => sum + magicMediumCost(m.magicMediums[md] ?? 0), 0)
-  const total = hp + ep + speed + attributes + skills + magic
+  const total = hp + ep + speed + attributes + skills + otherSkills + magic
   return {
     hp,
     ep,
     speed,
     attributes,
     skills,
+    otherSkills,
     magic,
     total,
     remaining: m.bpBudget - total,

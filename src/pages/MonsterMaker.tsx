@@ -28,6 +28,8 @@ import { MagicMediumsEditor } from '../components/MagicMediumsEditor'
 import { MAGIC_MEDIUMS, MAGIC_SCHOOLS } from '../system/magicSchools'
 import { MonsterManeuverComposer } from '../components/MonsterManeuverComposer'
 import { NumberStepper } from '../components/NumberStepper'
+import { SkillsEditor } from '../components/SkillsEditor'
+import { skillLabel } from '../system/character'
 import { Section } from '../components/Section'
 import { TierSelector } from '../components/TierSelector'
 
@@ -160,6 +162,18 @@ export function MonsterMaker() {
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section
+        title="Other skills"
+        subtitle="Anything else it's trained in: Stealth, Tracking (Scent), Intimidation."
+        cost={breakdown.otherSkills}
+      >
+        <SkillsEditor
+          value={monster.skills}
+          onChange={(skills) => patch({ skills })}
+          showCombat={false}
+        />
       </Section>
 
       <Section
@@ -618,6 +632,19 @@ function StatBlock({ monster }: { monster: Monster }) {
               </li>
             ))}
           </ul>
+        </BlockSection>
+      )}
+
+      {monster.skills.length > 0 && (
+        <BlockSection title="Skills">
+          <p className="text-sm text-zinc-300">
+            {monster.skills.map((s, i) => (
+              <span key={s.id}>
+                {i > 0 && ', '}
+                {skillLabel(s)} <span className="font-mono text-amber-300">{fmt(s.level)}</span>
+              </span>
+            ))}
+          </p>
         </BlockSection>
       )}
 

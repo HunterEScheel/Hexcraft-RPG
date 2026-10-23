@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { emptyMonster, monsterBpBreakdown } from './monster'
 import { emptyCharacter, ensureCombatSkills, maneuverBonus, maneuverReach } from './character'
 import { MANEUVER_CRITERIA, MANEUVER_SKILLS, maneuverCriteria } from './maneuvers'
 import { SPELL_CASTING_TIMES, emptySpellDraft, savedSpellCost, selectedOption, spellCost } from './spells'
@@ -207,5 +208,16 @@ describe('maneuver reach', () => {
     draft.selections.aoe = { modeIndex: 1, optionIndex: 2 } // 15 ft or 120 ft splash, 15 EP
     expect(spellCost(draft, fired).baseEp).toBe(31)
     expect(spellCost(draft, maneuverCriteria('combat-melee-2h', { speed: 30 })).baseEp).toBe(15)
+  })
+})
+
+describe('monster skills', () => {
+  it('cost BP on the skill curve alongside combat skills', () => {
+    const m = emptyMonster('New Adventurers', 400)
+    const before = monsterBpBreakdown(m).total
+    m.skills = [{ id: 's', name: 'Stealth', level: 3 }]
+    const after = monsterBpBreakdown(m)
+    expect(after.otherSkills).toBe(10)
+    expect(after.total).toBe(before + 10)
   })
 })

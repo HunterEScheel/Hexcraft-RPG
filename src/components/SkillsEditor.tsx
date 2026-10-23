@@ -9,9 +9,11 @@ import { NumberStepper } from './NumberStepper'
 interface Props {
   value: CharacterSkill[]
   onChange: (next: CharacterSkill[]) => void
+  /** List the saves and combat skills too. Off for a monster, which keeps those elsewhere. */
+  showCombat?: boolean
 }
 
-export function SkillsEditor({ value, onChange }: Props) {
+export function SkillsEditor({ value, onChange, showCombat = true }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SkillSearchResult[]>([])
   const [searching, setSearching] = useState(false)
@@ -181,32 +183,38 @@ export function SkillsEditor({ value, onChange }: Props) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h4 className="text-xs uppercase tracking-wide text-zinc-400 mb-2">
-          Saving throws
-        </h4>
-        <p className="text-xs text-zinc-500 mb-2">
-          Dodge, Grit, and Resolve are your three saves. Each level adds +1
-          to the corresponding save roll.
-        </p>
-        <ul className="space-y-2">{saveSkills.map(renderSkillRow)}</ul>
-      </div>
+      {showCombat && (
+        <>
+          <div>
+            <h4 className="text-xs uppercase tracking-wide text-zinc-400 mb-2">
+              Saving throws
+            </h4>
+            <p className="text-xs text-zinc-500 mb-2">
+              Dodge, Grit, and Resolve are your three saves. Each level adds +1
+              to the corresponding save roll.
+            </p>
+            <ul className="space-y-2">{saveSkills.map(renderSkillRow)}</ul>
+          </div>
+
+          <div>
+            <h4 className="text-xs uppercase tracking-wide text-zinc-400 mb-2">
+              Combat skills
+            </h4>
+            <p className="text-xs text-zinc-500 mb-2">
+              Every character starts with these at level 0. Upgrade as needed; they
+              can&apos;t be removed.
+            </p>
+            <ul className="space-y-2">{combatSkills.map(renderSkillRow)}</ul>
+          </div>
+        </>
+      )}
 
       <div>
-        <h4 className="text-xs uppercase tracking-wide text-zinc-400 mb-2">
-          Combat skills
-        </h4>
-        <p className="text-xs text-zinc-500 mb-2">
-          Every character starts with these at level 0. Upgrade as needed; they
-          can&apos;t be removed.
-        </p>
-        <ul className="space-y-2">{combatSkills.map(renderSkillRow)}</ul>
-      </div>
-
-      <div>
-        <h4 className="text-xs uppercase tracking-wide text-zinc-400 mb-2">
-          Other skills
-        </h4>
+        {showCombat && (
+          <h4 className="text-xs uppercase tracking-wide text-zinc-400 mb-2">
+            Other skills
+          </h4>
+        )}
         <div>
           <input
             type="text"
