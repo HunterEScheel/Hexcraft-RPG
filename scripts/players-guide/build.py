@@ -253,7 +253,7 @@ section('magic', 'Magic', f'''
 <h3>Resolving a spell</h3>
 <ul>
 <li><b>Roll to hit</b>: d20 + school + medium vs the target's Evasion.</li>
-<li><b>Save</b>: the target makes a Dodge, Grit or Resolve save against DC 10 + school + medium.</li>
+<li><b>Save</b>: the target makes a Dodge, Grit or Resolve save, or a Countermagic check, against DC 10 + school + medium.</li>
 </ul>
 <h3>Amping</h3>
 <p>Spend an extra <b>5 EP</b> as you cast to add +1 to the hit bonus or the save DC. Repeat as many times as you can afford.</p>
@@ -341,7 +341,7 @@ section('maneuvers', 'Maneuvers', f'''
 <p>Instead of a school and a medium, a maneuver draws on one of your <b>attack combat skills</b> (1-handed melee, 2-handed fired, Throw, Unarmed, Grapple, Tackle and so on) and that skill's attribute, trained or not: an untrained skill just adds nothing to the roll.</p>
 <ul>
 <li><b>Roll to hit</b>: d20 + combat skill + attribute vs the target's Evasion.</li>
-<li><b>Save</b>: the target saves against DC 10 + combat skill + attribute.</li>
+<li><b>Save</b>: the target makes a Dodge, Grit or Resolve save, or a Countermagic check, against DC 10 + combat skill + attribute.</li>
 <li><b>Signature moves</b>: save as many maneuvers per combat skill as your level in it. A saved maneuver costs 25% less EP.</li>
 <li><b>Amping</b> works the same: 5 more EP for +1 to hit or +1 DC.</li>
 </ul>

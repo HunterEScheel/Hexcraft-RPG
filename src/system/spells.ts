@@ -263,7 +263,7 @@ export interface SpellSelection {
   optionIndex: number
 }
 
-export type SpellTargeting = 'hit' | 'dodge' | 'grit' | 'resolve'
+export type SpellTargeting = 'hit' | 'dodge' | 'grit' | 'resolve' | 'countermagic'
 
 export const SPELL_TARGETING_OPTIONS: readonly {
   key: SpellTargeting
@@ -273,6 +273,7 @@ export const SPELL_TARGETING_OPTIONS: readonly {
   { key: 'dodge', label: 'Dodge save' },
   { key: 'grit', label: 'Grit save' },
   { key: 'resolve', label: 'Resolve save' },
+  { key: 'countermagic', label: 'Countermagic check' },
 ] as const
 
 export interface SpellDraft {
@@ -290,7 +291,15 @@ export interface SpellDraft {
 }
 
 export function targetingName(t: SpellTargeting): string {
-  return t === 'dodge' ? 'Dodge' : t === 'grit' ? 'Grit' : t === 'resolve' ? 'Resolve' : 'Hit'
+  return t === 'dodge'
+    ? 'Dodge'
+    : t === 'grit'
+      ? 'Grit'
+      : t === 'resolve'
+        ? 'Resolve'
+        : t === 'countermagic'
+          ? 'Countermagic'
+          : 'Hit'
 }
 
 export function emptySpellDraft(): SpellDraft {

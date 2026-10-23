@@ -21,6 +21,7 @@ import {
   pickLabels,
   selectedOption,
   selectionFor,
+  targetingName,
   type SpellCriterion,
   type SpellDraft,
 } from './spells'
@@ -184,9 +185,7 @@ export function monsterManeuverReach(m: Monster, skillId: string): ManeuverReach
 export function spellTargetingLabel(s: { draft: SpellDraft }, bonus: number): string {
   const targeting = s.draft.targeting ?? 'hit'
   if (targeting === 'hit') return `hit ${bonus >= 0 ? '+' : ''}${bonus}`
-  const save =
-    targeting === 'dodge' ? 'Dodge' : targeting === 'grit' ? 'Grit' : 'Resolve'
-  return `${save} DC ${10 + bonus}`
+  return `${targetingName(targeting)} DC ${10 + bonus}`
 }
 
 /**
