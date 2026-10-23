@@ -140,6 +140,8 @@ export function SpellCalculator() {
           <Result label="Saved" value={saved.totalEp} note="−25% if prepared" />
           {draft.targeting === 'hit' ? (
             <Result label="Hit bonus" value={`${bonus >= 0 ? '+' : ''}${bonus}`} note="vs Evasion" />
+          ) : draft.targeting === 'countermagic' ? (
+            <Result label="Countermagic" value="Resolve" note="vs 10 + EP gap ÷ 10" />
           ) : (
             <Result label={`${targeting?.label ?? 'Save'} DC`} value={10 + bonus} note={maneuver ? '10 + skill + attribute' : '10 + school + medium'} />
           )}

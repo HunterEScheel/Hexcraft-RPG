@@ -7,7 +7,7 @@ import {
   savedSpellCost,
   selectedOption,
   selectionFor,
-  targetingName,
+  targetingSummary,
   type SpellCriterion,
   type SpellDraft,
 } from '../system/spells'
@@ -126,9 +126,7 @@ export function SavedEffectRow({
         {item.source}
       </span>
       <span className="text-xs font-mono text-amber-300 whitespace-nowrap">
-        {targeting === 'hit'
-          ? `hit ${item.bonus >= 0 ? '+' : ''}${item.bonus}`
-          : `${targetingName(targeting)} DC ${10 + item.bonus}`}
+        {targetingSummary(targeting, item.bonus)}
       </span>
       <div className="flex flex-wrap gap-1 flex-1 min-w-0">
         {factors.map((label, i) => (

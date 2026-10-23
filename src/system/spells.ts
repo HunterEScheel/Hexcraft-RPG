@@ -290,6 +290,16 @@ export interface SpellDraft {
   targeting: SpellTargeting
 }
 
+/**
+ * How the effect lands, for a bonus: "hit +5", "Grit DC 15", or for a
+ * countermagic check the Resolve save its target makes against the EP gap.
+ */
+export function targetingSummary(t: SpellTargeting, bonus: number): string {
+  if (t === 'hit') return `hit ${bonus >= 0 ? '+' : ''}${bonus}`
+  if (t === 'countermagic') return 'Resolve vs 10 + EP gap ÷ 10'
+  return `${targetingName(t)} DC ${10 + bonus}`
+}
+
 export function targetingName(t: SpellTargeting): string {
   return t === 'dodge'
     ? 'Dodge'

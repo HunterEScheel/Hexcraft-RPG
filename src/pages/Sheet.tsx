@@ -10,7 +10,6 @@ import {
   maneuverReach,
   normalizeCurrentValues,
   restAttributeFor,
-  spellcastingAttributeFor,
   counterspellBonus,
   skillLabel,
   type BodyPart,
@@ -443,17 +442,12 @@ export function Sheet() {
               <div className="rounded border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-400 flex flex-wrap items-baseline justify-between gap-2">
                 <span>
                   <span className="text-zinc-200">Counterspell</span> (Destroy / Magic, reaction):
-                  automatic with at least the spell&apos;s EP, otherwise DC 10 + EP gap ÷ 10.
+                  automatic with more EP than the spell, otherwise a Resolve save against DC 10 + EP gap ÷ 10.
                 </span>
                 <span className="font-mono">
                   d20{' '}
                   <span className="text-amber-300">{fmt(counterspellBonus(character))}</span>{' '}
-                  <span className="text-zinc-500">
-                    (Destroy {character.magicSchools.Destroy ?? 0} + Magic{' '}
-                    {character.magicMediums.Magic ?? 0} +{' '}
-                    {ATTRIBUTE_ABBR[spellcastingAttributeFor(character)]}{' '}
-                    {fmt(character.attributes[spellcastingAttributeFor(character)] ?? 0)})
-                  </span>
+                  <span className="text-zinc-500">(Resolve)</span>
                 </span>
               </div>
               <ReadOnlySection title="Quick cast" collapsible defaultOpen={false}>

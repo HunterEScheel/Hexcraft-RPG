@@ -6,7 +6,7 @@ import {
   restAttributeFor,
   restEpBonus,
   rollLongRest,
-  spellcastingAttributeFor,
+  ensureCombatSkills,
 } from './character'
 
 describe('long rest', () => {
@@ -39,14 +39,12 @@ describe('long rest', () => {
   })
 })
 
-describe('spellcasting attribute', () => {
-  it('defaults to the highest attribute other than Agility and adds to counters', () => {
-    const c = emptyCharacter('Peasants', 150)
-    c.attributes = { ...c.attributes, Agility: 5, Power: 1, Intelligence: 4, Sense: 2, Influence: 0 }
+describe('countermagic check', () => {
+  it('rolls the counter caster\'s Resolve save, not Destroy or Magic', () => {
+    const c = ensureCombatSkills(emptyCharacter('Peasants', 150))
     c.magicSchools = { ...c.magicSchools, Destroy: 3 }
     c.magicMediums = { ...c.magicMediums, Magic: 2 }
-    expect(spellcastingAttributeFor(c)).toBe('Intelligence')
-    expect(counterspellBonus(c)).toBe(9)
-    expect(counterspellBonus({ ...c, spellcastingAttribute: 'Power' })).toBe(6)
+    c.skills = c.skills.map((s) => (s.id === 'combat-resolve' ? { ...s, level: 4 } : s))
+    expect(counterspellBonus(c)).toBe(4)
   })
 })

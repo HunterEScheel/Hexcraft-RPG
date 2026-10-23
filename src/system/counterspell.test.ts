@@ -4,7 +4,7 @@ import { counterspellChance, counterspellDC } from './counterspell'
 describe('counterspells', () => {
   it('succeed automatically with at least as much EP as the spell', () => {
     expect(counterspellDC(12, 16)).toBeNull()
-    expect(counterspellDC(20, 20)).toBeNull()
+    expect(counterspellDC(20, 20)).toBe(10) // a tie still rolls
     expect(counterspellChance(0, null)).toBe(1)
   })
 

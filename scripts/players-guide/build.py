@@ -253,19 +253,19 @@ section('magic', 'Magic', f'''
 <h3>Resolving a spell</h3>
 <ul>
 <li><b>Roll to hit</b>: d20 + school + medium vs the target's Evasion.</li>
-<li><b>Save</b>: the target makes a Dodge, Grit or Resolve save, or a Countermagic check, against DC 10 + school + medium.</li>
+<li><b>Save</b>: the target makes a Dodge, Grit or Resolve save against DC 10 + school + medium.</li>
+<li><b>Countermagic check</b>: for a counter. Its caster makes a Resolve save against DC 10 + the EP gap ÷ 10 (see <i>Counterspells</i>).</li>
 </ul>
 <h3>Amping</h3>
 <p>Spend an extra <b>5 EP</b> as you cast to add +1 to the hit bonus or the save DC. Repeat as many times as you can afford.</p>
 <h3>Counterspells</h3>
 <p>As a <b>reaction</b> to a spell being cast, cast a <b>Destroy / Magic</b> spell at Reaction timing (which makes it costly) and compare the EP each caster actually spent:</p>
 <ul>
-<li>If your counter has <b>at least as much EP</b> as the spell, the spell is stopped.</li>
-<li>Otherwise roll <b>d20 + Destroy + Magic + your spellcasting attribute</b> against <b>DC 10 + (spell's EP − counter's EP) ÷ 10</b>, rounded down. A natural 1 always fails.</li>
+<li>If your counter has <b>more EP</b> than the spell, the spell is stopped.</li>
+<li>Otherwise make a <b>countermagic check</b>: a <b>Resolve save</b> against <b>DC 10 + (spell's EP − counter's EP) ÷ 10</b>, rounded down. A natural 1 always fails.</li>
 </ul>
 <p>Either way the countered caster's EP is spent. Amping raises a spell's DC against its targets but only makes it slightly harder to counter, so an impossible save is never an impossible counter unless the caster sinks hundreds of EP into it.</p>
-<div class="example"><b>Example.</b> A cultist casts a dominating spell costing 80 EP, amped to DC 30. Devon counters with 16 EP: DC 10 + 64 ÷ 10 = <b>16</b>. With Destroy 3, Magic 3 and Intelligence +2 he rolls d20 + 8 and needs an 8 or better.</div>
-<p><b>Spellcasting attribute.</b> Every caster picks one attribute other than Agility (Power, Intelligence, Sense or Influence). It adds to counterspell rolls.</p>
+<div class="example"><b>Example.</b> A cultist casts a dominating spell costing 80 EP, amped to DC 30. Devon counters with 16 EP: DC 10 + 64 ÷ 10 = <b>16</b>. With Resolve 4 he rolls d20 + 4 and needs a 12 or better.</div>
 <h3>Saved spells</h3>
 <p>You can save (prepare) as many spells per school as your level in that school. A saved spell costs <b>25% less EP</b> to cast.</p>
 ''')
@@ -341,7 +341,7 @@ section('maneuvers', 'Maneuvers', f'''
 <p>Instead of a school and a medium, a maneuver draws on one of your <b>attack combat skills</b> (1-handed melee, 2-handed fired, Throw, Unarmed, Grapple, Tackle and so on) and that skill's attribute, trained or not: an untrained skill just adds nothing to the roll.</p>
 <ul>
 <li><b>Roll to hit</b>: d20 + combat skill + attribute vs the target's Evasion.</li>
-<li><b>Save</b>: the target makes a Dodge, Grit or Resolve save, or a Countermagic check, against DC 10 + combat skill + attribute.</li>
+<li><b>Save</b>: the target makes a Dodge, Grit or Resolve save against DC 10 + combat skill + attribute.</li>
 <li><b>Signature moves</b>: save as many maneuvers per combat skill as your level in it. A saved maneuver costs 25% less EP.</li>
 <li><b>Amping</b> works the same: 5 more EP for +1 to hit or +1 DC.</li>
 </ul>
@@ -408,7 +408,7 @@ section('reference', 'Quick Reference', f'''
 <div>
 <h3>Turns</h3><p>4 actions, reset at the end of your turn<br>Unspent actions are reactions: one per other combatant's turn, any number per round<br>Default reactions: Parry (adjacent attacker), Move</p>
 <h3>Rolls</h3>
-<p>Check: d20 + attribute + skill vs DC<br>Attack: d20 + weapon skill + attribute vs Evasion<br>Spell attack: d20 + school + medium vs Evasion<br>Spell save DC: 10 + school + medium<br>Counterspell (Destroy / Magic, reaction): automatic with at least the spell's EP; else d20 + Destroy + Magic + spellcasting attribute vs DC 10 + EP gap ÷ 10<br>Maneuver: d20 + skill + attribute; DC 10 + skill + attribute<br>Evasion: 10 + Agility + Dodge − armor</p>
+<p>Check: d20 + attribute + skill vs DC<br>Attack: d20 + weapon skill + attribute vs Evasion<br>Spell attack: d20 + school + medium vs Evasion<br>Spell save DC: 10 + school + medium<br>Counterspell (Destroy / Magic, reaction): automatic with more EP than the spell; else countermagic check: Resolve save vs DC 10 + EP gap ÷ 10<br>Maneuver: d20 + skill + attribute; DC 10 + skill + attribute<br>Evasion: 10 + Agility + Dodge − armor</p>
 <h3>DCs</h3><p>Easy 12 &middot; Medium 20 &middot; Hard 30 &middot; Near-impossible 40</p>
 <p>Fit: Negative ×1.5 &middot; Relevant ×0.9 &middot; Adjacent ×0.75 &middot; Exact ×0.6</p>
 <h3>Criticals</h3><p>Nat 20: +10 &middot; Nat 1: −10<br>Crit success: beat DC by 10+<br>Crit failure: under 25% of DC</p>

@@ -1,7 +1,6 @@
 import {
   ATTRIBUTES,
   REST_ATTRIBUTES,
-  SPELLCASTING_ATTRIBUTES,
   type AttributeName,
   type RestAttribute,
   type SpellcastingAttribute,
@@ -121,7 +120,7 @@ export interface Character {
   deathSaves: DeathSaves
   tempHp: number
   bodyDescriptions: Partial<Record<BodyPart, string>>
-  /** Added to counterspell rolls: any attribute but Agility. */
+  /** Was added to counterspell rolls; unused since they became Resolve saves. */
   spellcastingAttribute?: SpellcastingAttribute
   /** Added to the EP a long rest recovers: Intelligence, Sense or Influence. */
   restAttribute?: RestAttribute
@@ -265,24 +264,9 @@ export function restAttributeFor(c: Character): RestAttribute {
   )
 }
 
-/**
- * The caster's spellcasting attribute: their pick, or until they pick one, the
- * highest attribute other than Agility.
- */
-export function spellcastingAttributeFor(c: Character): SpellcastingAttribute {
-  if (c.spellcastingAttribute) return c.spellcastingAttribute
-  return SPELLCASTING_ATTRIBUTES.reduce((best, a) =>
-    (c.attributes[a] ?? 0) > (c.attributes[best] ?? 0) ? a : best,
-  )
-}
-
-/** A counterspell roll's bonus: Destroy + Magic + the spellcasting attribute. */
+/** A countermagic check's bonus: the counter's caster rolls a Resolve save. */
 export function counterspellBonus(c: Character): number {
-  return (
-    (c.magicSchools.Destroy ?? 0) +
-    (c.magicMediums.Magic ?? 0) +
-    (c.attributes[spellcastingAttributeFor(c)] ?? 0)
-  )
+  return combatSkillLevel(c, 'combat-resolve')
 }
 
 /** EP a long rest adds on top of the dice: the rest attribute's value, once per rest. */

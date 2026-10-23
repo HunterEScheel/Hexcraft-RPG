@@ -3,17 +3,13 @@ import { counterspellChance, counterspellDC } from '../system/counterspell'
 import { NumberStepper } from './NumberStepper'
 
 /**
- * Whether a counterspell stops a spell: automatic with at least as much EP,
- * otherwise d20 + Destroy + Magic + spellcasting attribute against DC 10 +
- * every 10 EP of difference.
+ * Whether a counterspell stops a spell: automatic with more EP, otherwise the
+ * countering caster's Resolve save against DC 10 + every 10 EP of difference.
  */
 export function CounterspellCalculator() {
   const [spellEp, setSpellEp] = useState(40)
   const [counterEp, setCounterEp] = useState(16)
-  const [destroy, setDestroy] = useState(3)
-  const [magic, setMagic] = useState(3)
-  const [attribute, setAttribute] = useState(2)
-  const bonus = destroy + magic + attribute
+  const [bonus, setBonus] = useState(3)
 
   const dc = counterspellDC(spellEp, counterEp)
   const chance = counterspellChance(bonus, dc)
@@ -32,9 +28,7 @@ export function CounterspellCalculator() {
         <div className="flex flex-wrap gap-x-8 gap-y-2">
           <NumberStepper label="Spell's EP" value={spellEp} onChange={setSpellEp} min={0} />
           <NumberStepper label="Counter's EP" value={counterEp} onChange={setCounterEp} min={0} />
-          <NumberStepper label="Destroy" value={destroy} onChange={setDestroy} min={0} />
-          <NumberStepper label="Magic" value={magic} onChange={setMagic} min={0} />
-          <NumberStepper label="Spellcasting attribute" value={attribute} onChange={setAttribute} min={-5} />
+          <NumberStepper label="Counter's Resolve" value={bonus} onChange={setBonus} min={0} />
         </div>
 
         <div className="grid grid-cols-3 gap-3 rounded border border-zinc-800 bg-zinc-950 p-3 text-center">
@@ -48,7 +42,7 @@ export function CounterspellCalculator() {
             value={needed === null ? '—' : needed > 20 ? '—' : `${needed}+`}
             note={needed !== null && needed > 20 ? 'impossible' : 'on the d20'}
           />
-          <Result label="Chance" value={`${Math.round(chance * 100)}%`} note={`d20 + ${bonus} · natural 1 fails`} />
+          <Result label="Chance" value={`${Math.round(chance * 100)}%`} note={`Resolve d20 + ${bonus} · natural 1 fails`} />
         </div>
         <p className="text-xs text-zinc-500">
           A counter is a Destroy / Magic spell at Reaction timing. EP is what each caster

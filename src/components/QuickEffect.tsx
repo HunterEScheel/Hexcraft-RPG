@@ -3,7 +3,7 @@ import {
   emptySpellDraft,
   isEmptyDraft,
   spellCost,
-  targetingName,
+  targetingSummary,
   type SpellCriterion,
   type SpellDraft,
 } from '../system/spells'
@@ -78,9 +78,7 @@ export function QuickEffect({
               <>
                 {' · '}
                 <span className="text-amber-300">
-                  {draft.targeting === 'hit'
-                    ? `hit ${bonus >= 0 ? '+' : ''}${bonus}`
-                    : `${targetingName(draft.targeting)} DC ${10 + bonus}`}
+                  {targetingSummary(draft.targeting, bonus)}
                 </span>
               </>
             )}
