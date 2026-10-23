@@ -254,7 +254,7 @@ section('magic', 'Magic', f'''
 <ul>
 <li><b>Roll to hit</b>: d20 + school + medium vs the target's Evasion.</li>
 <li><b>Save</b>: the target makes a Dodge, Grit or Resolve save against DC 10 + school + medium.</li>
-<li><b>Countermagic check</b>: for a counter. Its caster makes a Resolve save against DC 10 + the EP gap ÷ 10 (see <i>Counterspells</i>).</li>
+<li><b>Countermagic check</b> (spells only): for a counter. Its caster makes a Resolve save against DC 10 + the EP gap ÷ 10 (see <i>Counterspells</i>).</li>
 </ul>
 <h3>Amping</h3>
 <p>Spend an extra <b>5 EP</b> as you cast to add +1 to the hit bonus or the save DC. Repeat as many times as you can afford.</p>

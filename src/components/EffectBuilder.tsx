@@ -166,7 +166,7 @@ export function EffectBuilder({
           Targeting
         </span>
         <div className="flex flex-wrap gap-1">
-          {SPELL_TARGETING_OPTIONS.map((opt) => {
+          {SPELL_TARGETING_OPTIONS.filter((o) => !o.spellOnly || !isManeuverCriteria(criteria)).map((opt) => {
             const active = draft.targeting === opt.key
             return (
               <button

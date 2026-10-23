@@ -268,12 +268,15 @@ export type SpellTargeting = 'hit' | 'dodge' | 'grit' | 'resolve' | 'countermagi
 export const SPELL_TARGETING_OPTIONS: readonly {
   key: SpellTargeting
   label: string
+  /** Not for maneuvers. */
+  spellOnly?: boolean
 }[] = [
   { key: 'hit', label: 'Roll to hit' },
   { key: 'dodge', label: 'Dodge save' },
   { key: 'grit', label: 'Grit save' },
   { key: 'resolve', label: 'Resolve save' },
-  { key: 'countermagic', label: 'Countermagic check' },
+  // Spells only: a counter's countermagic check.
+  { key: 'countermagic', label: 'Countermagic check', spellOnly: true },
 ] as const
 
 export interface SpellDraft {
