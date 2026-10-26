@@ -32,6 +32,7 @@ import { BodyDiagramEditor } from '../components/BodyDiagramEditor'
 import { InventoryEditor } from '../components/InventoryEditor'
 import { QuickCast } from '../components/QuickCast'
 import { QuickManeuver } from '../components/QuickManeuver'
+import { ShieldValue } from '../components/ShieldValue'
 import { SavedEffectRow } from '../components/SavedEffects'
 import { canThrow, maneuverCriteria } from '../system/maneuvers'
 import { SavedSpells } from '../components/SavedSpells'
@@ -294,12 +295,9 @@ export function Sheet() {
             <span className="text-zinc-500 text-[10px]"> /{character.ep}</span>
           </span>
         </Stat>
-        <Stat
-          label="EVA"
-          value={evasion(character)}
-          color="text-amber-300"
-          tooltip={evasionBreakdown(character)}
-        />
+        <Stat label="EVA" tooltip={evasionBreakdown(character)}>
+          <ShieldValue className="text-amber-300">{evasion(character)}</ShieldValue>
+        </Stat>
         <RibbonRule />
         {ATTRIBUTES.map((a) => (
           <Stat

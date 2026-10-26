@@ -29,6 +29,7 @@ import { MAGIC_MEDIUMS, MAGIC_SCHOOLS } from '../system/magicSchools'
 import { MonsterManeuverComposer } from '../components/MonsterManeuverComposer'
 import { NumberStepper } from '../components/NumberStepper'
 import { SkillsEditor } from '../components/SkillsEditor'
+import { ShieldValue } from '../components/ShieldValue'
 import { skillLabel } from '../system/character'
 import { Section } from '../components/Section'
 import { TierSelector } from '../components/TierSelector'
@@ -552,6 +553,7 @@ function StatBlock({ monster }: { monster: Monster }) {
           label="EVA"
           value={String(monsterEvasion(monster))}
           color="text-amber-300"
+          shield
         />
         <BlockStat
           label="SPD"
@@ -790,19 +792,26 @@ function BlockStat({
   label,
   value,
   color,
+  shield = false,
 }: {
   label: string
   value: string
   color: string
+  /** Draw the value inside a shield (Evasion). */
+  shield?: boolean
 }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-500">
         {label}
       </span>
-      <span className={`font-mono text-base leading-none ${color}`}>
-        {value}
-      </span>
+      {shield ? (
+        <ShieldValue className={color}>{value}</ShieldValue>
+      ) : (
+        <span className={`font-mono text-base leading-none ${color}`}>
+          {value}
+        </span>
+      )}
     </div>
   )
 }
