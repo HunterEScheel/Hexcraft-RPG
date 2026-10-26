@@ -57,43 +57,48 @@ export function MonsterManeuverComposer({
         }))}
         onChange={setSkillId}
       />
-      <EffectBuilder
-        draft={draft}
-        onChange={setDraft}
-        timingLabel="Timing"
-        criteria={skillId ? maneuverCriteria(skillId, monsterManeuverReach(monster, skillId), draft.castingTime) : MANEUVER_CRITERIA}
-        damageLabel="Extra damage (d6, on top of the weapon's)"
-      />
+      {/* The skill sets the range and AOE options, so it comes first. */}
+      {skillId === '' ? (
+        <p className="text-sm text-zinc-500 italic">Pick a combat skill to start building.</p>
+      ) : (
+        <>
+          <EffectBuilder
+            draft={draft}
+            onChange={setDraft}
+            timingLabel="Timing"
+            criteria={maneuverCriteria(skillId, monsterManeuverReach(monster, skillId), draft.castingTime)}
+            damageLabel="Extra damage (d6, on top of the weapon's)"
+          />
 
-      <div className="rounded border border-zinc-800 bg-zinc-950 p-3 flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-zinc-500 font-mono whitespace-nowrap">
-          {cost.baseEp} base × {cost.multiplier} = {cost.totalEp} EP
-        </span>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Maneuver name…"
-          className="flex-1 min-w-[10rem] bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-100"
-        />
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={!canAdd}
-          title={
-            skillId === ''
-              ? 'Pick a combat skill'
-              : name.trim().length === 0
-                ? 'Give the maneuver a name'
-                : isEmptyDraft(draft)
-                  ? 'Set at least one criterion or damage die'
-                  : undefined
-          }
-          className="rounded bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-1.5 text-sm font-medium text-zinc-950"
-        >
-          Add maneuver
-        </button>
-      </div>
+          <div className="rounded border border-zinc-800 bg-zinc-950 p-3 flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-zinc-500 font-mono whitespace-nowrap">
+              {cost.baseEp} base × {cost.multiplier} = {cost.totalEp} EP
+            </span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Maneuver name…"
+              className="flex-1 min-w-[10rem] bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-100"
+            />
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={!canAdd}
+              title={
+                name.trim().length === 0
+                  ? 'Give the maneuver a name'
+                  : isEmptyDraft(draft)
+                    ? 'Set at least one criterion or damage die'
+                    : undefined
+              }
+              className="rounded bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-1.5 text-sm font-medium text-zinc-950"
+            >
+              Add maneuver
+            </button>
+          </div>
+        </>
+      )}
 
       {value.length > 0 && (
         <ul className="space-y-1">

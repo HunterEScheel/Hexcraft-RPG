@@ -42,6 +42,7 @@ export function QuickManeuver({
         />
       }
       pickerHint={skill ? null : 'Pick a combat skill'}
+      pickFirst
       bonus={skill ? maneuverBonus(character, skill.id) : null}
       currentEp={character.currentEp}
       slots={

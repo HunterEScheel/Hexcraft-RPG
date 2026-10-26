@@ -22,6 +22,7 @@ export function QuickEffect({
   damageLabel,
   pickers,
   pickerHint,
+  pickFirst = false,
   bonus,
   currentEp,
   slots,
@@ -37,6 +38,8 @@ export function QuickEffect({
   pickers: ReactNode
   /** Why the effect can't be used yet (e.g. "Pick a school"), or null. */
   pickerHint: string | null
+  /** Hide the builder until the pickers are filled (a maneuver's skill sets its options). */
+  pickFirst?: boolean
   /** Hit bonus from the picks; the save DC is 10 + this. Null until picked. */
   bonus: number | null
   currentEp: number
@@ -58,6 +61,15 @@ export function QuickEffect({
   const slotsLeft = slots ? Math.max(0, slots.limit - slots.used) : 0
   const canSave =
     pickerHint === null && name.trim().length > 0 && built && slotsLeft > 0
+
+  if (pickFirst && pickerHint !== null) {
+    return (
+      <div className="space-y-4">
+        {pickers}
+        <p className="text-sm text-zinc-500 italic">{pickerHint} to start building.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
