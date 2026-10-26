@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { emptyMonster, monsterBpBreakdown } from './monster'
 import { emptyCharacter, ensureCombatSkills, maneuverBonus, maneuverReach } from './character'
-import { MANEUVER_CRITERIA, MANEUVER_SKILLS, maneuverCriteria } from './maneuvers'
+import { MANEUVER_CRITERIA, MANEUVER_SKILLS, canThrow, maneuverCriteria } from './maneuvers'
 import { SPELL_CASTING_TIMES, emptySpellDraft, savedSpellCost, selectedOption, spellCost } from './spells'
 import { conditionDescription } from './conditions'
 
@@ -199,6 +199,12 @@ describe('maneuver reach', () => {
     expect(maneuverReach(c, 'combat-throw')).toEqual({ minRange: 0, maxRange: 160 })
     expect(maneuverBonus(c, 'combat-throw')).toBe(3 + c.attributes.Agility)
     expect(maneuverReach(c, 'combat-tackle')).toEqual({ speed: c.speed })
+  })
+
+  it('cannot throw at Power −4 or lower', () => {
+    expect(canThrow(-3)).toBe(true) // 10 ft
+    expect(canThrow(-4)).toBe(false)
+    expect(canThrow(-5)).toBe(false)
   })
 
   it('reads a fired skill off the equipped weapon', () => {

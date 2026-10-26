@@ -33,7 +33,7 @@ import { InventoryEditor } from '../components/InventoryEditor'
 import { QuickCast } from '../components/QuickCast'
 import { QuickManeuver } from '../components/QuickManeuver'
 import { SavedEffectRow } from '../components/SavedEffects'
-import { maneuverCriteria } from '../system/maneuvers'
+import { canThrow, maneuverCriteria } from '../system/maneuvers'
 import { SavedSpells } from '../components/SavedSpells'
 import { TakeDamagePanel } from '../components/TakeDamagePanel'
 import { DeathSavePanel } from '../components/DeathSavePanel'
@@ -814,6 +814,8 @@ function CombatTab({
         })
       }
     } else {
+      // Too weak to throw: no Throw action at all.
+      if (def.id === 'combat-throw' && !canThrow(character.attributes.Power ?? 0)) continue
       actions.push({
         key: def.id,
         label: def.name,

@@ -42,6 +42,11 @@ export function throwDistance(power: number): number {
   return Math.max(0, 100 + 30 * power)
 }
 
+/** Power −4 or lower is too weak to throw at all. */
+export function canThrow(power: number): boolean {
+  return throwDistance(power) > 0
+}
+
 /**
  * The actions a maneuver's timing spends, which multiply how far its line
  * runs. A no-action or reaction maneuver moves as one action does, and

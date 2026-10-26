@@ -215,7 +215,7 @@ section('combat', 'Combat', f'''
 <p><b>Natural weapons.</b> Claws, horns, a bite or a tail are weapons that are part of you. Add one to your inventory with the category <i>Natural (Unarmed)</i>, its damage in the notes (for example claws: 1d6 Physical). It attacks with the Unarmed skill plus your choice of <b>Agility</b> (quick claws, a snapping bite) or <b>Power</b> (goring horns, a crushing tail), picked per weapon. It can't be dropped or disarmed, and sits beside your plain fists in your attacks.</p>
 <div class="example"><b>Example.</b> A bandit with 1-handed melee +3 and Power +2 swings at Mira (Evasion 14): d20 + 5, rolls 13, total 18. Hit, 1d6 + 2 Physical.</div>
 <h3>Weapon range</h3>
-<p>A fired weapon shoots between its <b>min</b> and <b>max range</b>, set on the item in your inventory. A thrown object's range is <b>100 ft + 30 ft × Power</b>.</p>
+<p>A fired weapon shoots between its <b>min</b> and <b>max range</b>, set on the item in your inventory. A thrown object's range is <b>100 ft + 30 ft × Power</b>. At Power −4 or lower you can't throw at all.</p>
 {table(['Firearm', 'Damage / shot', 'Min range', 'Max range', 'Capacity', 'Reload'], [
     ('Double barrel shotgun', '5d6', '0 ft', '100 ft', 2, '1 action / shell'),
     ('Pump shotgun', '5d6', '0 ft', '100 ft', 4, '1 action / shell'),

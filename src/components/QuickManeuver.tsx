@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { maneuverBonus, maneuverReach, combatSkillLevel, type Character } from '../system/character'
-import { MANEUVER_CRITERIA, MANEUVER_SKILLS, maneuverCriteria } from '../system/maneuvers'
+import { MANEUVER_CRITERIA, MANEUVER_SKILLS, canThrow, maneuverCriteria } from '../system/maneuvers'
 import type { SpellDraft } from '../system/spells'
 import { PickerSelect } from './EffectBuilder'
 import { QuickEffect } from './QuickEffect'
@@ -19,7 +19,11 @@ export function QuickManeuver({
   onSave: (maneuver: { name: string; skillId: string; draft: SpellDraft }) => void
 }) {
   const [skillId, setSkillId] = useState('')
-  const skill = MANEUVER_SKILLS.find((s) => s.id === skillId)
+  // Power −4 or lower can't throw, so no Throw maneuvers either.
+  const skills = MANEUVER_SKILLS.filter(
+    (s) => s.id !== 'combat-throw' || canThrow(character.attributes.Power ?? 0),
+  )
+  const skill = skills.find((s) => s.id === skillId)
   const saved = character.savedManeuvers ?? []
   return (
     <QuickEffect
@@ -34,7 +38,7 @@ export function QuickManeuver({
         <PickerSelect
           label="Combat skill"
           value={skillId}
-          options={MANEUVER_SKILLS.map((s) => ({
+          options={skills.map((s) => ({
             value: s.id,
             label: `${s.name} (Lv ${combatSkillLevel(character, s.id)}${s.attribute ? ` + ${s.attribute}` : ''})`,
           }))}

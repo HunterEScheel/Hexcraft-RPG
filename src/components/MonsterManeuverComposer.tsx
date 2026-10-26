@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { emptySpellDraft, isEmptyDraft, spellCost } from '../system/spells'
-import { MANEUVER_CRITERIA, MANEUVER_SKILLS, maneuverCriteria } from '../system/maneuvers'
+import { MANEUVER_CRITERIA, MANEUVER_SKILLS, canThrow, maneuverCriteria } from '../system/maneuvers'
 import {
   monsterManeuverBonus,
   monsterManeuverReach,
@@ -51,7 +51,7 @@ export function MonsterManeuverComposer({
       <PickerSelect
         label="Combat skill"
         value={skillId}
-        options={MANEUVER_SKILLS.map((s) => ({
+        options={MANEUVER_SKILLS.filter((s) => s.id !== 'combat-throw' || canThrow(monster.attributes.Power)).map((s) => ({
           value: s.id,
           label: `${s.name} (bonus ${monsterManeuverBonus(monster, s.id)})`,
         }))}
