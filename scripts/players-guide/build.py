@@ -314,7 +314,7 @@ section('maneuvers', 'Maneuvers', f'''
 <li><b>Timing</b>: the same multipliers as a spell's casting time, plus <b>None (no action) at ×8</b>: a maneuver that costs no action at all.</li>
 </ul>
 <h3>Range &middot; fired and thrown</h3>
-<p>A <b>fired or thrown</b> maneuver reaches as far as its weapon (or throw), and pays to reach further. A <b>close</b> maneuver (melee, Unarmed, Grapple, Tackle) has no range: how far it goes is its <b>line</b>, a charge that runs your speed for each action its timing takes (1 for None, Reaction or Action, 2 for 2 Actions, 4 for 1 Round or longer).</p>
+<p>A <b>fired or thrown</b> maneuver reaches as far as its weapon (or throw), and pays to reach further. A <b>close</b> maneuver (melee, Unarmed, Grapple, Tackle) has no range: how far it goes is its <b>line</b> (called <b>movement</b> for Tackle, Grapple and Unarmed: the same picks and EP), a charge that runs your speed for each action its timing takes (1 for None, Reaction or Action, 2 for 2 Actions, 4 for 1 Round or longer).</p>
 {table(['Tier', 'EP', 'Reach'], [
     ('I', 0, 'Within range'),
     ('II', 4, '&gt;2× max range'),

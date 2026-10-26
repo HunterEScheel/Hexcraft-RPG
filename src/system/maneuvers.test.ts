@@ -164,10 +164,16 @@ describe('maneuver reach', () => {
 
   it('run a close line a move per action the timing takes', () => {
     const line = (time: Parameters<typeof maneuverCriteria>[2], speed?: number) =>
-      labels(maneuverCriteria('combat-tackle', speed ? { speed } : {}, time), 'aoe', 'line')
+      labels(maneuverCriteria('combat-melee-2h', speed ? { speed } : {}, time), 'aoe', 'line')
     expect(line('2actions', 25)).toEqual(['50 ft line', '100 ft line', '200 ft line', '400 ft line'])
     expect(line('1round', 25)[0]).toBe('100 ft line')
     expect(line('2actions')[0]).toBe('2× speed line')
+    // Tackle, Grapple and Unarmed read it as movement.
+    for (const id of ['combat-tackle', 'combat-grapple', 'combat-unarmed']) {
+      const c = maneuverCriteria(id, { speed: 25 }, '2actions')
+      expect(c.find((x) => x.key === 'aoe')!.modes!.find((m) => m.key === 'line')!.label).toBe('Movement')
+      expect(labels(c, 'aoe', 'line')).toEqual(['move up to 50 ft', 'move up to 100 ft', 'move up to 200 ft', 'move up to 400 ft'])
+    }
     // A fired maneuver's reach doesn't care how long it takes.
     const fired = maneuverCriteria('combat-fired-1h', { maxRange: 80 }, '1round')
     expect(labels(fired, 'aoe', 'line')[0]).toBe('80 ft line')

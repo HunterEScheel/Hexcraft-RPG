@@ -24,6 +24,13 @@ export const RANGED_MANEUVER_SKILLS: ReadonlySet<string> = new Set([
   'combat-throw',
 ])
 
+/** Body-to-body skills whose line is the user moving: a charge, a drag, a rush. */
+export const MOVEMENT_MANEUVER_SKILLS: ReadonlySet<string> = new Set([
+  'combat-tackle',
+  'combat-grapple',
+  'combat-unarmed',
+])
+
 /**
  * How far a maneuver can reach. Ranged and thrown ones go by the weapon's (or
  * the throw's) range in feet; the rest by the user's movement speed. Either can
@@ -80,7 +87,12 @@ function rangeCriterion(reach: ManeuverReach): SpellCriterion {
 
 // The options keep one shape across skills, tier for tier, and differ only in
 // their labels: ranged splashes add a fourth.
-function aoeCriterion(ranged: boolean, reach: ManeuverReach, actions: number): SpellCriterion {
+function aoeCriterion(
+  ranged: boolean,
+  reach: ManeuverReach,
+  actions: number,
+  movement: boolean,
+): SpellCriterion {
   const spellAoe = SPELL_CRITERIA.find((c) => c.key === 'aoe')!
   const spellMode = (key: string) => spellAoe.modes!.find((m) => m.key === key)!
   // A melee sweep reaches 5, 10 or 15 ft around; a ranged one bursts like a spell.
@@ -93,18 +105,17 @@ function aoeCriterion(ranged: boolean, reach: ManeuverReach, actions: number): S
       }
   // A line doubles each tier from the weapon's reach, or from as far as the
   // user moves in the actions the maneuver takes: a charge. Its EP doubles
-  // too: 5, 10, 20, 40.
+  // too: 5, 10, 20, 40. For a tackle, grapple or punch it reads as movement,
+  // the same picks and EP.
   const base = ranged ? reach.maxRange : reach.speed && reach.speed * actions
   const line = {
     key: 'line',
-    label: 'Line',
+    label: movement ? 'Movement' : 'Line',
     options: [1, 2, 4, 8].map((m) => {
       const times = ranged ? m : m * actions
       const unit = ranged ? 'range' : 'speed'
-      return {
-        label: base ? `${ft(base * m)} line` : `${times === 1 ? '' : `${times}× `}${unit} line`,
-        tier: m,
-      }
+      const reachText = base ? ft(base * m) : `${times === 1 ? '' : `${times}× `}${unit}`
+      return { label: movement ? `move up to ${reachText}` : `${reachText} line`, tier: m }
     }),
   }
   return { ...spellAoe, modes: [spellMode('targets'), splash, line] }
@@ -120,7 +131,7 @@ export function maneuverCriteria(
   castingTime: CastingTimeKey = 'action',
 ): readonly SpellCriterion[] {
   const ranged = RANGED_MANEUVER_SKILLS.has(skillId)
-  const aoe = aoeCriterion(ranged, reach, TIMING_ACTIONS[castingTime] ?? 1)
+  const aoe = aoeCriterion(ranged, reach, TIMING_ACTIONS[castingTime] ?? 1, MOVEMENT_MANEUVER_SKILLS.has(skillId))
   return ranged ? [rangeCriterion(reach), aoe, ...SHARED_CRITERIA] : [aoe, ...SHARED_CRITERIA]
 }
 
