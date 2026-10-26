@@ -42,7 +42,7 @@ COMBAT = [('Dodge', 'Passive', '+1 Evasion per level; save vs. agility-based eff
 RANGE = ['touch / 30 ft', '120 ft', '600 ft', '1 mile', 'any distance', 'cross-planar']
 AOE = {'Targeted': [('none / self', 0), ('single target', 0), ('split damage', 1), ('3 targets', 2), ('10 targets', 3), ('100 targets', 5)],
        'Splash': [('20 ft', 1), ('60 ft', 2), ('120 ft', 3), ('300 ft', 4)],
-       'Line': [('60 ft', 1), ('300 ft', 2), ('600 ft', 3), ('1 mile', 4)]}
+       'Line': [('≤ 60 ft', 1), ('≤ 300 ft', 2), ('≤ 600 ft', 3), ('≤ 1 mile', 4)]}
 DURATION = {'No concentration': [('instantaneous', 0), ('1 minute', 1), ('1 hour', 2), ('1 day', 3), ('1 year', 4), ('permanent', 5)],
             'Concentration': [('1 round', 1), ('1 minute', 2), ('1 hour', 3), ('8 hours', 4)]}
 BUFFS = {1: 'darkvision, magic detection, languages, 1-sense illusions, +2 skill, cursory knowledge, inconvenience, poisoned, deafened, grappled, slowed, reincarnation',
@@ -322,10 +322,10 @@ section('maneuvers', 'Maneuvers', f'''
     ('IV', 16, '&gt;4× max range')], 'compact')}
 <h3>AOE</h3>
 {table(['Tier', 'Splash EP', 'Splash (close)', 'Splash (fired, Throw)', 'Line', 'Line EP'], [
-    ('I', 5, '5 ft', '20 ft', 'speed × actions (or max range)', 5),
-    ('II', 10, '10 ft', '60 ft', '2×', 10),
-    ('III', 15, '15 ft', '120 ft', '4×', 20),
-    ('IV', 20, '—', '300 ft', '8×', 40)], 'compact')}
+    ('I', 5, '5 ft', '20 ft', '≤ speed × actions (or max range)', 5),
+    ('II', 10, '10 ft', '60 ft', '≤ 2×', 10),
+    ('III', 15, '15 ft', '120 ft', '≤ 4×', 20),
+    ('IV', 20, '—', '300 ft', '≤ 8×', 40)], 'compact')}
 <div class="example"><b>Example.</b> With a 25 ft speed, a one-action sword maneuver's lines run 25, 50, 100 or 200 ft; at 2 Actions, 50, 100, 200 or 400 ft. With a short-range rifle (max 800 ft), a shot past 1,600 ft is Range tier II (4 EP), and one past 2,400 ft is tier III (8 EP).</div>
 <div class="two">
 <div><h3>Duration &middot; multiplies Effect EP</h3>{table(['Lasts', 'Effect EP'], [(l, f'× {m}') for l, m in MAN_DURATION], 'compact')}</div>

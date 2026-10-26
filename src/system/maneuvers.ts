@@ -104,7 +104,7 @@ function aoeCriterion(ranged: boolean, reach: ManeuverReach, actions: number): S
       const times = ranged ? m : m * actions
       const unit = ranged ? 'range' : 'speed'
       return {
-        label: base ? `${ft(base * m)} line` : `${times === 1 ? '' : `${times}× `}${unit} line`,
+        label: `≤ ${base ? ft(base * m) : `${times === 1 ? '' : `${times}× `}${unit}`} line`,
         tier: m,
       }
     }),
