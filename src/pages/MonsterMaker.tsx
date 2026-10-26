@@ -29,7 +29,7 @@ import { MAGIC_MEDIUMS, MAGIC_SCHOOLS } from '../system/magicSchools'
 import { MonsterManeuverComposer } from '../components/MonsterManeuverComposer'
 import { NumberStepper } from '../components/NumberStepper'
 import { SkillsEditor } from '../components/SkillsEditor'
-import { ShieldValue } from '../components/ShieldValue'
+import { BoltIcon, HeartValue, ShieldValue } from '../components/StatIcons'
 import { skillLabel } from '../system/character'
 import { Section } from '../components/Section'
 import { TierSelector } from '../components/TierSelector'
@@ -547,13 +547,13 @@ function StatBlock({ monster }: { monster: Monster }) {
       </header>
 
       <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
-        <BlockStat label="HP" value={String(monster.hp)} color="text-rose-300" />
-        <BlockStat label="EP" value={String(monster.ep)} color="text-sky-300" />
+        <BlockStat label="HP" value={String(monster.hp)} color="text-rose-300" icon="heart" />
+        <BlockStat label="EP" value={String(monster.ep)} color="text-sky-300" icon="bolt" />
         <BlockStat
           label="EVA"
           value={String(monsterEvasion(monster))}
           color="text-amber-300"
-          shield
+          icon="shield"
         />
         <BlockStat
           label="SPD"
@@ -792,23 +792,26 @@ function BlockStat({
   label,
   value,
   color,
-  shield = false,
+  icon,
 }: {
   label: string
   value: string
   color: string
-  /** Draw the value inside a shield (Evasion). */
-  shield?: boolean
+  /** HP in a heart, EP beside a bolt, Evasion in a shield. */
+  icon?: 'heart' | 'bolt' | 'shield'
 }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-500">
         {label}
       </span>
-      {shield ? (
+      {icon === 'shield' ? (
         <ShieldValue className={color}>{value}</ShieldValue>
+      ) : icon === 'heart' ? (
+        <HeartValue className={color}>{value}</HeartValue>
       ) : (
-        <span className={`font-mono text-base leading-none ${color}`}>
+        <span className={`inline-flex items-center gap-1 font-mono text-base leading-none ${color}`}>
+          {icon === 'bolt' && <BoltIcon />}
           {value}
         </span>
       )}

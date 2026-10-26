@@ -32,7 +32,7 @@ import { BodyDiagramEditor } from '../components/BodyDiagramEditor'
 import { InventoryEditor } from '../components/InventoryEditor'
 import { QuickCast } from '../components/QuickCast'
 import { QuickManeuver } from '../components/QuickManeuver'
-import { ShieldValue } from '../components/ShieldValue'
+import { BoltIcon, HeartValue, ShieldValue } from '../components/StatIcons'
 import { SavedEffectRow } from '../components/SavedEffects'
 import { canThrow, maneuverCriteria } from '../system/maneuvers'
 import { SavedSpells } from '../components/SavedSpells'
@@ -277,9 +277,9 @@ export function Sheet() {
           tooltip="Click to adjust"
           onClick={() => setAdjusting('hp')}
         >
-          <span className="font-mono text-base whitespace-nowrap leading-none text-rose-300">
-            {character.currentHp}
-            <span className="text-zinc-500 text-[10px]"> /{character.hp}</span>
+          <span className="inline-flex items-center gap-0.5 font-mono text-base whitespace-nowrap leading-none text-rose-300">
+            <HeartValue>{character.currentHp}</HeartValue>
+            <span className="text-zinc-500 text-[10px]">/{character.hp}</span>
             {(character.tempHp ?? 0) > 0 && (
               <span className="text-sky-300"> +{character.tempHp}</span>
             )}
@@ -290,9 +290,10 @@ export function Sheet() {
           tooltip="Click to adjust"
           onClick={() => setAdjusting('ep')}
         >
-          <span className="font-mono text-base whitespace-nowrap leading-none text-sky-300">
+          <span className="inline-flex items-center gap-0.5 font-mono text-base whitespace-nowrap leading-none text-sky-300">
+            <BoltIcon className="mr-0.5" />
             {character.currentEp}
-            <span className="text-zinc-500 text-[10px]"> /{character.ep}</span>
+            <span className="text-zinc-500 text-[10px]">/{character.ep}</span>
           </span>
         </Stat>
         <Stat label="EVA" tooltip={evasionBreakdown(character)}>
