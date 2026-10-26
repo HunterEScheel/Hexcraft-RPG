@@ -301,7 +301,7 @@ MAN_SELF = {1: 'rooted, exposed, off-balance',
             2: 'poisoned, burned, prone, exhaustion',
             3: 'blinded, restrained',
             4: 'debilitated'}
-MAN_SELF_DURATION = [('2 rounds', 1), ('5 rounds', 2), ('1 minute', 4), ('1 hour', 8)]
+MAN_SELF_DURATION = [('2 rounds', 1), ('5 rounds', 2), ('1 minute', 4), ('1 hour', 8), ('until a long rest', 12)]
 
 section('maneuvers', 'Maneuvers', f'''
 <p>Maneuvers are the martial side of the same system: signature strikes, sweeps, trips, disarms and feints. You build one the way you build a spell and pay for it in EP, but from a shorter list of parts:</p>
@@ -333,7 +333,7 @@ section('maneuvers', 'Maneuvers', f'''
 {table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], e) for t, e in MAN_EFFECTS.items()], 'compact')}</div>
 </div>
 <h3>Self-debuffs</h3>
-<p>Going all in has a price. A self-debuff refunds 5 EP per tier, and its duration <b>multiplies</b> the refund: 2 rounds ×1, 5 rounds ×2, 1 minute ×4, 1 hour ×8. You can take <b>several self-debuffs</b>: each refunds its own tier, and they share one duration that multiplies them all. The refund comes off before the timing multiplier, and a maneuver never costs less than 0.</p>
+<p>Going all in has a price. A self-debuff refunds 5 EP per tier, and its duration <b>multiplies</b> the refund: 2 rounds ×1, 5 rounds ×2, 1 minute ×4, 1 hour ×8, until a long rest ×12. You can take <b>several self-debuffs</b>: each refunds its own tier, and they share one duration that multiplies them all. The refund comes off before the timing multiplier, and a maneuver never costs less than 0.</p>
 <div class="two">
 <div>{table(['Tier', 'Refund', 'Self-debuffs'], [(ROMAN[t], f'−{t * 5}', e) for t, e in MAN_SELF.items()], 'compact')}</div>
 <div>{table(['Lasts', 'Refund'], [(l, f'× {m}') for l, m in MAN_SELF_DURATION], 'compact')}</div>

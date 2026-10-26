@@ -249,6 +249,7 @@ const SHARED_CRITERIA: readonly SpellCriterion[] = [
       { label: '5 rounds', tier: 0, multiplier: 2 },
       { label: '1 minute', tier: 0, multiplier: 4 },
       { label: '1 hour', tier: 0, multiplier: 8 },
+      { label: 'until a long rest', tier: 0, multiplier: 12 },
     ],
   },
 ]

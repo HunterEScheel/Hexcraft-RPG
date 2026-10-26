@@ -58,6 +58,14 @@ describe('maneuvers', () => {
     expect(spellCost(draft, MANEUVER_CRITERIA).totalEp).toBe(3)
   })
 
+  it('refund ×12 for a self-debuff that lasts until a long rest', () => {
+    const draft = emptySpellDraft()
+    draft.damageDice = 40 // 80 EP
+    draft.selections.selfDebuff = { modeIndex: 1, optionIndex: 0 } // rooted, −5 EP
+    draft.selections.selfDuration = { modeIndex: 0, optionIndex: 4 } // until a long rest
+    expect(spellCost(draft, MANEUVER_CRITERIA).baseEp).toBe(80 - 60)
+  })
+
   it('ignore a self-debuff duration without a self-debuff, and never go below 0', () => {
     const draft = emptySpellDraft()
     draft.damageDice = 1 // 2 EP
