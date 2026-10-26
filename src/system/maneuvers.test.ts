@@ -192,17 +192,17 @@ describe('maneuver reach', () => {
     expect(labels(c, 'aoe', 'splash')).toContain('300 ft splash')
   })
 
-  it('throws 100 ft + 30 ft per Power, whatever the Throw level', () => {
+  it('throws 120 ft + 30 ft per Power, whatever the Throw level', () => {
     const c = ensureCombatSkills(emptyCharacter('New Adventurers', 400))
     c.attributes.Power = 2
     c.skills = c.skills.map((s) => (s.id === 'combat-throw' ? { ...s, level: 3 } : s))
-    expect(maneuverReach(c, 'combat-throw')).toEqual({ minRange: 0, maxRange: 160 })
+    expect(maneuverReach(c, 'combat-throw')).toEqual({ minRange: 0, maxRange: 180 })
     expect(maneuverBonus(c, 'combat-throw')).toBe(3 + c.attributes.Agility)
     expect(maneuverReach(c, 'combat-tackle')).toEqual({ speed: c.speed })
   })
 
   it('cannot throw at Power −4 or lower', () => {
-    expect(canThrow(-3)).toBe(true) // 10 ft
+    expect(canThrow(-3)).toBe(true) // 30 ft
     expect(canThrow(-4)).toBe(false)
     expect(canThrow(-5)).toBe(false)
   })

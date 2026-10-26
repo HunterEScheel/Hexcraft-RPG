@@ -37,9 +37,9 @@ export interface ManeuverReach {
   maxRange?: number
 }
 
-/** A throw's range: 100 ft + 30 ft per point of Power. */
+/** A throw's range: 120 ft + 30 ft per point of Power. */
 export function throwDistance(power: number): number {
-  return Math.max(0, 100 + 30 * power)
+  return Math.max(0, 120 + 30 * power)
 }
 
 /** Power −4 or lower is too weak to throw at all. */
