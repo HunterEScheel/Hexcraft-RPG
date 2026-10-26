@@ -37,9 +37,9 @@ export interface ManeuverReach {
   maxRange?: number
 }
 
-/** A throw carries (Throw + Power) × 10 ft. */
-export function throwDistance(throwLevel: number, power: number): number {
-  return Math.max(0, (throwLevel + power) * 10)
+/** A throw's range: 100 ft + 30 ft per point of Power. */
+export function throwDistance(power: number): number {
+  return Math.max(0, 100 + 30 * power)
 }
 
 /**

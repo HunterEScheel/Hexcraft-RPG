@@ -820,7 +820,7 @@ function CombatTab({
         // A throw's reach comes from the skill, not a weapon.
         notes:
           def.id === 'combat-throw'
-            ? `Carries ${maneuverReach(character, def.id).maxRange} ft`
+            ? `Range ${maneuverReach(character, def.id).maxRange} ft`
             : undefined,
         def,
         level,

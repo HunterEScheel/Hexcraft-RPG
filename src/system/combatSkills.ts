@@ -77,7 +77,7 @@ export const COMBAT_SKILLS: readonly CombatSkillDef[] = [
   {
     id: 'combat-throw',
     name: 'Throw',
-    effect: 'Attack (action) +1 · carries (Throw + Power) × 10 ft',
+    effect: 'Attack (action) +1 · range 100 ft + 30 ft × Power',
     category: 'action',
     attribute: 'Agility',
   },

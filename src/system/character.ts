@@ -595,7 +595,7 @@ export function maneuverBonus(c: Character, skillId: string, attribute?: Attribu
 }
 
 /**
- * How far a maneuver from this skill reaches: a throw by Throw + Power, a fired
+ * How far a maneuver from this skill reaches: a throw by Power, a fired
  * weapon by its range (`weapon`, or the first equipped one with a range), and
  * anything else by movement speed.
  */
@@ -605,7 +605,7 @@ export function maneuverReach(
   weapon?: { minRange?: number; maxRange?: number },
 ): ManeuverReach {
   if (skillId === 'combat-throw') {
-    return { minRange: 0, maxRange: throwDistance(combatSkillLevel(c, skillId), c.attributes.Power ?? 0) }
+    return { minRange: 0, maxRange: throwDistance(c.attributes.Power ?? 0) }
   }
   if (RANGED_MANEUVER_SKILLS.has(skillId)) {
     const category = COMBAT_SKILLS.find((s) => s.id === skillId)?.requiresWeapon
