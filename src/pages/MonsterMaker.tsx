@@ -2,13 +2,21 @@ import { useMemo, useState } from 'react'
 import { ATTRIBUTES } from '../system/attributes'
 import { COMBAT_SKILLS } from '../system/combatSkills'
 import { MAX_SKILL_LEVEL, SPEED_STEP } from '../system/costs'
-import { DAMAGE_TYPES, type DamageType } from '../system/inventory'
+import {
+  ARMOR_CLASS_STATS,
+  DAMAGE_TYPES,
+  armorMaxDurability,
+  armorReductionDie,
+  armorThreshold,
+  type DamageType,
+} from '../system/inventory'
 import {
   emptyMonster,
   monsterBpBreakdown,
   monsterEvasion,
   monsterManeuverBonus,
   monsterManeuverReach,
+  monsterWeaponAttacks,
   monsterSpellBonus,
   spellDamage,
   spellFactors,
@@ -29,6 +37,7 @@ import { MAGIC_MEDIUMS, MAGIC_SCHOOLS } from '../system/magicSchools'
 import { MonsterManeuverComposer } from '../components/MonsterManeuverComposer'
 import { NumberStepper } from '../components/NumberStepper'
 import { SkillsEditor } from '../components/SkillsEditor'
+import { InventoryEditor } from '../components/InventoryEditor'
 import { BoltIcon, HeartValue, ShieldValue } from '../components/StatIcons'
 import { skillLabel } from '../system/character'
 import { Section } from '../components/Section'
@@ -174,6 +183,16 @@ export function MonsterMaker() {
           value={monster.skills}
           onChange={(skills) => patch({ skills })}
           showCombat={false}
+        />
+      </Section>
+
+      <Section
+        title="Weapons & armor"
+        subtitle="Equipped weapons attack with their combat skill; equipped armor reduces damage and lowers Evasion."
+      >
+        <InventoryEditor
+          value={monster.inventory}
+          onChange={(inventory) => patch({ inventory })}
         />
       </Section>
 
@@ -530,6 +549,8 @@ function StatBlock({ monster }: { monster: Monster }) {
   const otherActions = COMBAT_SKILLS.filter(
     (d) => d.category === 'action' && skillLv(d.id) > 0,
   )
+  const weapons = monsterWeaponAttacks(monster)
+  const armor = monster.inventory.filter((i) => i.armor && i.equipped)
   const knownMagic = [
     ...MAGIC_SCHOOLS.map((n) => ({ name: n, level: monster.magicSchools[n] ?? 0 })),
     ...MAGIC_MEDIUMS.map((n) => ({ name: n, level: monster.magicMediums[n] ?? 0 })),
@@ -600,6 +621,52 @@ function StatBlock({ monster }: { monster: Monster }) {
                 {a.note && <span className="text-zinc-500">{a.note}</span>}
               </li>
             ))}
+          </ul>
+        </BlockSection>
+      )}
+
+      {weapons.length > 0 && (
+        <BlockSection title="Weapons">
+          <ul className="space-y-1">
+            {weapons.map(({ item, skillName, bonus }) => (
+              <li key={item.id} className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                <span className="text-zinc-100 font-medium">{item.name || skillName}</span>
+                <span className="font-mono text-amber-300">{fmt(bonus)} to hit</span>
+                <span className="text-[10px] uppercase tracking-wider text-zinc-500">{skillName}</span>
+                {item.maxRange ? (
+                  <span className="font-mono text-zinc-400 text-xs">
+                    {item.minRange ? `${item.minRange}–` : ''}
+                    {item.maxRange} ft
+                  </span>
+                ) : null}
+                {item.notes && <span className="text-zinc-400">{item.notes}</span>}
+              </li>
+            ))}
+          </ul>
+        </BlockSection>
+      )}
+
+      {armor.length > 0 && (
+        <BlockSection title="Armor">
+          <ul className="space-y-1">
+            {armor.map((item) => {
+              const a = item.armor!
+              return (
+                <li key={item.id} className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                  <span className="text-zinc-100 font-medium">
+                    {item.name || `${ARMOR_CLASS_STATS[a.class].label} armor`}
+                  </span>
+                  <span className="font-mono text-sky-300">
+                    1{armorReductionDie(a)}
+                    {a.extraProtective ? `+${a.extraProtective}` : ''} {a.reductionTypes.join(', ')}
+                  </span>
+                  <span className="font-mono text-zinc-400 text-xs">
+                    threshold {armorThreshold(a)} · durability {a.currentDurability}/{armorMaxDurability(a)}
+                  </span>
+                  {item.notes && <span className="text-zinc-500">{item.notes}</span>}
+                </li>
+              )
+            })}
           </ul>
         </BlockSection>
       )}

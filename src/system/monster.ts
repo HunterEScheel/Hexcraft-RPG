@@ -11,7 +11,7 @@ import {
   speedCost,
 } from './costs'
 import { MAGIC_MEDIUMS, MAGIC_SCHOOLS, type MagicMedium, type MagicSchool } from './magicSchools'
-import type { DamageType } from './inventory'
+import { armorEvasionReduction, type DamageType, type InventoryItem } from './inventory'
 import type { CharacterSkill } from './character'
 import { RANGED_MANEUVER_SKILLS, throwDistance, type ManeuverReach } from './maneuvers'
 import {
@@ -78,6 +78,8 @@ export interface Monster {
   combatSkills: Record<string, number>
   /** Non-combat skills (Stealth, Tracking (Scent), …), bought like a character's. */
   skills: CharacterSkill[]
+  /** Weapons and armor; only equipped ones count. */
+  inventory: InventoryItem[]
   magicSchools: Record<MagicSchool, number>
   magicMediums: Record<MagicMedium, number>
   multiattack: string
@@ -103,6 +105,7 @@ export function emptyMonster(tierName: string, bpBudget: number): Monster {
     >,
     combatSkills: Object.fromEntries(COMBAT_SKILLS.map((c) => [c.id, 0])),
     skills: [],
+    inventory: [],
     magicSchools: Object.fromEntries(MAGIC_SCHOOLS.map((s) => [s, 0])) as Record<MagicSchool, number>,
     magicMediums: Object.fromEntries(MAGIC_MEDIUMS.map((m) => [m, 0])) as Record<MagicMedium, number>,
     multiattack: '',
@@ -157,8 +160,33 @@ export function monsterBpBreakdown(m: Monster): MonsterBPBreakdown {
   }
 }
 
+/** 10 + Agility + Dodge, less what equipped armor costs, as a character's. */
 export function monsterEvasion(m: Monster): number {
-  return 10 + m.attributes.Agility + (m.combatSkills['combat-dodge'] ?? 0)
+  const armor = (m.inventory ?? [])
+    .filter((i) => i.armor && i.equipped)
+    .reduce((sum, i) => sum + armorEvasionReduction(i.armor!), 0)
+  return 10 + m.attributes.Agility + (m.combatSkills['combat-dodge'] ?? 0) - armor
+}
+
+export interface MonsterWeaponAttack {
+  item: InventoryItem
+  skillName: string
+  /** The weapon's combat skill plus its attribute (a natural weapon's pick). */
+  bonus: number
+}
+
+/** An attack for each equipped weapon, by the combat skill that wields it. */
+export function monsterWeaponAttacks(m: Monster): MonsterWeaponAttack[] {
+  return (m.inventory ?? []).flatMap((item) => {
+    if (!item.equipped || !item.weaponCategory) return []
+    const def = COMBAT_SKILLS.find(
+      (d) => d.requiresWeapon === item.weaponCategory || d.extraWeapons === item.weaponCategory,
+    )
+    if (!def) return []
+    const attribute = item.weaponCategory === 'natural' ? (item.attackAttribute ?? def.attribute) : def.attribute
+    const bonus = (m.combatSkills[def.id] ?? 0) + (attribute ? m.attributes[attribute] : 0)
+    return [{ item, skillName: def.name, bonus }]
+  })
 }
 
 /** A monster spell's hit bonus: its school plus its medium (save DC is 10 + this). */
@@ -177,8 +205,13 @@ export function monsterManeuverReach(m: Monster, skillId: string): ManeuverReach
   if (skillId === 'combat-throw') {
     return { minRange: 0, maxRange: throwDistance(m.attributes.Power) }
   }
-  // A monster's weapons carry no range, so fired maneuvers read in multiples.
-  if (RANGED_MANEUVER_SKILLS.has(skillId)) return {}
+  // A fired maneuver goes by the first equipped weapon with a range; without
+  // one it reads in multiples.
+  if (RANGED_MANEUVER_SKILLS.has(skillId)) {
+    const category = COMBAT_SKILLS.find((s) => s.id === skillId)?.requiresWeapon
+    const w = (m.inventory ?? []).find((i) => i.equipped && i.weaponCategory === category && i.maxRange)
+    return { minRange: w?.minRange, maxRange: w?.maxRange }
+  }
   return { speed: m.speed }
 }
 

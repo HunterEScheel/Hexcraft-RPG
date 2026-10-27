@@ -388,6 +388,7 @@ section('gm', 'For the GM', f'''
 <li><b>Hold players to their tethers and flaws.</b> They were paid for in BP. If they never bite, bring them into the story.</li>
 <li><b>Pace BP awards steadily.</b> 5–25 BP per session: the high end for a hard-won fight or a quest beat, the low end for quiet downtime. A new skill rank or attribute step should take a few sessions to earn.</li>
 <li><b>Monster magic.</b> A monster's spells come from the schools and mediums it knows, bought with its BP like a character's, so its bonus is school + medium. Unlike players, monsters have no limit on saved spells, and you can cast anything their schools and mediums allow on the fly.</li>
+<li><b>Monster gear.</b> Monsters carry weapons and armor like characters. An equipped weapon attacks with its combat skill + attribute, and equipped armor reduces damage and lowers Evasion the same way.</li>
 <li><b>Keep the tier fixed.</b> Grow characters with BP awards, never by raising the power tier mid-campaign.</li>
 </ul>
 ''')
