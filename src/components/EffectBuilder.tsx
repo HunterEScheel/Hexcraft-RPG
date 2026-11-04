@@ -11,6 +11,7 @@ import {
   criterionApplies,
   criterionEp,
   criterionOptions,
+  costMultiplierApplies,
   extrasFor,
   needsConcentration,
   selectionFor,
@@ -20,6 +21,7 @@ import {
   type CriterionKey,
   type SpellCriterion,
   type SpellDraft,
+  type SpellOption,
   type SpellSelection,
   type SpellTargeting,
 } from '../system/spells'
@@ -102,6 +104,7 @@ export function EffectBuilder({
             selection={selectionFor(draft, c.key)}
             onModeChange={(idx) => setMode(c.key, idx)}
             onOptionChange={(idx) => setOption(c.key, idx)}
+            note={unmetNote(c, draft, criteria)}
           />
         ),
       )}
@@ -291,6 +294,36 @@ interface CriterionRowProps {
   label?: string
   /** Shows a remove button, for a repeated pick. */
   onRemove?: () => void
+  /** A warning under the options, e.g. an unmet requirement. */
+  note?: string
+}
+
+// Options that scale the whole cost (a gun's point-blank, tier −1) come
+// first, ahead of tier 0; each keeps its own index for picking.
+function displayOrder(options: readonly SpellOption[]): { opt: SpellOption; i: number }[] {
+  const indexed = options.map((opt, i) => ({ opt, i }))
+  return [
+    ...indexed.filter(({ opt }) => opt.costMultiplier !== undefined),
+    ...indexed.filter(({ opt }) => opt.costMultiplier === undefined),
+  ]
+}
+
+// What an option costs, as its badge reads: EP, or a multiplier.
+function optionBadge(criterion: SpellCriterion, opt: SpellOption, ep: number): string {
+  if (criterion.multiplies) return `×${opt.multiplier ?? 1}`
+  if (opt.costMultiplier !== undefined) return opt.costMultiplier === 0.5 ? '×½ total' : `×${opt.costMultiplier} total`
+  return formatEp(ep)
+}
+
+// Why a picked option's cost multiplier isn't counting, if it isn't.
+function unmetNote(
+  criterion: SpellCriterion,
+  draft: SpellDraft,
+  criteria: readonly SpellCriterion[],
+): string | undefined {
+  const opt = selectedOption(criterion, selectionFor(draft, criterion.key))
+  if (!opt?.requiresEffect || costMultiplierApplies(opt, draft, criteria)) return undefined
+  return `Needs the ${opt.requiresEffect} effect: no discount until it's picked.`
 }
 
 export function CriterionRow({
@@ -300,6 +333,7 @@ export function CriterionRow({
   onOptionChange,
   label,
   onRemove,
+  note,
 }: CriterionRowProps) {
   const ep = criterionEp(criterion, selection)
   const hasModes = (criterion.modes?.length ?? 0) > 1
@@ -314,7 +348,7 @@ export function CriterionRow({
         </span>
         <span className="flex items-baseline gap-2 text-xs text-zinc-500 font-mono">
           {currentOption ? currentOption.label : '—'} ·{' '}
-          {criterion.multiplies ? `×${currentOption?.multiplier ?? 1}` : formatEp(ep)}
+          {currentOption ? optionBadge(criterion, currentOption, ep) : formatEp(ep)}
           {onRemove && (
             <button
               type="button"
@@ -350,7 +384,7 @@ export function CriterionRow({
         </div>
       )}
       <div className="flex flex-wrap gap-1">
-        {options.map((opt, i) => {
+        {displayOrder(options).map(({ opt, i }) => {
           const active = i === selection.optionIndex
           const optionEp = (criterion.refund ? -1 : 1) * opt.tier * criterion.epPerTier
           return (
@@ -376,12 +410,13 @@ export function CriterionRow({
                 </span>
               )}
               <span className="ml-1 text-[10px] text-zinc-500 font-mono">
-                {criterion.multiplies ? `×${opt.multiplier ?? 1}` : formatEp(optionEp)}
+                {optionBadge(criterion, opt, optionEp)}
               </span>
             </button>
           )
         })}
       </div>
+      {note && <p className="mt-1 text-xs text-amber-400">{note}</p>}
       {currentOption && conditionDescription(currentOption.label) && (
         <p className="mt-1 text-xs text-zinc-400">
           <span className="text-zinc-300">{currentOption.label}:</span>{' '}

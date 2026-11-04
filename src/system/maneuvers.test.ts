@@ -185,10 +185,12 @@ describe('maneuver reach', () => {
     const c = maneuverCriteria('combat-fired-2h', { minRange: 30, maxRange: 800 })
     expect(labels(c, 'range')).toEqual([
       'within range (30–800 ft)', '>2× max range (1,600 ft)', '>3× max range (2,400 ft)', '>4× max range (3,200 ft)',
+      'point-blank (≤ 5 ft)',
     ])
     expect(labels(maneuverCriteria('combat-fired-1h'), 'range')).toEqual([
-      'within range', '>2× max range', '>3× max range', '>4× max range',
+      'within range', '>2× max range', '>3× max range', '>4× max range', 'point-blank (≤ 5 ft)',
     ])
+    expect(labels(maneuverCriteria('combat-throw'), 'range')).not.toContain('point-blank (≤ 5 ft)')
     expect(labels(c, 'aoe', 'splash')).toContain('300 ft splash')
   })
 
@@ -216,12 +218,26 @@ describe('maneuver reach', () => {
   it('price range at 0, 4, 8 and 16 EP for fired skills, and not at all for close ones', () => {
     const fired = maneuverCriteria('combat-fired-2h', { maxRange: 800 })
     const range = fired.find((x) => x.key === 'range')!
-    expect(range.options!.map((o) => o.tier * range.epPerTier)).toEqual([0, 4, 8, 16])
+    expect(range.options!.map((o) => o.tier * range.epPerTier)).toEqual([0, 4, 8, 16, 0])
     const draft = emptySpellDraft()
     draft.selections.range = { modeIndex: 0, optionIndex: 3 } // 16 EP
     draft.selections.aoe = { modeIndex: 1, optionIndex: 2 } // 15 ft or 120 ft splash, 15 EP
     expect(spellCost(draft, fired).baseEp).toBe(31)
     expect(spellCost(draft, maneuverCriteria('combat-melee-2h', { speed: 30 })).baseEp).toBe(15)
+  })
+
+  it('halve a gun maneuver point-blank, only with sneak attack', () => {
+    const fired = maneuverCriteria('combat-fired-1h', { maxRange: 80 })
+    const draft = emptySpellDraft()
+    draft.castingTime = '2actions' // ×1
+    draft.selections.range = { modeIndex: 0, optionIndex: 4 } // point-blank
+    draft.damageDice = 5 // 10 EP
+    expect(spellCost(draft, fired).totalEp).toBe(10) // no sneak attack: no discount
+    const effects = fired.find((x) => x.key === 'buffDebuff')!
+    const t2 = effects.modes!.findIndex((m) => m.key === 't2')
+    const sneak = effects.modes![t2].options.findIndex((o) => o.label === 'sneak attack')
+    draft.selections.buffDebuff = { modeIndex: t2, optionIndex: sneak } // 10 EP
+    expect(spellCost(draft, fired).totalEp).toBe(10) // (10 + 10) × ½
   })
 })
 

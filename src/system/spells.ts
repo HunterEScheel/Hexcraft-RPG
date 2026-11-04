@@ -18,6 +18,10 @@ export interface SpellOption {
   tier: number
   /** For a `multiplies` criterion: what it multiplies the other one's EP by. */
   multiplier?: number
+  /** Scales the whole effect's base EP when picked: a gun's point-blank ×½. */
+  costMultiplier?: number
+  /** A buff/debuff that must also be picked for costMultiplier to count. */
+  requiresEffect?: string
 }
 
 export interface SpellMode {
@@ -430,6 +434,25 @@ export function criterionApplies(
   return pickLabels(draft, partner.key, criteria).length > 0
 }
 
+/** Whether an option's costMultiplier counts: its required effect, if any, is picked. */
+export function costMultiplierApplies(
+  option: SpellOption,
+  draft: SpellDraft,
+  criteria: readonly SpellCriterion[],
+): boolean {
+  if (option.costMultiplier === undefined) return false
+  return !option.requiresEffect || effectLabels(draft, criteria).includes(option.requiresEffect)
+}
+
+// Every picked option's whole-cost multiplier that counts, multiplied together.
+function costFactor(draft: SpellDraft, criteria: readonly SpellCriterion[]): number {
+  return criteria
+    .filter((c) => criterionApplies(c, draft, criteria))
+    .map((c) => selectedOption(c, selectionFor(draft, c.key)))
+    .filter((o): o is SpellOption => o !== undefined && costMultiplierApplies(o, draft, criteria))
+    .reduce((factor, o) => factor * o.costMultiplier!, 1)
+}
+
 export interface SpellCost {
   baseEp: number
   multiplier: number
@@ -459,7 +482,7 @@ export function spellCost(
   const criteriaEp = [...totals.values()].reduce((sum, ep) => sum + ep, 0)
   const damageEp = draft.damageDice * EP_PER_DAMAGE_DIE
   // Refunds can bring a maneuver down to free, never below.
-  const baseEp = Math.max(0, criteriaEp + damageEp)
+  const baseEp = Math.max(0, criteriaEp + damageEp) * costFactor(draft, criteria)
   const time =
     CASTING_TIMES.find((t) => t.key === draft.castingTime) ??
     CASTING_TIMES.find((t) => t.key === '2actions')!

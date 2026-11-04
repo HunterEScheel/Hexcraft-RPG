@@ -4,7 +4,7 @@
 // as a weapon attack's is, and a character can save as many per skill as their
 // level in it.
 import { COMBAT_SKILLS } from './combatSkills'
-import { SPELL_CRITERIA, type CastingTimeKey, type SpellCriterion, type SpellDraft } from './spells'
+import { SPELL_CRITERIA, type CastingTimeKey, type SpellCriterion, type SpellDraft, type SpellOption } from './spells'
 
 export interface SavedManeuver {
   id: string
@@ -67,7 +67,9 @@ const ft = (n: number) => `${n.toLocaleString('en-US')} ft`
 // A fired or thrown maneuver's range, by its weapon's: within it is free, then
 // 4, 8 and 16 EP past twice, three and four times it (tier 4 skips 3 on
 // purpose). Close maneuvers have no range: how far they go is their line.
-function rangeCriterion(reach: ManeuverReach): SpellCriterion {
+// Guns also get tier −1, point-blank: within 5 ft, with sneak attack, at half
+// the maneuver's EP. It comes last so saved picks keep their indexes.
+function rangeCriterion(reach: ManeuverReach, gun: boolean): SpellCriterion {
   const max = reach.maxRange
   const span = max ? ` (${reach.minRange ? `${reach.minRange.toLocaleString('en-US')}–` : 'up to '}${ft(max)})` : ''
   const labels = [
@@ -79,8 +81,19 @@ function rangeCriterion(reach: ManeuverReach): SpellCriterion {
     key: 'range',
     label: 'Range',
     epPerTier: 4,
-    options: labels.map((label, i) => ({ label, tier: tiers[i] })),
+    options: [
+      ...labels.map((label, i) => ({ label, tier: tiers[i] })),
+      ...(gun ? [POINT_BLANK] : []),
+    ],
   }
+}
+
+/** A gun maneuver's tier −1 range: costs nothing itself, halves the rest. */
+export const POINT_BLANK: SpellOption = {
+  label: 'point-blank (≤ 5 ft)',
+  tier: 0,
+  costMultiplier: 0.5,
+  requiresEffect: 'sneak attack',
 }
 
 // The options keep one shape across skills, tier for tier, and differ only in
@@ -128,7 +141,8 @@ export function maneuverCriteria(
 ): readonly SpellCriterion[] {
   const ranged = RANGED_MANEUVER_SKILLS.has(skillId)
   const aoe = aoeCriterion(ranged, reach, TIMING_ACTIONS[castingTime] ?? 1)
-  return ranged ? [rangeCriterion(reach), aoe, ...SHARED_CRITERIA] : [aoe, ...SHARED_CRITERIA]
+  const gun = skillId !== 'combat-throw'
+  return ranged ? [rangeCriterion(reach, gun), aoe, ...SHARED_CRITERIA] : [aoe, ...SHARED_CRITERIA]
 }
 
 // The duration is short and the effects are the non-magical kind a fighter can
