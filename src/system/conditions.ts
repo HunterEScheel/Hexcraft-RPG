@@ -7,7 +7,7 @@ export const CONDITIONS: Record<string, string> = {
   rooted: 'Your movement speed is 0.',
   poisoned: 'You take 1d6 poison damage each round.',
   burned: 'You take 1d6 fire damage each round.',
-  prone: 'You fall over.',
+  prone: 'You are rooted, and exposed to melee attacks. You can use an action to get up.',
   exhaustion:
     'Per level: your HP, EP and movement speed maximums drop by 10, and all your skills, attributes and saving throws drop by 2.',
   blinded: "You can't see.",

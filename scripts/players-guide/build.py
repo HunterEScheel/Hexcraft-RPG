@@ -357,7 +357,7 @@ CONDITIONS = [
     ('Rooted', 'Your movement speed is 0.'),
     ('Poisoned', 'You take 1d6 poison damage each round.'),
     ('Burned', 'You take 1d6 fire damage each round.'),
-    ('Prone', 'You fall over.'),
+    ('Prone', 'You are rooted, and exposed to melee attacks. You can use an action to get up.'),
     ('Exhaustion', 'Per level: your HP, EP and movement speed maximums drop by 10, and all your skills, attributes and saving throws drop by 2.'),
     ('Blinded', "You can't see."),
     ('Restrained', 'You are off-balance, rooted and exposed.'),
