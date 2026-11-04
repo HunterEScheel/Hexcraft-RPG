@@ -22,6 +22,17 @@ export interface SpellOption {
   costMultiplier?: number
   /** A buff/debuff that must also be picked for costMultiplier to count. */
   requiresEffect?: string
+  /**
+   * Picks this option forces on the rest of the draft while it is chosen:
+   * per criterion, the labels to pick (the first, then any extras), and the
+   * targeting. A gun's point-blank locks one target, its effects and a save.
+   */
+  locks?: OptionLocks
+}
+
+export interface OptionLocks {
+  selections?: Partial<Record<CriterionKey, readonly string[]>>
+  targeting?: SpellTargeting
 }
 
 export interface SpellMode {
@@ -625,7 +636,48 @@ export function applyDurationRules(
   draft: SpellDraft,
   criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
 ): SpellDraft {
-  return applyConcentrationRule(applyInstantRule(draft, criteria), criteria)
+  return applyConcentrationRule(applyInstantRule(applyOptionLocks(draft, criteria), criteria), criteria)
+}
+
+/** The locks every picked option puts on the draft, merged. */
+export function draftLocks(draft: SpellDraft, criteria: readonly SpellCriterion[]): OptionLocks {
+  return criteria
+    .map((c) => selectedOption(c, selectionFor(draft, c.key))?.locks)
+    .filter((l): l is OptionLocks => l !== undefined)
+    .reduce<OptionLocks>(
+      (all, l) => ({
+        selections: { ...all.selections, ...l.selections },
+        targeting: l.targeting ?? all.targeting,
+      }),
+      {},
+    )
+}
+
+// Where a label sits in a criterion: its mode and option index.
+function findSelection(criterion: SpellCriterion, label: string): SpellSelection | undefined {
+  const modes = criterion.modes ?? [{ options: criterion.options ?? [] }]
+  const modeIndex = modes.findIndex((m) => m.options.some((o) => o.label === label))
+  if (modeIndex < 0) return undefined
+  return { modeIndex, optionIndex: modes[modeIndex].options.findIndex((o) => o.label === label) }
+}
+
+/** Forces the picks and targeting that the draft's chosen options lock. */
+export function applyOptionLocks(
+  draft: SpellDraft,
+  criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
+): SpellDraft {
+  const locks = draftLocks(draft, criteria)
+  let next: SpellDraft = locks.targeting ? { ...draft, targeting: locks.targeting } : draft
+  for (const [key, labels] of Object.entries(locks.selections ?? {}) as [CriterionKey, readonly string[]][]) {
+    const criterion = criteria.find((c) => c.key === key)
+    if (!criterion) continue
+    const picks = labels.map((l) => findSelection(criterion, l)).filter((s): s is SpellSelection => !!s)
+    if (picks.length === 0) continue
+    const [first, ...extras] = picks
+    next = { ...next, selections: { ...next.selections, [key]: first } }
+    if (REPEATABLE_CRITERIA.includes(key)) next = withExtras(next, key, extras)
+  }
+  return next
 }
 
 function applyInstantRule(draft: SpellDraft, criteria: readonly SpellCriterion[]): SpellDraft {

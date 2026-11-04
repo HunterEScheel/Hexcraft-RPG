@@ -67,8 +67,9 @@ const ft = (n: number) => `${n.toLocaleString('en-US')} ft`
 // A fired or thrown maneuver's range, by its weapon's: within it is free, then
 // 4, 8 and 16 EP past twice, three and four times it (tier 4 skips 3 on
 // purpose). Close maneuvers have no range: how far they go is their line.
-// Guns also get tier −1, point-blank: within 5 ft, with inevitable, at half
-// the maneuver's EP. It comes last so saved picks keep their indexes.
+// Guns also get tier −1, point-blank: within 5 ft at half the maneuver's EP,
+// locked to one target, inevitable and +5 to a check, and a Grit save. It
+// comes last so saved picks keep their indexes.
 function rangeCriterion(reach: ManeuverReach, gun: boolean): SpellCriterion {
   const max = reach.maxRange
   const span = max ? ` (${reach.minRange ? `${reach.minRange.toLocaleString('en-US')}–` : 'up to '}${ft(max)})` : ''
@@ -94,6 +95,13 @@ export const POINT_BLANK: SpellOption = {
   tier: 0,
   costMultiplier: 0.5,
   requiresEffect: 'inevitable',
+  locks: {
+    selections: {
+      aoe: ['single target'],
+      buffDebuff: ['inevitable', '+5 to a check'],
+    },
+    targeting: 'grit',
+  },
 }
 
 // The options keep one shape across skills, tier for tier, and differ only in

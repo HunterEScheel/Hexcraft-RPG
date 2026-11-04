@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { emptyMonster, monsterBpBreakdown } from './monster'
 import { emptyCharacter, ensureCombatSkills, maneuverBonus, maneuverReach } from './character'
 import { MANEUVER_CRITERIA, MANEUVER_SKILLS, canThrow, maneuverCriteria } from './maneuvers'
-import { SPELL_CASTING_TIMES, emptySpellDraft, savedSpellCost, selectedOption, spellCost } from './spells'
+import { SPELL_CASTING_TIMES, applyDurationRules, emptySpellDraft, savedSpellCost, selectedOption, spellCost } from './spells'
 import { conditionDescription } from './conditions'
 
 describe('maneuvers', () => {
@@ -238,6 +238,26 @@ describe('maneuver reach', () => {
     const inevitable = effects.modes![t2].options.findIndex((o) => o.label === 'inevitable')
     draft.selections.buffDebuff = { modeIndex: t2, optionIndex: inevitable } // 10 EP
     expect(spellCost(draft, fired).totalEp).toBe(10) // (10 + 10) × ½
+  })
+
+  it('lock point-blank to one target, inevitable, +5 to a check and a Grit save', () => {
+    const fired = maneuverCriteria('combat-fired-2h', { maxRange: 800 })
+    const draft = emptySpellDraft()
+    draft.castingTime = '2actions' // ×1
+    draft.targeting = 'hit'
+    draft.selections.aoe = { modeIndex: 1, optionIndex: 2 } // a splash, overridden
+    draft.selections.range = { modeIndex: 0, optionIndex: 4 } // point-blank
+    draft.damageDice = 5 // 10 EP
+    const locked = applyDurationRules(draft, fired)
+    const pick = (key: 'aoe' | 'buffDebuff', sel = locked.selections[key]) =>
+      selectedOption(fired.find((c) => c.key === key)!, sel)?.label
+    expect(pick('aoe')).toBe('single target')
+    expect(pick('buffDebuff')).toBe('inevitable')
+    expect(locked.extraEffects?.map((s) => pick('buffDebuff', s))).toEqual(['+5 to a check'])
+    expect(locked.targeting).toBe('grit')
+    expect(spellCost(locked, fired).totalEp).toBe(15) // (10 + 10 + 10) × ½
+    // Any other range leaves the picks alone.
+    expect(applyDurationRules({ ...draft, selections: { ...draft.selections, range: { modeIndex: 0, optionIndex: 0 } } }, fired).targeting).toBe('hit')
   })
 })
 

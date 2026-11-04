@@ -12,6 +12,7 @@ import {
   criterionEp,
   criterionOptions,
   costMultiplierApplies,
+  draftLocks,
   extrasFor,
   needsConcentration,
   selectionFor,
@@ -73,6 +74,13 @@ export function EffectBuilder({
     onChange((d) => ({ ...d, castingTime: k }))
   const setTargeting = (t: SpellTargeting) =>
     onChange((d) => ({ ...d, targeting: t }))
+  // What a picked option (a gun's point-blank) holds fixed, and why.
+  const locks = draftLocks(draft, criteria)
+  const lockSource = criteria
+    .map((c) => selectedOption(c, selectionFor(draft, c.key)))
+    .find((o) => o?.locks)?.label
+  const lockNote = lockSource ? `Locked by ${lockSource}.` : undefined
+  const isLocked = (key: CriterionKey) => locks.selections?.[key] !== undefined
 
   return (
     <>
@@ -99,6 +107,7 @@ export function EffectBuilder({
             onModeChange={(idx) => setMode(c.key, idx)}
             onOptionChange={(idx) => setOption(c.key, idx)}
             onExtrasChange={(extras) => onChange((d) => withExtras(d, c.key, extras))}
+            locked={isLocked(c.key) ? lockNote : undefined}
           />
         ) : (
           <CriterionRow
@@ -107,7 +116,8 @@ export function EffectBuilder({
             selection={selectionFor(draft, c.key)}
             onModeChange={(idx) => setMode(c.key, idx)}
             onOptionChange={(idx) => setOption(c.key, idx)}
-            note={unmetNote(c, draft, criteria)}
+            note={isLocked(c.key) ? lockNote : unmetNote(c, draft, criteria)}
+            disabled={isLocked(c.key)}
           />
         ),
       )}
@@ -179,8 +189,10 @@ export function EffectBuilder({
                 key={opt.key}
                 type="button"
                 onClick={() => setTargeting(opt.key)}
+                disabled={locks.targeting !== undefined}
                 className={
-                  'rounded px-3 py-1.5 text-xs border ' +
+                  'rounded px-3 py-1.5 text-xs border disabled:cursor-not-allowed ' +
+                  (locks.targeting !== undefined && !active ? 'opacity-40 ' : '') +
                   (active
                     ? 'border-amber-500 bg-amber-900/30 text-amber-200'
                     : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500')
@@ -191,6 +203,7 @@ export function EffectBuilder({
             )
           })}
         </div>
+        {locks.targeting && lockNote && <p className="mt-1 text-xs text-amber-400">{lockNote}</p>}
       </div>
     </>
   )
@@ -240,12 +253,15 @@ function RepeatableRows({
   onModeChange,
   onOptionChange,
   onExtrasChange,
+  locked,
 }: {
   criterion: SpellCriterion
   draft: SpellDraft
   onModeChange: (idx: number) => void
   onOptionChange: (idx: number) => void
   onExtrasChange: (next: SpellSelection[]) => void
+  /** Why every pick here is fixed, when another option locks them. */
+  locked?: string
 }) {
   const extras = extrasFor(draft, criterion.key)
   const first = selectionFor(draft, criterion.key)
@@ -263,6 +279,7 @@ function RepeatableRows({
         selection={first}
         onModeChange={onModeChange}
         onOptionChange={onOptionChange}
+        disabled={!!locked}
       />
       {extras.map((sel, i) => (
         <CriterionRow
@@ -272,9 +289,13 @@ function RepeatableRows({
           selection={sel}
           onModeChange={(modeIndex) => setExtra(i, { modeIndex, optionIndex: 0 })}
           onOptionChange={(optionIndex) => setExtra(i, { optionIndex })}
-          onRemove={() => onExtrasChange(extras.filter((_, j) => j !== i))}
+          onRemove={locked ? undefined : () => onExtrasChange(extras.filter((_, j) => j !== i))}
+          disabled={!!locked}
         />
       ))}
+      {locked ? (
+        <p className="text-xs text-amber-400">{locked}</p>
+      ) : (
       <button
         type="button"
         onClick={() => onExtrasChange([...extras, fresh])}
@@ -284,6 +305,7 @@ function RepeatableRows({
       >
         + Add another {criterion.label.toLowerCase()}
       </button>
+      )}
     </div>
   )
 }
@@ -299,6 +321,8 @@ interface CriterionRowProps {
   onRemove?: () => void
   /** A warning under the options, e.g. an unmet requirement. */
   note?: string
+  /** Fixed by another pick: shown, not changeable. */
+  disabled?: boolean
 }
 
 // Options that scale the whole cost (a gun's point-blank, tier −1) come
@@ -337,6 +361,7 @@ export function CriterionRow({
   label,
   onRemove,
   note,
+  disabled,
 }: CriterionRowProps) {
   const ep = criterionEp(criterion, selection)
   const hasModes = (criterion.modes?.length ?? 0) > 1
@@ -373,8 +398,10 @@ export function CriterionRow({
                 key={mode.key}
                 type="button"
                 onClick={() => onModeChange(i)}
+                disabled={disabled}
                 className={
-                  'rounded px-2 py-1 text-xs border ' +
+                  'rounded px-2 py-1 text-xs border disabled:cursor-not-allowed ' +
+                  (disabled && !active ? 'opacity-40 ' : '') +
                   (active
                     ? 'border-violet-500 bg-violet-900/30 text-violet-200'
                     : 'border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-zinc-500')
@@ -395,9 +422,11 @@ export function CriterionRow({
               key={i}
               type="button"
               onClick={() => onOptionChange(i)}
+              disabled={disabled}
               title={conditionDescription(opt.label)}
               className={
-                'rounded px-2 py-1 text-xs border ' +
+                'rounded px-2 py-1 text-xs border disabled:cursor-not-allowed ' +
+                (disabled && !active ? 'opacity-40 ' : '') +
                 (active
                   ? 'border-emerald-500 bg-emerald-900/30 text-emerald-200'
                   : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500')
