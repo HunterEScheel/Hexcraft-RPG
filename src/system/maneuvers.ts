@@ -68,7 +68,7 @@ const ft = (n: number) => `${n.toLocaleString('en-US')} ft`
 // 4, 8 and 16 EP past twice, three and four times it (tier 4 skips 3 on
 // purpose). Close maneuvers have no range: how far they go is their line.
 // Guns also get tier −1, point-blank: within 5 ft at half the maneuver's EP,
-// locked to one target, inevitable and +5 to a check, and a Grit save. It
+// locked to one target, the inevitable effect and a Grit save. It
 // comes last so saved picks keep their indexes.
 function rangeCriterion(reach: ManeuverReach, gun: boolean): SpellCriterion {
   const max = reach.maxRange
@@ -98,7 +98,7 @@ export const POINT_BLANK: SpellOption = {
   locks: {
     selections: {
       aoe: ['single target'],
-      buffDebuff: ['inevitable', '+5 to a check'],
+      buffDebuff: ['inevitable'],
     },
     targeting: 'grit',
   },

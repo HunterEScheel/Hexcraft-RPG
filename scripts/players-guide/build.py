@@ -315,9 +315,9 @@ section('maneuvers', 'Maneuvers', f'''
 </ul>
 <h3>Range &middot; fired and thrown</h3>
 <p>A <b>fired or thrown</b> maneuver reaches as far as its weapon (or throw), and pays to reach further. A <b>close</b> maneuver (melee, Unarmed, Grapple, Tackle) has no range: how far it goes is its <b>line</b>, a charge that runs your speed for each action its timing takes. With Tackle, Grapple or Unarmed you <b>move the length of the line</b>, and everyone in it is targeted (1 for None, Reaction or Action, 2 for 2 Actions, 4 for 1 Round or longer).</p>
-<p>A <b>fired</b> (gun) maneuver can also go <b>point-blank</b>, tier −1: the target is within 5 ft and its whole EP cost is <b>halved</b>. A point-blank shot is locked to a <b>single target</b> and a <b>Grit save</b>, and always has the <b>inevitable</b> and <b>+5 to a check</b> effects; it can add more effects on top.</p>
+<p>A <b>fired</b> (gun) maneuver can also go <b>point-blank</b>, tier −1: the target is within 5 ft and its whole EP cost is <b>halved</b>. A point-blank shot is locked to a <b>single target</b> and a <b>Grit save</b>, and always has the <b>inevitable</b> effect; it can add more effects on top.</p>
 {table(['Tier', 'EP', 'Reach'], [
-    ('−1', '×½ total', 'Point-blank (≤ 5 ft): fired only; single target, Grit save, always inevitable and +5 to a check'),
+    ('−1', '×½ total', 'Point-blank (≤ 5 ft): fired only; single target, Grit save, always inevitable'),
     ('I', 0, 'Within range'),
     ('II', 4, '&gt;2× max range'),
     ('III', 8, '&gt;3× max range'),

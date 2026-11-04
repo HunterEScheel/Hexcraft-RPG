@@ -262,7 +262,7 @@ describe('maneuver reach', () => {
     expect(spellCost(draft, fired).totalEp).toBe(10) // (10 + 10) × ½
   })
 
-  it('lock point-blank to one target, inevitable, +5 to a check and a Grit save', () => {
+  it('lock point-blank to one target, inevitable and a Grit save', () => {
     const fired = maneuverCriteria('combat-fired-2h', { maxRange: 800 })
     const draft = emptySpellDraft()
     draft.castingTime = '2actions' // ×1
@@ -275,17 +275,17 @@ describe('maneuver reach', () => {
       selectedOption(fired.find((c) => c.key === key)!, sel)?.label
     expect(pick('aoe')).toBe('single target')
     expect(pick('buffDebuff')).toBe('inevitable')
-    expect(locked.extraEffects?.map((s) => pick('buffDebuff', s))).toEqual(['+5 to a check'])
+    expect(locked.extraEffects ?? []).toEqual([])
     expect(locked.targeting).toBe('grit')
-    expect(spellCost(locked, fired).totalEp).toBe(15) // (10 + 10 + 10) × ½
-    // Other effects stay, after the forced two.
+    expect(spellCost(locked, fired).totalEp).toBe(10) // (10 + 10) × ½
+    // Other effects stay, after the forced one.
     const effects = fired.find((c) => c.key === 'buffDebuff')!
     const t1 = effects.modes!.findIndex((m) => m.key === 't1')
-    const withMore = applyDurationRules({ ...locked, extraEffects: [...locked.extraEffects!, { modeIndex: t1, optionIndex: 0 }] }, fired)
-    expect(withMore.extraEffects?.map((s) => pick('buffDebuff', s))).toEqual(['+5 to a check', 'advantage on attack'])
+    const withMore = applyDurationRules({ ...locked, extraEffects: [...(locked.extraEffects ?? []), { modeIndex: t1, optionIndex: 0 }] }, fired)
+    expect(withMore.extraEffects?.map((s) => pick('buffDebuff', s))).toEqual(['advantage on attack'])
     const firstPicked = applyDurationRules({ ...draft, selections: { ...draft.selections, buffDebuff: { modeIndex: t1, optionIndex: 0 } } }, fired)
     expect(pick('buffDebuff', firstPicked.selections.buffDebuff)).toBe('inevitable')
-    expect(firstPicked.extraEffects?.map((s) => pick('buffDebuff', s))).toEqual(['+5 to a check', 'advantage on attack'])
+    expect(firstPicked.extraEffects?.map((s) => pick('buffDebuff', s))).toEqual(['advantage on attack'])
     // Any other range leaves the picks alone.
     expect(applyDurationRules({ ...draft, selections: { ...draft.selections, range: { modeIndex: 0, optionIndex: 0 } } }, fired).targeting).toBe('hit')
   })
