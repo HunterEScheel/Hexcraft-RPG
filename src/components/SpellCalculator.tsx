@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
+  SPELL_CRITERIA,
   SPELL_TARGETING_OPTIONS,
   emptySpellDraft,
   savedSpellCost,
@@ -12,6 +13,7 @@ import {
   MAGIC_SCHOOLS,
 } from '../system/magicSchools'
 import { EffectBuilder } from './EffectBuilder'
+import { EffectAgentBox } from './EffectAgentBox'
 import { NumberStepper } from './NumberStepper'
 
 /**
@@ -126,6 +128,12 @@ export function SpellCalculator() {
             min={maneuver ? -10 : 0}
           />
         </div>
+
+        <EffectAgentBox
+          kind={maneuver ? 'maneuver' : 'spell'}
+          criteria={criteria ?? SPELL_CRITERIA}
+          onDraft={(d) => setDraft(d)}
+        />
 
         <EffectBuilder
           draft={draft}

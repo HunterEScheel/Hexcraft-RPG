@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import {
+  SPELL_CRITERIA,
   emptySpellDraft,
   isEmptyDraft,
   spellCost,
@@ -8,6 +9,8 @@ import {
   type SpellDraft,
 } from '../system/spells'
 import { EffectBuilder } from './EffectBuilder'
+import { EffectAgentBox } from './EffectAgentBox'
+import { isManeuverCriteria } from '../system/maneuvers'
 
 /**
  * Build a spell or maneuver on the fly, then use it (spending its EP) or save
@@ -74,6 +77,14 @@ export function QuickEffect({
   return (
     <div className="space-y-4">
       {pickers}
+      <EffectAgentBox
+        kind={criteria && isManeuverCriteria(criteria) ? 'maneuver' : 'spell'}
+        criteria={criteria ?? SPELL_CRITERIA}
+        onDraft={(d, suggested) => {
+          setDraft(d)
+          if (suggested && name.trim() === '') setName(suggested)
+        }}
+      />
       <EffectBuilder
         draft={draft}
         onChange={setDraft}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { emptySpellDraft, spellCost } from '../system/spells'
+import { SPELL_CRITERIA, emptySpellDraft, spellCost } from '../system/spells'
 import {
   MAGIC_MEDIUMS,
   MAGIC_SCHOOLS,
@@ -8,6 +8,7 @@ import {
 } from '../system/magicSchools'
 import { spellDamage, spellFactors, spellTargetingLabel, type MonsterSpell } from '../system/monster'
 import { EffectBuilder, PickerSelect } from './EffectBuilder'
+import { EffectAgentBox } from './EffectAgentBox'
 
 interface Props {
   schools: Record<MagicSchool, number>
@@ -88,6 +89,15 @@ export function MonsterSpellComposer({ schools, mediums, value, onChange }: Prop
           onChange={(v) => setMedium(v as MagicMedium)}
         />
       </div>
+
+      <EffectAgentBox
+        kind="spell"
+        criteria={SPELL_CRITERIA}
+        onDraft={(d, suggested) => {
+          setDraft(d)
+          if (suggested && name.trim() === '') setName(suggested)
+        }}
+      />
 
       <EffectBuilder draft={draft} onChange={setDraft} />
 
