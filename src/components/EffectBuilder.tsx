@@ -6,7 +6,7 @@ import {
   EP_PER_DAMAGE_DIE,
   SPELL_CRITERIA,
   SPELL_TARGETING_OPTIONS,
-  applyConcentrationRule,
+  applyDurationRules,
   concentrationModes,
   criterionApplies,
   criterionEp,
@@ -16,6 +16,7 @@ import {
   needsConcentration,
   selectionFor,
   selectedOption,
+  spellDurationLocked,
   withExtras,
   type CastingTimeKey,
   type CriterionKey,
@@ -48,10 +49,11 @@ export function EffectBuilder({
   criteria?: readonly SpellCriterion[]
   damageLabel?: string
 }) {
-  // Every change re-applies the concentration rule, so a spell that gains a
-  // concentration effect or dice moves its duration onto that list.
+  // Every change re-applies the duration rules, so a spell that gains a
+  // concentration effect or dice moves its duration onto that list, and one
+  // whose only effects are instant (prone, exhaustion) stays instantaneous.
   const onChange = (update: (d: SpellDraft) => SpellDraft) =>
-    onDraftChange((d) => applyConcentrationRule(update(d), criteria))
+    onDraftChange((d) => applyDurationRules(update(d), criteria))
   const setMode = (key: CriterionKey, modeIndex: number) =>
     onChange((d) => ({
       ...d,
@@ -81,6 +83,7 @@ export function EffectBuilder({
             criterion={c}
             selection={selectionFor(draft, c.key)}
             concentration={needsConcentration(draft)}
+            locked={spellDurationLocked(draft, criteria)}
             onPick={(modeIndex, optionIndex) =>
               onChange((d) => ({
                 ...d,
@@ -437,16 +440,22 @@ function DurationRow({
   criterion,
   selection,
   concentration,
+  locked,
   onPick,
 }: {
   criterion: SpellCriterion
   selection: SpellSelection
   concentration: boolean
+  /** Only instant effects (prone, exhaustion) and no dice: instantaneous only. */
+  locked: boolean
   onPick: (modeIndex: number, optionIndex: number) => void
 }) {
   const modes = concentrationModes(criterion)!
   const standard = criterionOptions(criterion, modes.standard)
-  const choices = concentration
+  const instant = standard.findIndex((o) => o.label === 'instantaneous')
+  const choices = locked
+    ? [{ modeIndex: modes.standard, optionIndex: instant, option: standard[instant] }]
+    : concentration
     ? [
         { modeIndex: modes.standard, optionIndex: 0, option: standard[0] },
         ...criterionOptions(criterion, modes.concentration).map((option, i) => ({
@@ -504,7 +513,9 @@ function DurationRow({
         })}
       </div>
       <p className="mt-1 text-[11px] text-zinc-500">
-        {concentration
+        {locked
+          ? 'Prone and exhaustion just happen, with no duration that makes sense, so this is instantaneous.'
+          : concentration
           ? 'Has an area (splash or line), a concentration effect (marked C), or damage or healing dice, so anything longer than instantaneous needs concentration.'
           : 'No area, no concentration effect (marked C) and no dice, so it lasts without concentration.'}
       </p>

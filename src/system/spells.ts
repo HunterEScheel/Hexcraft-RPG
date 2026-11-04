@@ -422,16 +422,45 @@ export function criterionEp(
   return criterion.refund ? -ep : ep
 }
 
-/** Whether a criterion applies to a draft: an `onlyWith` one needs its partner picked. */
+/**
+ * Conditions that just happen, with no duration that makes sense: prone and
+ * exhaustion. They are always instantaneous, so no duration counts for them.
+ */
+export const INSTANT_EFFECTS: ReadonlySet<string> = new Set(['prone', 'exhaustion'])
+
+/** The labels of a criterion's picks that last (tier above 0, not instant-only). */
+export function lastingLabels(
+  draft: SpellDraft,
+  key: CriterionKey,
+  criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
+): string[] {
+  return pickLabels(draft, key, criteria).filter((label) => !INSTANT_EFFECTS.has(label))
+}
+
+/**
+ * Whether a criterion applies to a draft: an `onlyWith` one needs its partner
+ * picked, and a duration that multiplies needs a pick that lasts.
+ */
 export function criterionApplies(
   criterion: SpellCriterion,
   draft: SpellDraft,
   criteria: readonly SpellCriterion[],
 ): boolean {
+  if (criterion.multiplies && lastingLabels(draft, criterion.multiplies, criteria).length === 0) return false
   if (!criterion.onlyWith) return true
   const partner = criteria.find((c) => c.key === criterion.onlyWith)
   if (!partner) return false
   return pickLabels(draft, partner.key, criteria).length > 0
+}
+
+/**
+ * A spell whose only effects are instant (prone, exhaustion) and that deals no
+ * dice has nothing to last: its duration is locked to instantaneous.
+ */
+export function spellDurationLocked(draft: SpellDraft, criteria: readonly SpellCriterion[] = SPELL_CRITERIA): boolean {
+  const duration = criteria.find((c) => c.key === 'duration')
+  if (!duration || !concentrationModes(duration) || draft.damageDice > 0) return false
+  return effectLabels(draft, criteria).length > 0 && lastingLabels(draft, 'buffDebuff', criteria).length === 0
 }
 
 /** Whether an option's costMultiplier counts: its required effect, if any, is picked. */
@@ -472,12 +501,18 @@ export function spellCost(
     const picks = REPEATABLE_CRITERIA.includes(c.key) ? picksFor(draft, c.key) : [selectionFor(draft, c.key)]
     totals.set(c.key, picks.reduce((sum, sel) => sum + criterionEp(c, sel), 0))
   }
-  // A duration that multiplies scales its criterion's total.
+  // A duration that multiplies scales its criterion's picks, all but the
+  // instant ones (prone, exhaustion), which count once.
   for (const c of criteria) {
     if (!c.multiplies || !criterionApplies(c, draft, criteria)) continue
+    const partner = criteria.find((p) => p.key === c.multiplies)
+    if (!partner || !totals.has(partner.key)) continue
     const factor = selectedOption(c, selectionFor(draft, c.key))?.multiplier ?? 1
-    const total = totals.get(c.multiplies)
-    if (total !== undefined) totals.set(c.multiplies, total * factor)
+    const total = picksFor(draft, partner.key).reduce((sum, sel) => {
+      const instant = INSTANT_EFFECTS.has(selectedOption(partner, sel)?.label ?? '')
+      return sum + criterionEp(partner, sel) * (instant ? 1 : factor)
+    }, 0)
+    totals.set(partner.key, total)
   }
   const criteriaEp = [...totals.values()].reduce((sum, ep) => sum + ep, 0)
   const damageEp = draft.damageDice * EP_PER_DAMAGE_DIE
@@ -579,6 +614,29 @@ export function concentrationModes(
   const concentration = modes.findIndex((m) => m.key === 'concentration')
   const standard = modes.findIndex((m) => m.key === 'standard')
   return concentration >= 0 && standard >= 0 ? { standard, concentration } : null
+}
+
+/**
+ * Locks a spell's duration to instantaneous when it has nothing to last (see
+ * spellDurationLocked), then applies the concentration rule. The builder runs
+ * this on every change.
+ */
+export function applyDurationRules(
+  draft: SpellDraft,
+  criteria: readonly SpellCriterion[] = SPELL_CRITERIA,
+): SpellDraft {
+  return applyConcentrationRule(applyInstantRule(draft, criteria), criteria)
+}
+
+function applyInstantRule(draft: SpellDraft, criteria: readonly SpellCriterion[]): SpellDraft {
+  const duration = criteria.find((c) => c.key === 'duration')
+  const modes = duration && concentrationModes(duration)
+  if (!duration || !modes || !spellDurationLocked(draft, criteria)) return draft
+  const optionIndex = criterionOptions(duration, modes.standard).findIndex((o) => o.label === 'instantaneous')
+  const next = { modeIndex: modes.standard, optionIndex: Math.max(0, optionIndex) }
+  const sel = selectionFor(draft, 'duration')
+  if (sel.modeIndex === next.modeIndex && sel.optionIndex === next.optionIndex) return draft
+  return { ...draft, selections: { ...draft.selections, duration: next } }
 }
 
 /**

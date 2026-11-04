@@ -11,7 +11,7 @@ import {
   CASTING_TIMES,
   REPEATABLE_CRITERIA,
   SPELL_TARGETING_OPTIONS,
-  applyConcentrationRule,
+  applyDurationRules,
   costMultiplierApplies,
   emptySpellDraft,
   selectedOption,
@@ -197,11 +197,11 @@ export function draftFromAgent(
     }
   }
 
-  // The same rule the builder applies on every change.
+  // The same rules the builder applies on every change.
   const before = draft.selections.duration
-  draft = applyConcentrationRule(draft, criteria)
+  draft = applyDurationRules(draft, criteria)
   if (draft.selections.duration !== before) {
-    warnings.push('Duration moved to the list the concentration rule allows.')
+    warnings.push('Duration changed to one the duration rules allow.')
   }
 
   return {

@@ -187,7 +187,7 @@ How to choose:
 
 Spell rules:
 - AOE / Targets: "single target" for one target, "N targets" for several separate targets, "split damage" for damage split among targets, a splash for a radius around a point, a line for a line.
-- Duration: instantaneous unless the effect lasts. An effect that lasts and covers an area, deals dice, or has a concentration effect needs concentration; pick the matching length from either list and the app moves it to the right one.
+- Duration: instantaneous unless the effect lasts. Prone and exhaustion are always instantaneous: they just happen. An effect that lasts and covers an area, deals dice, or has a concentration effect needs concentration; pick the matching length from either list and the app moves it to the right one.
 - Challenge: "none" unless the description says how strong a target (in BP) the spell can overcome.
 - Timing defaults to 2actions when the description doesn't say.
 - countermagic targeting is only for a spell that counters another spell.`
@@ -198,7 +198,7 @@ Maneuver rules (martial techniques, non-magical):
 - Range exists only for fired and thrown weapons: "within range" unless the shot reaches past twice the weapon's range. A gun's "point-blank" is for a shot within 5 ft and only counts with the inevitable effect, so pick inevitable with it.
 - AOE / Targets: a sweep around the user is a splash, a charge or a shot through several foes is a line.
 - damageDice are extra d6s on top of the weapon's own damage; don't count the weapon's damage.
-- Duration says how long the effects last and multiplies their cost; instantaneous if they don't last.
+- Duration says how long the effects last and multiplies their cost; instantaneous if they don't last. Prone and exhaustion are always instantaneous, and no duration multiplies them.
 - selfDebuff is a drawback the user takes on (off-balance, exposed, prone...) to lower the cost; pick one only if the description mentions a drawback. selfDuration is how long that drawback lasts.
 - Timing defaults to action when the description doesn't say; "none" is for a move that takes no action at all.`
 }

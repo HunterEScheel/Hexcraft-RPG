@@ -284,7 +284,7 @@ section('spellbuilding', 'Building a Spell', f'''
 </div>
 <div class="two">
 <div><h3>Duration &middot; {EP['duration']} EP per tier</h3>
-<p class="small"><b>Concentration:</b> a spell that lasts beyond an instant needs concentration if it covers an <b>area</b> (a splash or a line), has <b>damage or healing dice</b>, or has a Buff/Debuff marked <b>(C)</b>. So an area spell is either instantaneous or concentration. The split follows D&amp;D 5e's nearest spells, except that every granted sense needs concentration: Charm Person or Tongues need none, while darkvision, Enhance Ability (+skill), Hold Person (debilitated) or Slow do. You don't choose: the spell builder offers only the list that applies.</p>{dur_rows}</div>
+<p class="small"><b>Concentration:</b> a spell that lasts beyond an instant needs concentration if it covers an <b>area</b> (a splash or a line), has <b>damage or healing dice</b>, or has a Buff/Debuff marked <b>(C)</b>. So an area spell is either instantaneous or concentration. The split follows D&amp;D 5e's nearest spells, except that every granted sense needs concentration: Charm Person or Tongues need none, while darkvision, Enhance Ability (+skill), Hold Person (debilitated) or Slow do. You don't choose: the spell builder offers only the list that applies. <b>Prone</b> and <b>exhaustion</b> just happen, so they are always instantaneous: a spell whose only effects are those and that has no dice is instantaneous.</p>{dur_rows}</div>
 <div><h3>Buff / Debuff &middot; {EP['buff']} EP per tier</h3>
 {table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], mark_concentration(e)) for t, e in BUFFS.items()], 'compact')}
 <p class="small">(C) needs concentration unless instantaneous.</p></div>
@@ -307,7 +307,7 @@ section('maneuvers', 'Maneuvers', f'''
 <p>Maneuvers are the martial side of the same system: signature strikes, sweeps, trips, disarms and feints. You build one the way you build a spell and pay for it in EP, but from a shorter list of parts:</p>
 <ul>
 <li><b>Range</b> (fired and thrown only) and <b>AOE / targets</b>: fit to the combat skill, below. Targets cost what a spell's do.</li>
-<li><b>Duration</b>: how long the effects last, which <b>multiplies</b> their EP: instantaneous or 1 round ×1, 1 minute ×2, 1 hour ×4. There's no concentration.</li>
+<li><b>Duration</b>: how long the effects last, which <b>multiplies</b> their EP: instantaneous or 1 round ×1, 1 minute ×2, 1 hour ×4. There's no concentration. <b>Prone</b> and <b>exhaustion</b> are always instantaneous: no duration multiplies them.</li>
 <li><b>Effect</b>: non-magical effects only, listed below. There's no Challenge.</li>
 <li><b>Extra damage</b>: d6s added to the weapon's own damage, 2 EP per die.</li>
 <li><b>Self-debuff</b> (optional): a drawback you take on to pay for the move, which <b>takes EP off</b> its cost.</li>
@@ -335,7 +335,7 @@ section('maneuvers', 'Maneuvers', f'''
 {table(['Tier', 'EP', 'Effects'], [(ROMAN[t], t * EP['buff'], e) for t, e in MAN_EFFECTS.items()], 'compact')}</div>
 </div>
 <h3>Self-debuffs</h3>
-<p>Going all in has a price. A self-debuff refunds 5 EP per tier, and its duration <b>multiplies</b> the refund: 2 rounds ×1, 5 rounds ×2, 1 minute ×4, 1 hour ×8, until a long rest ×12. You can take <b>several self-debuffs</b>: each refunds its own tier, and they share one duration that multiplies them all. The refund comes off before the timing multiplier, and a maneuver never costs less than 0.</p>
+<p>Going all in has a price. A self-debuff refunds 5 EP per tier, and its duration <b>multiplies</b> the refund: 2 rounds ×1, 5 rounds ×2, 1 minute ×4, 1 hour ×8, until a long rest ×12. You can take <b>several self-debuffs</b>: each refunds its own tier, and they share one duration that multiplies them all. Prone and exhaustion are instantaneous, so their refund is never multiplied. The refund comes off before the timing multiplier, and a maneuver never costs less than 0.</p>
 <div class="two">
 <div>{table(['Tier', 'Refund', 'Self-debuffs'], [(ROMAN[t], f'−{t * 5}', e) for t, e in MAN_SELF.items()], 'compact')}</div>
 <div>{table(['Lasts', 'Refund'], [(l, f'× {m}') for l, m in MAN_SELF_DURATION], 'compact')}</div>
@@ -357,7 +357,7 @@ CONDITIONS = [
     ('Rooted', 'Your movement speed is 0.'),
     ('Poisoned', 'You take 1d6 poison damage each round.'),
     ('Burned', 'You take 1d6 fire damage each round.'),
-    ('Prone', 'You are rooted, and exposed to melee attacks. You can use an action to get up.'),
+    ('Prone', 'You are rooted. In melee you are exposed and off-balance; against ranged attacks you have half cover. You can use 1 action to remove this condition.'),
     ('Exhaustion', 'Per level: your HP, EP and movement speed maximums drop by 10, and all your skills, attributes and saving throws drop by 2.'),
     ('Blinded', "You can't see."),
     ('Restrained', 'You are off-balance, rooted and exposed.'),

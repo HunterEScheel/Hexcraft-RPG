@@ -124,7 +124,7 @@ describe('draftFromAgent', () => {
     const duration = SPELL_CRITERIA.find((c) => c.key === 'duration')!
     expect(duration.modes![draft.selections.duration.modeIndex].key).toBe('concentration')
     expect(option(SPELL_CRITERIA, 'duration', draft)).toBe('1 minute')
-    expect(warnings).toContain('Duration moved to the list the concentration rule allows.')
+    expect(warnings).toContain('Duration changed to one the duration rules allow.')
   })
 
   it('builds a maneuver with self-debuffs and a no-action timing', () => {
