@@ -150,13 +150,13 @@ describe('draftFromAgent', () => {
     expect(spellCost(draft, criteria).totalEp).toBe(112)
   })
 
-  it('flags a point-blank shot without split-second', () => {
+  it('flags a point-blank shot without inevitable', () => {
     const criteria = maneuverCriteria('combat-fired-1h')
     const { warnings } = draftFromAgent(
       { picks: { range: 'point-blank (≤ 5 ft)' }, lists: {}, damageDice: 3, castingTime: 'action' },
       criteria,
       'maneuver',
     )
-    expect(warnings.join('\n')).toMatch(/split-second/)
+    expect(warnings.join('\n')).toMatch(/inevitable/)
   })
 })

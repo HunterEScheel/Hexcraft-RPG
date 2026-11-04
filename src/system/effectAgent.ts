@@ -189,7 +189,7 @@ export function draftFromAgent(
   if (extras.selfDebuff?.length) draft.extraSelfDebuffs = extras.selfDebuff
 
   // A cost multiplier that needs an effect (a gun's point-blank needs
-  // split-second) is kept but flagged when that effect is missing.
+  // inevitable) is kept but flagged when that effect is missing.
   for (const c of criteria) {
     const opt = selectedOption(c, draft.selections[c.key])
     if (opt?.requiresEffect && !costMultiplierApplies(opt, draft, criteria)) {

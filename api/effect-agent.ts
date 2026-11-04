@@ -195,7 +195,7 @@ Spell rules:
   return `${common}
 
 Maneuver rules (martial techniques, non-magical):
-- Range exists only for fired and thrown weapons: "within range" unless the shot reaches past twice the weapon's range. A gun's "point-blank" is for a shot within 5 ft and only counts with the split-second effect, so pick split-second with it.
+- Range exists only for fired and thrown weapons: "within range" unless the shot reaches past twice the weapon's range. A gun's "point-blank" is for a shot within 5 ft and only counts with the inevitable effect, so pick inevitable with it.
 - AOE / Targets: a sweep around the user is a splash, a charge or a shot through several foes is a line.
 - damageDice are extra d6s on top of the weapon's own damage; don't count the weapon's damage.
 - Duration says how long the effects last and multiplies their cost; instantaneous if they don't last.

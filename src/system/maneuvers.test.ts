@@ -226,17 +226,17 @@ describe('maneuver reach', () => {
     expect(spellCost(draft, maneuverCriteria('combat-melee-2h', { speed: 30 })).baseEp).toBe(15)
   })
 
-  it('halve a gun maneuver point-blank, only with split-second', () => {
+  it('halve a gun maneuver point-blank, only with inevitable', () => {
     const fired = maneuverCriteria('combat-fired-1h', { maxRange: 80 })
     const draft = emptySpellDraft()
     draft.castingTime = '2actions' // ×1
     draft.selections.range = { modeIndex: 0, optionIndex: 4 } // point-blank
     draft.damageDice = 5 // 10 EP
-    expect(spellCost(draft, fired).totalEp).toBe(10) // no split-second: no discount
+    expect(spellCost(draft, fired).totalEp).toBe(10) // no inevitable: no discount
     const effects = fired.find((x) => x.key === 'buffDebuff')!
     const t2 = effects.modes!.findIndex((m) => m.key === 't2')
-    const splitSecond = effects.modes![t2].options.findIndex((o) => o.label === 'split-second')
-    draft.selections.buffDebuff = { modeIndex: t2, optionIndex: splitSecond } // 10 EP
+    const inevitable = effects.modes![t2].options.findIndex((o) => o.label === 'inevitable')
+    draft.selections.buffDebuff = { modeIndex: t2, optionIndex: inevitable } // 10 EP
     expect(spellCost(draft, fired).totalEp).toBe(10) // (10 + 10) × ½
   })
 })
