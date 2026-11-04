@@ -67,7 +67,7 @@ const ft = (n: number) => `${n.toLocaleString('en-US')} ft`
 // A fired or thrown maneuver's range, by its weapon's: within it is free, then
 // 4, 8 and 16 EP past twice, three and four times it (tier 4 skips 3 on
 // purpose). Close maneuvers have no range: how far they go is their line.
-// Guns also get tier −1, point-blank: within 5 ft, with sneak attack, at half
+// Guns also get tier −1, point-blank: within 5 ft, with Split-second, at half
 // the maneuver's EP. It comes last so saved picks keep their indexes.
 function rangeCriterion(reach: ManeuverReach, gun: boolean): SpellCriterion {
   const max = reach.maxRange
@@ -93,7 +93,7 @@ export const POINT_BLANK: SpellOption = {
   label: 'point-blank (≤ 5 ft)',
   tier: 0,
   costMultiplier: 0.5,
-  requiresEffect: 'sneak attack',
+  requiresEffect: 'Split-second',
 }
 
 // The options keep one shape across skills, tier for tier, and differ only in
@@ -186,7 +186,7 @@ const SHARED_CRITERIA: readonly SpellCriterion[] = [
         label: 'Tier II (10 EP)',
         options: [
           { label: 'damage resistance', tier: 2 },
-          { label: 'sneak attack', tier: 2 },
+          { label: 'Split-second', tier: 2 },
           { label: '+5 to a check', tier: 2 },
           { label: 'prone', tier: 2 },
           { label: 'frightened', tier: 2 },
