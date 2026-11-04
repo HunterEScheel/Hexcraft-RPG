@@ -13,6 +13,7 @@ import {
   criterionOptions,
   costMultiplierApplies,
   draftLocks,
+  lockedPickCount,
   extrasFor,
   needsConcentration,
   selectionFor,
@@ -107,7 +108,8 @@ export function EffectBuilder({
             onModeChange={(idx) => setMode(c.key, idx)}
             onOptionChange={(idx) => setOption(c.key, idx)}
             onExtrasChange={(extras) => onChange((d) => withExtras(d, c.key, extras))}
-            locked={isLocked(c.key) ? lockNote : undefined}
+            lockedCount={lockedPickCount(draft, c.key, criteria)}
+            lockNote={lockNote}
           />
         ) : (
           <CriterionRow
@@ -253,15 +255,18 @@ function RepeatableRows({
   onModeChange,
   onOptionChange,
   onExtrasChange,
-  locked,
+  lockedCount = 0,
+  lockNote,
 }: {
   criterion: SpellCriterion
   draft: SpellDraft
   onModeChange: (idx: number) => void
   onOptionChange: (idx: number) => void
   onExtrasChange: (next: SpellSelection[]) => void
-  /** Why every pick here is fixed, when another option locks them. */
-  locked?: string
+  /** How many picks, from the first, another option forces. */
+  lockedCount?: number
+  /** Why those picks are fixed. */
+  lockNote?: string
 }) {
   const extras = extrasFor(draft, criterion.key)
   const first = selectionFor(draft, criterion.key)
@@ -279,23 +284,29 @@ function RepeatableRows({
         selection={first}
         onModeChange={onModeChange}
         onOptionChange={onOptionChange}
-        disabled={!!locked}
+        disabled={lockedCount > 0}
       />
-      {extras.map((sel, i) => (
-        <CriterionRow
-          key={i}
-          criterion={criterion}
-          label={`${criterion.label} ${i + 2}`}
-          selection={sel}
-          onModeChange={(modeIndex) => setExtra(i, { modeIndex, optionIndex: 0 })}
-          onOptionChange={(optionIndex) => setExtra(i, { optionIndex })}
-          onRemove={locked ? undefined : () => onExtrasChange(extras.filter((_, j) => j !== i))}
-          disabled={!!locked}
-        />
-      ))}
-      {locked ? (
-        <p className="text-xs text-amber-400">{locked}</p>
-      ) : (
+      {extras.map((sel, i) => {
+        // Extra i is pick i + 2; the first lockedCount picks are forced.
+        const forced = i + 1 < lockedCount
+        return (
+          <CriterionRow
+            key={i}
+            criterion={criterion}
+            label={`${criterion.label} ${i + 2}`}
+            selection={sel}
+            onModeChange={(modeIndex) => setExtra(i, { modeIndex, optionIndex: 0 })}
+            onOptionChange={(optionIndex) => setExtra(i, { optionIndex })}
+            onRemove={forced ? undefined : () => onExtrasChange(extras.filter((_, j) => j !== i))}
+            disabled={forced}
+          />
+        )
+      })}
+      {lockedCount > 0 && lockNote && (
+        <p className="text-xs text-amber-400">
+          {lockNote.replace(/\.$/, '')}: the first {lockedCount === 1 ? 'pick is' : `${lockedCount} picks are`} fixed; add more below.
+        </p>
+      )}
       <button
         type="button"
         onClick={() => onExtrasChange([...extras, fresh])}
@@ -305,7 +316,6 @@ function RepeatableRows({
       >
         + Add another {criterion.label.toLowerCase()}
       </button>
-      )}
     </div>
   )
 }

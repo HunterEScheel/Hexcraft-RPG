@@ -134,7 +134,7 @@ describe('draftFromAgent', () => {
         picks: { aoe: 'Splash: 10 ft splash', duration: '1 round', selfDuration: '2 rounds' },
         lists: {
           buffDebuff: ['Tier II (10 EP): prone'],
-          selfDebuff: ['Tier I (−5 EP): off-balance', 'Tier I (−5 EP): exposed'],
+          selfDebuff: ['Tier I (−5 EP): off-balance', 'Tier I (−5 EP): burned'],
         },
         damageDice: 2,
         castingTime: 'none',

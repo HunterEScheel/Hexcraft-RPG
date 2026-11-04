@@ -436,7 +436,7 @@ function migrateSchools(
 
 // Bump when a rules change needs saved characters rewritten, and add a step
 // to RULE_STEPS. Each step runs once per character, in order.
-const RULES_VERSION = 4
+const RULES_VERSION = 5
 
 // An effect option that was removed: picks of it become `into`, and picks
 // after it in the same list move up one so they keep their effect.
@@ -489,7 +489,39 @@ const RULE_STEPS: {
       ),
     }),
   },
+  {
+    // Maneuver self-debuffs re-tiered: poisoned and burned down to Tier I,
+    // exposed up to Tier II. Every self-debuff pick, extras too, moves with
+    // its effect.
+    version: 5,
+    spells: [],
+    maneuvers: [],
+    character: (c) => ({
+      ...c,
+      savedManeuvers: (c.savedManeuvers ?? []).map((m) => ({ ...m, draft: retierSelfDebuffs(m.draft) })),
+    }),
+  },
 ]
+
+// Old [mode, option] → new, for the version 5 self-debuff re-tier.
+const SELF_DEBUFF_RETIER: Record<string, SpellSelection> = {
+  '1,1': { modeIndex: 2, optionIndex: 0 }, // exposed
+  '1,2': { modeIndex: 1, optionIndex: 1 }, // off-balance
+  '2,0': { modeIndex: 1, optionIndex: 2 }, // poisoned
+  '2,1': { modeIndex: 1, optionIndex: 3 }, // burned
+  '2,2': { modeIndex: 2, optionIndex: 1 }, // prone
+  '2,3': { modeIndex: 2, optionIndex: 2 }, // exhaustion
+}
+
+function retierSelfDebuffs(draft: SpellDraft): SpellDraft {
+  const move = (s: SpellSelection) => SELF_DEBUFF_RETIER[`${s.modeIndex},${s.optionIndex}`] ?? s
+  const first = draft.selections.selfDebuff
+  return {
+    ...draft,
+    selections: first ? { ...draft.selections, selfDebuff: move(first) } : draft.selections,
+    ...(draft.extraSelfDebuffs ? { extraSelfDebuffs: draft.extraSelfDebuffs.map(move) } : {}),
+  }
+}
 
 function applyRemovals(draft: SpellDraft, removals: Removal[]): SpellDraft {
   const selections = { ...draft.selections }

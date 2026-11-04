@@ -87,7 +87,29 @@ describe('maneuvers', () => {
     const labels = self.modes!.flatMap((m) => m.options.map((o) => o.label)).filter((l) => l !== 'none')
     const undefinedYet = labels.filter((l) => !conditionDescription(l))
     expect(undefinedYet).toEqual([])
-    expect(selectedOption(self, { modeIndex: 1, optionIndex: 1 })?.label).toBe('exposed')
+    expect(selectedOption(self, { modeIndex: 2, optionIndex: 0 })?.label).toBe('exposed')
+    expect(selectedOption(self, { modeIndex: 1, optionIndex: 2 })?.label).toBe('poisoned')
+    expect(selectedOption(self, { modeIndex: 1, optionIndex: 3 })?.label).toBe('burned')
+  })
+
+  it('move saved self-debuffs to their new tiers, extras too', () => {
+    const draft = emptySpellDraft()
+    draft.selections.selfDebuff = { modeIndex: 1, optionIndex: 1 } // exposed, Tier I before
+    draft.extraSelfDebuffs = [
+      { modeIndex: 2, optionIndex: 1 }, // burned, Tier II before
+      { modeIndex: 2, optionIndex: 3 }, // exhaustion
+      { modeIndex: 1, optionIndex: 0 }, // rooted, unmoved
+    ]
+    const old = {
+      ...emptyCharacter('Peasants', 150),
+      rulesVersion: 4,
+      savedManeuvers: [{ id: 'm', name: 'All in', skillId: 'combat-melee-1h', draft }],
+    }
+    const self = MANEUVER_CRITERIA.find((c) => c.key === 'selfDebuff')!
+    const moved = ensureCombatSkills(old).savedManeuvers[0].draft
+    const label = (s: { modeIndex: number; optionIndex: number }) => selectedOption(self, s)?.label
+    expect(label(moved.selections.selfDebuff)).toBe('exposed')
+    expect(moved.extraSelfDebuffs!.map(label)).toEqual(['burned', 'exhaustion', 'rooted'])
   })
 
   it('rewrite removed effects on older characters, once', () => {
@@ -256,6 +278,14 @@ describe('maneuver reach', () => {
     expect(locked.extraEffects?.map((s) => pick('buffDebuff', s))).toEqual(['+5 to a check'])
     expect(locked.targeting).toBe('grit')
     expect(spellCost(locked, fired).totalEp).toBe(15) // (10 + 10 + 10) × ½
+    // Other effects stay, after the forced two.
+    const effects = fired.find((c) => c.key === 'buffDebuff')!
+    const t1 = effects.modes!.findIndex((m) => m.key === 't1')
+    const withMore = applyDurationRules({ ...locked, extraEffects: [...locked.extraEffects!, { modeIndex: t1, optionIndex: 0 }] }, fired)
+    expect(withMore.extraEffects?.map((s) => pick('buffDebuff', s))).toEqual(['+5 to a check', 'advantage on attack'])
+    const firstPicked = applyDurationRules({ ...draft, selections: { ...draft.selections, buffDebuff: { modeIndex: t1, optionIndex: 0 } } }, fired)
+    expect(pick('buffDebuff', firstPicked.selections.buffDebuff)).toBe('inevitable')
+    expect(firstPicked.extraEffects?.map((s) => pick('buffDebuff', s))).toEqual(['+5 to a check', 'advantage on attack'])
     // Any other range leaves the picks alone.
     expect(applyDurationRules({ ...draft, selections: { ...draft.selections, range: { modeIndex: 0, optionIndex: 0 } } }, fired).targeting).toBe('hit')
   })

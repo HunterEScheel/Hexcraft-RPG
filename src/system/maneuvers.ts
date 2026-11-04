@@ -233,16 +233,16 @@ const SHARED_CRITERIA: readonly SpellCriterion[] = [
         label: 'Tier I (−5 EP)',
         options: [
           { label: 'rooted', tier: 1 },
-          { label: 'exposed', tier: 1 },
           { label: 'off-balance', tier: 1 },
+          { label: 'poisoned', tier: 1 },
+          { label: 'burned', tier: 1 },
         ],
       },
       {
         key: 't2',
         label: 'Tier II (−10 EP)',
         options: [
-          { label: 'poisoned', tier: 2 },
-          { label: 'burned', tier: 2 },
+          { label: 'exposed', tier: 2 },
           { label: 'prone', tier: 2 },
           { label: 'exhaustion', tier: 2 },
         ],

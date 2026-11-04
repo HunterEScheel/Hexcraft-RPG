@@ -297,8 +297,8 @@ MAN_EFFECTS = {1: 'advantage on attack, +2 to a check, push 10 ft, disarmed, gra
                2: 'damage resistance, inevitable, +5 to a check, prone, frightened, bleeding',
                3: 'extra action, restrained, blinded',
                4: 'debilitated'}
-MAN_SELF = {1: 'rooted, exposed, off-balance',
-            2: 'poisoned, burned, prone, exhaustion',
+MAN_SELF = {1: 'rooted, off-balance, poisoned, burned',
+            2: 'exposed, prone, exhaustion',
             3: 'blinded, restrained',
             4: 'debilitated'}
 MAN_SELF_DURATION = [('2 rounds', 1), ('5 rounds', 2), ('1 minute', 4), ('1 hour', 8), ('until a long rest', 12)]
@@ -315,9 +315,9 @@ section('maneuvers', 'Maneuvers', f'''
 </ul>
 <h3>Range &middot; fired and thrown</h3>
 <p>A <b>fired or thrown</b> maneuver reaches as far as its weapon (or throw), and pays to reach further. A <b>close</b> maneuver (melee, Unarmed, Grapple, Tackle) has no range: how far it goes is its <b>line</b>, a charge that runs your speed for each action its timing takes. With Tackle, Grapple or Unarmed you <b>move the length of the line</b>, and everyone in it is targeted (1 for None, Reaction or Action, 2 for 2 Actions, 4 for 1 Round or longer).</p>
-<p>A <b>fired</b> (gun) maneuver can also go <b>point-blank</b>, tier −1: the target is within 5 ft and its whole EP cost is <b>halved</b>. A point-blank shot is locked to a <b>single target</b>, the <b>inevitable</b> and <b>+5 to a check</b> effects, and a <b>Grit save</b>.</p>
+<p>A <b>fired</b> (gun) maneuver can also go <b>point-blank</b>, tier −1: the target is within 5 ft and its whole EP cost is <b>halved</b>. A point-blank shot is locked to a <b>single target</b> and a <b>Grit save</b>, and always has the <b>inevitable</b> and <b>+5 to a check</b> effects; it can add more effects on top.</p>
 {table(['Tier', 'EP', 'Reach'], [
-    ('−1', '×½ total', 'Point-blank (≤ 5 ft): fired only; single target, inevitable, +5 to a check, Grit save'),
+    ('−1', '×½ total', 'Point-blank (≤ 5 ft): fired only; single target, Grit save, always inevitable and +5 to a check'),
     ('I', 0, 'Within range'),
     ('II', 4, '&gt;2× max range'),
     ('III', 8, '&gt;3× max range'),

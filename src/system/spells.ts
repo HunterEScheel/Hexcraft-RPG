@@ -24,8 +24,9 @@ export interface SpellOption {
   requiresEffect?: string
   /**
    * Picks this option forces on the rest of the draft while it is chosen:
-   * per criterion, the labels to pick (the first, then any extras), and the
-   * targeting. A gun's point-blank locks one target, its effects and a save.
+   * per criterion, the labels to pick (the first, then extras; a repeatable
+   * criterion keeps any other picks after them), and the targeting. A gun's
+   * point-blank locks one target, two effects and a save.
    */
   locks?: OptionLocks
 }
@@ -673,11 +674,23 @@ export function applyOptionLocks(
     if (!criterion) continue
     const picks = labels.map((l) => findSelection(criterion, l)).filter((s): s is SpellSelection => !!s)
     if (picks.length === 0) continue
-    const [first, ...extras] = picks
+    // A repeatable criterion keeps the user's other picks after the forced ones.
+    const kept = REPEATABLE_CRITERIA.includes(key)
+      ? picksFor(next, key).filter((s) => {
+          const opt = selectedOption(criterion, s)
+          return opt !== undefined && opt.tier > 0 && !labels.includes(opt.label)
+        })
+      : []
+    const [first, ...extras] = [...picks, ...kept]
     next = { ...next, selections: { ...next.selections, [key]: first } }
     if (REPEATABLE_CRITERIA.includes(key)) next = withExtras(next, key, extras)
   }
   return next
+}
+
+/** How many of a criterion's picks, from the first, the draft's options force. */
+export function lockedPickCount(draft: SpellDraft, key: CriterionKey, criteria: readonly SpellCriterion[]): number {
+  return draftLocks(draft, criteria).selections?.[key]?.length ?? 0
 }
 
 function applyInstantRule(draft: SpellDraft, criteria: readonly SpellCriterion[]): SpellDraft {
