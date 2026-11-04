@@ -20,7 +20,8 @@ export interface AgentCatalog {
 
 export const maxDuration = 60
 
-const MODEL = process.env.EFFECT_AGENT_MODEL || 'gpt-5-mini'
+// Needs a model with strict JSON-schema output that the key's project can use.
+const MODEL = process.env.EFFECT_AGENT_MODEL || 'gpt-4.1-mini'
 const MAX_DESCRIPTION = 1000
 const MAX_CHOICES = 200
 
@@ -75,8 +76,17 @@ export async function POST(request: Request): Promise<Response> {
     }),
   })
   if (!res.ok) {
-    console.error('OpenAI', res.status, await res.text())
-    return json({ error: `The model call failed (${res.status})` }, 502)
+    const text = await res.text()
+    console.error('OpenAI', res.status, text)
+    // OpenAI's own reason ("model not found", a bad schema, out of quota), which
+    // only the admin sees; it carries no secrets.
+    let reason = ''
+    try {
+      reason = (JSON.parse(text) as { error?: { message?: string } }).error?.message ?? ''
+    } catch {
+      // Not JSON: the status alone will do.
+    }
+    return json({ error: `The model call failed (${res.status}, ${MODEL})${reason ? `: ${reason}` : ''}` }, 502)
   }
   const message = ((await res.json()) as {
     choices?: { message?: { content?: string | null; refusal?: string | null } }[]
