@@ -294,7 +294,7 @@ section('spellbuilding', 'Building a Spell', f'''
 
 MAN_DURATION = [('instantaneous', 1), ('1 round', 1), ('1 minute', 2), ('1 hour', 4)]
 MAN_EFFECTS = {1: 'advantage on attack, +2 to a check, push 10 ft, disarmed, grappled, slowed',
-               2: 'damage resistance, Split-second, +5 to a check, prone, frightened, bleeding',
+               2: 'damage resistance, split-second, +5 to a check, prone, frightened, bleeding',
                3: 'extra action, restrained, blinded',
                4: 'debilitated'}
 MAN_SELF = {1: 'rooted, exposed, off-balance',
@@ -315,9 +315,9 @@ section('maneuvers', 'Maneuvers', f'''
 </ul>
 <h3>Range &middot; fired and thrown</h3>
 <p>A <b>fired or thrown</b> maneuver reaches as far as its weapon (or throw), and pays to reach further. A <b>close</b> maneuver (melee, Unarmed, Grapple, Tackle) has no range: how far it goes is its <b>line</b>, a charge that runs your speed for each action its timing takes. With Tackle, Grapple or Unarmed you <b>move the length of the line</b>, and everyone in it is targeted (1 for None, Reaction or Action, 2 for 2 Actions, 4 for 1 Round or longer).</p>
-<p>A <b>fired</b> (gun) maneuver can also go <b>point-blank</b>, tier −1: the target is within 5 ft and the maneuver has the <b>Split-second</b> effect, and its whole EP cost is <b>halved</b>.</p>
+<p>A <b>fired</b> (gun) maneuver can also go <b>point-blank</b>, tier −1: the target is within 5 ft and the maneuver has the <b>split-second</b> effect, and its whole EP cost is <b>halved</b>.</p>
 {table(['Tier', 'EP', 'Reach'], [
-    ('−1', '×½ total', 'Point-blank (≤ 5 ft): fired only, needs Split-second'),
+    ('−1', '×½ total', 'Point-blank (≤ 5 ft): fired only, needs split-second'),
     ('I', 0, 'Within range'),
     ('II', 4, '&gt;2× max range'),
     ('III', 8, '&gt;3× max range'),
