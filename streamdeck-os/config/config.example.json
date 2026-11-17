@@ -1,0 +1,50 @@
+{
+  "brightness": 70,
+  "idle_dim_seconds": 600,
+  "idle_brightness": 10,
+  "start_page": "home",
+
+  "pages": {
+    "home": [
+      {
+        "key": 0, "label": "Movie Night", "color": "#3a1d6e",
+        "actions": [
+          { "type": "govee_scene", "device": "TV Backlight", "scene": "Movie" },
+          { "type": "govee_brightness", "device": "Floor Lamp", "brightness": 15 },
+          { "type": "spotify_pause" }
+        ]
+      },
+      {
+        "key": 1, "label": "Party", "color": "#b0186e",
+        "actions": [
+          { "type": "govee_scene", "device": "TV Backlight", "scene": "Party" },
+          { "type": "govee_scene", "device": "Floor Lamp", "scene": "Rainbow" },
+          { "type": "spotify_playlist", "playlist": "https://open.spotify.com/playlist/37i9dQZF1DXaXB8fQg7xif", "shuffle": true, "volume": 60 }
+        ]
+      },
+      {
+        "key": 2, "label": "Chill", "color": "#105a6e",
+        "actions": [
+          { "type": "govee_scene", "device": "TV Backlight", "scene": "Sunset" },
+          { "type": "spotify_playlist", "playlist": "spotify:playlist:37i9dQZF1DX4WYpdgoIcn6", "spotify_device": "Kitchen Echo", "volume": 35 }
+        ]
+      },
+      {
+        "key": 3, "label": "Lights Off", "color": "#222222",
+        "actions": [
+          { "type": "govee_power", "device": "TV Backlight", "on": false },
+          { "type": "govee_power", "device": "Floor Lamp", "on": false }
+        ]
+      },
+      { "key": 4, "label": "Music >", "color": "#1db954", "text_color": "#000000",
+        "actions": [ { "type": "page", "page": "music" } ] }
+    ],
+    "music": [
+      { "key": 0, "label": "Pause", "actions": [ { "type": "spotify_pause" } ] },
+      { "key": 1, "label": "Next", "actions": [ { "type": "spotify_next" } ] },
+      { "key": 2, "label": "Vol 30", "actions": [ { "type": "spotify_volume", "volume": 30 } ] },
+      { "key": 3, "label": "Vol 70", "actions": [ { "type": "spotify_volume", "volume": 70 } ] },
+      { "key": 4, "label": "< Back", "actions": [ { "type": "page", "page": "home" } ] }
+    ]
+  }
+}

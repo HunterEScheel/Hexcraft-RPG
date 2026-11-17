@@ -1,0 +1,23 @@
+#!/bin/sh
+LOG=/dev/ttyS1
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mount -t devtmpfs dev /dev
+mkdir -p /dev/pts /tmp /run /var/run /var/log /var/lib/streamdeck
+mount -t tmpfs tmpfs /tmp
+echo "VM: kernel $(uname -r)" > $LOG
+
+# Kernel side of the Stream Deck path: HID core + generic driver + uhid
+# (the virtual MK.2 is created through /dev/uhid).
+for m in hid hid-generic uhid; do insmod /lib/modules/$m.ko || echo "VM: insmod $m failed" > $LOG; done
+
+# Same keymap script as the real OS image.
+/etc/init.d/S01keymap start > $LOG 2>&1
+
+ifconfig lo 127.0.0.1 up
+ifconfig eth0 up
+udhcpc -i eth0 -s /usr/share/udhcpc/default.script -q -n -t 10 > $LOG 2>&1
+
+/usr/bin/mockapi > $LOG 2>&1 &
+/usr/bin/fakedeck > $LOG 2>&1 &
+echo "VM: boot complete, ip $(ifconfig eth0 | sed -n 's/.*inet addr:\([^ ]*\).*/\1/p')" > $LOG

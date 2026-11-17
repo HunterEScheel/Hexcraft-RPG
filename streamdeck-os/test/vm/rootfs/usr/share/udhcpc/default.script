@@ -1,0 +1,9 @@
+#!/bin/sh
+case "$1" in
+bound|renew)
+	ifconfig "$interface" "$ip" ${subnet:+netmask $subnet}
+	[ -n "$router" ] && route add default gw "${router%% *}" dev "$interface"
+	[ -n "$dns" ] && echo "nameserver ${dns%% *}" > /etc/resolv.conf
+	;;
+esac
+exit 0

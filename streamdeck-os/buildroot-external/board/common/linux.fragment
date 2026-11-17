@@ -1,0 +1,9 @@
+# Stream Deck MK.2 is accessed through hidraw.
+CONFIG_HID=y
+CONFIG_HIDRAW=y
+CONFIG_USB_HID=y
+CONFIG_HID_GENERIC=y
+# FAT boot partition mounted at /boot for the editable layout.
+CONFIG_VFAT_FS=y
+CONFIG_NLS_CODEPAGE_437=y
+CONFIG_NLS_ISO8859_1=y

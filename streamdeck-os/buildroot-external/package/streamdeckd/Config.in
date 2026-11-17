@@ -1,0 +1,9 @@
+config BR2_PACKAGE_STREAMDECKD
+	bool "streamdeckd"
+	depends on BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS
+	select BR2_PACKAGE_HOST_GO
+	select BR2_PACKAGE_CA_CERTIFICATES # TLS to Govee/Spotify
+	help
+	  Stream Deck MK.2 daemon: buttons apply Govee lighting scenes
+	  and start Spotify playlists on Spotify Connect devices.
+	  Includes the first-boot installer (streamdeckd console).

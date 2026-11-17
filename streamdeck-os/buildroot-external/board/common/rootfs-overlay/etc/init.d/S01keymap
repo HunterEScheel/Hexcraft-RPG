@@ -1,0 +1,10 @@
+#!/bin/sh
+# Console keyboard layout: Dvorak (US). Compiled from kbd's
+# i386/dvorak/dvorak.map with `loadkeys -b`.
+case "$1" in
+start|restart|"")
+	printf "Loading Dvorak keymap: "
+	if loadkmap < /usr/share/keymaps/dvorak.bmap; then echo OK; else echo FAIL; fi
+	;;
+stop) ;;
+esac

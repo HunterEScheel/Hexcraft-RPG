@@ -1,0 +1,1 @@
+source "$BR2_EXTERNAL_STREAMDECK_OS_PATH/package/streamdeckd/Config.in"
