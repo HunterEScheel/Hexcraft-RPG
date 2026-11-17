@@ -40,7 +40,19 @@ func fakeSys(t *testing.T) {
 	mk(t, filepath.Join(nd, "product"), "802.11ac NIC\n")
 	mk(t, filepath.Join(nd, "manufacturer"), "Realtek\n")
 	mk(t, filepath.Join(nd, "bDeviceClass"), "00\n")
-	os.MkdirAll(filepath.Join(nd, "1-3:1.0"), 0o755)
+	// The user's AC600 dongle after its driver CD was ejected.
+	mk(t, filepath.Join(nd, "1-3:1.0", "modalias"), "usb:v0BDApC811d0200dcEFdsc02dp01icFFiscFFipFFin00\n")
+	mk(t, filepath.Join(nd, "1-3:1.0", "bInterfaceClass"), "ff\n")
+	// TP-Link UB500-style Bluetooth adapter, no driver in the image.
+	bt := filepath.Join(dev, "pci0000:00/0000:00:14.0/usb1/1-4")
+	mk(t, filepath.Join(bt, "idVendor"), "2357\n")
+	mk(t, filepath.Join(bt, "idProduct"), "0604\n")
+	mk(t, filepath.Join(bt, "product"), "TP-Link Bluetooth USB Adapter\n")
+	mk(t, filepath.Join(bt, "bDeviceClass"), "e0\n")
+	mk(t, filepath.Join(bt, "1-4:1.0", "bInterfaceClass"), "e0\n")
+	mk(t, filepath.Join(bt, "1-4:1.0", "modalias"), "usb:v2357p0604d0200dcE0dsc01dp01icE0isc01ip01in00\n")
+	ModulesAlias = filepath.Join(root, "modules.alias")
+	mk(t, ModulesAlias, "alias usb:v0BDApC811d*dc*dsc*dp*icFFiscFFipFFin* rtw88_8821cu\nalias usb:v0BDApA811d*dc*dsc*dp*icFFiscFFipFFin* rtw88_8821au\n")
 	// A hub (ignored)
 	hub := filepath.Join(dev, "pci0000:00/0000:00:14.0/usb1/1-1")
 	mk(t, filepath.Join(hub, "bDeviceClass"), "09\n")
@@ -55,7 +67,7 @@ func fakeSys(t *testing.T) {
 	}
 	os.MkdirAll(filepath.Join(SysNet, "eth0"), 0o755)
 	os.MkdirAll(SysUSB, 0o755)
-	for _, d := range []string{usbDev, usbIf, nd, filepath.Join(nd, "1-3:1.0"), hub, filepath.Join(hub, "1-1:1.0")} {
+	for _, d := range []string{usbDev, usbIf, nd, filepath.Join(nd, "1-3:1.0"), hub, filepath.Join(hub, "1-1:1.0"), bt, filepath.Join(bt, "1-4:1.0")} {
 		os.Symlink(d, filepath.Join(SysUSB, filepath.Base(d)))
 	}
 	os.Symlink(filepath.Join(dev, "pci0000:00/0000:00:14.0/usb1"), filepath.Join(SysUSB, "usb1"))
@@ -78,8 +90,14 @@ func TestAdaptersPreferUSB(t *testing.T) {
 func TestUSBWithoutDriver(t *testing.T) {
 	fakeSys(t)
 	d := USBWithoutDriver()
-	if len(d) != 1 || d[0].ID != "0bda:8813" || !d[0].Wireless || d[0].Name != "Realtek 802.11ac NIC" {
+	if len(d) != 2 {
 		t.Fatalf("got %+v", d)
+	}
+	if d[0].ID != "0bda:8813" || !d[0].Wireless || d[0].Bluetooth || d[0].Name != "Realtek 802.11ac NIC" || d[0].Module != "rtw88_8821cu" {
+		t.Fatalf("dongle: %+v", d[0])
+	}
+	if d[1].ID != "2357:0604" || !d[1].Bluetooth || d[1].Wireless || d[1].Module != "" {
+		t.Fatalf("bluetooth adapter: %+v", d[1])
 	}
 }
 

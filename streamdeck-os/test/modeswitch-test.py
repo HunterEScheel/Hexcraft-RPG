@@ -60,6 +60,21 @@ def main():
         check("initrd.img" in out, "installer USB stick (also QEMU storage, but a disk) left alone and still mounted")
         stick = mon.query("info block stick")
         check("tray open" not in stick, "installer USB stick not ejected")
+
+        # A USB device that is present but whose driver isn't loaded (what the
+        # dongle looks like after it re-appears in Wi-Fi mode): unload the
+        # keyboard driver; netwatch must load it again and rebind.
+        out = sh.run("rmmod usbhid; sleep 0.5; ls /sys/bus/usb/devices/1-1:1.0/driver 2>&1 | head -1")
+        check("No such file" in out, "keyboard driver unloaded (device left without a driver)")
+        out = sh.run("for i in $(seq 1 20); do [ -e /sys/bus/usb/devices/1-1:1.0/driver ] && break; sleep 1; done; "
+                     "echo after=$i; basename $(readlink /sys/bus/usb/devices/1-1:1.0/driver)", timeout=40)
+        check("usbhid" in out, f"netwatch loaded the missing driver and the device got it back ({out.strip().splitlines()[-2:]})")
+
+        # The USB Wi-Fi drivers load on this kernel (dependencies, firmware paths).
+        mods = "rtw88_8821cu rtw88_8821au rtw88_8822bu rtl8xxxu mt7601u mt76x2u mt7921u rt2800usb ath9k_htc rtw89_8852bu"
+        out = sh.run(f"for m in {mods}; do modprobe $m && echo ok:$m || echo FAIL:$m; done", timeout=60)
+        bad = [l for l in out.split() if l.startswith("FAIL:")]
+        check(not bad and out.count("ok:") == len(mods.split()), f"USB Wi-Fi drivers load ({', '.join(bad) or 'all ' + str(len(mods.split()))})")
     finally:
         vm.kill()
         vm.wait()

@@ -18,6 +18,14 @@ mkdir -p "$RUN" /var/run/wpa_supplicant
 coldplug() {
 	find /sys/devices -name modalias -exec cat {} + 2>/dev/null | sort -u | xargs modprobe -a -q 2>/dev/null
 }
+# Modaliases of USB interfaces that have no driver yet. Covers devices that
+# appear after boot-time driver loading, e.g. a dongle that re-appears as a
+# Wi-Fi adapter after its "driver CD" is ejected.
+unbound_usb() {
+	for i in /sys/bus/usb/devices/*:*; do
+		[ -e "$i/driver" ] || cat "$i/modalias" 2>/dev/null
+	done | sort -u
+}
 alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
 dhcp() {
 	alive "$RUN/dhcp.$1.pid" && return
@@ -47,6 +55,14 @@ while true; do
 		coldplug
 		usb=$n
 		settle=4
+	fi
+	# Load drivers for USB devices that have none (retried every ~30 s, or
+	# at once when the set of driverless devices changes).
+	u=$(unbound_usb)
+	tick=$(( ${tick:-0} + 1 ))
+	if [ -n "$u" ] && { [ "$u" != "$tried" ] || [ $((tick % 10)) -eq 0 ]; }; then
+		echo "$u" | xargs modprobe -a -q 2>/dev/null
+		tried=$u
 	fi
 	# Dongles that first appear as a "driver CD" get switched to Wi-Fi mode.
 	# Retried for a few rounds after a USB change: a new device takes a

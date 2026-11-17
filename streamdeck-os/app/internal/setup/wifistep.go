@@ -50,21 +50,62 @@ func (w *Wizard) explainNoAdapter() {
 		}
 		w.trace("wifi-missing-firmware %s", strings.Join(fw, " "))
 	case len(usb) > 0:
-		w.say("These USB devices have no driver in StreamDeck OS:\n")
+		handled := false
 		for _, d := range usb {
-			mark := ""
-			if d.Wireless {
-				mark = "   <- probably your Wi-Fi adapter"
+			if d.Module == "" || d.Bluetooth {
+				continue
 			}
-			w.say("  - USB ID %s  %s%s\n", d.ID, d.Name, mark)
+			// The image has a driver for it: load it now and say what happened.
+			handled = true
+			w.say("Found %s (USB ID %s). Starting its driver %s...\n", nameOr(d.Name, "a USB device"), d.ID, d.Module)
+			bound, msgs := wifi.LoadDriver(d)
+			if bound {
+				w.trace("wifi-driver-loaded %s %s", d.ID, d.Module)
+				w.say("Driver started. Press Enter to continue.\n")
+				continue
+			}
+			w.trace("wifi-driver-failed %s %s", d.ID, d.Module)
+			w.say("The driver %s didn't take the adapter. Kernel messages:\n", d.Module)
+			for _, m := range msgs {
+				w.say("  %s\n", m)
+			}
+			if len(msgs) == 0 {
+				w.say("  (none)\n")
+			}
 		}
-		w.trace("wifi-no-driver %s", usb[0].ID)
+		var others []wifi.USBDevice
+		for _, d := range usb {
+			if d.Module == "" && !d.Bluetooth {
+				others = append(others, d)
+			}
+		}
+		if len(others) > 0 {
+			w.say("These USB devices have no driver in StreamDeck OS:\n")
+			for _, d := range others {
+				mark := ""
+				if d.Wireless {
+					mark = "   <- probably your Wi-Fi adapter"
+				}
+				w.say("  - USB ID %s  %s%s\n", d.ID, d.Name, mark)
+			}
+			w.trace("wifi-no-driver %s", others[0].ID)
+		} else if !handled {
+			w.say("Nothing plugged in looks like a Wi-Fi adapter (Bluetooth adapters don't count).\n")
+			w.trace("wifi-no-adapter")
+		}
 	default:
 		w.say("Nothing plugged in looks like a Wi-Fi adapter. Try another USB port\n")
 		w.say("(a USB 2 port, or one directly on the PC rather than a hub).\n")
 		w.trace("wifi-no-adapter")
 	}
 	w.say("Please send the line(s) above to whoever maintains this OS so support can be added.\n")
+}
+
+func nameOr(s, def string) string {
+	if s == "" {
+		return def
+	}
+	return s
 }
 
 // wifiSetup connects to a Wi-Fi network. ok is false if the user skipped.

@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -78,9 +79,13 @@ func Adapters() []Adapter {
 
 // USBDevice is a USB device for which no driver is loaded.
 type USBDevice struct {
-	ID       string // vendor:product
-	Name     string // manufacturer + product strings
-	Wireless bool   // looks like a Wi-Fi adapter
+	ID        string // vendor:product
+	Name      string // manufacturer + product strings
+	Wireless  bool   // looks like a Wi-Fi adapter
+	Bluetooth bool
+	Modalias  []string
+	// Module is a driver in the image that matches this device ("" if none).
+	Module string
 }
 
 // Known USB Wi-Fi chip vendors (helps tell a Wi-Fi dongle from, say, a webcam).
@@ -121,11 +126,90 @@ func USBWithoutDriver() []USBDevice {
 		ven := readTrim(filepath.Join(dir, "idVendor"))
 		name := strings.TrimSpace(readTrim(filepath.Join(dir, "manufacturer")) + " " + readTrim(filepath.Join(dir, "product")))
 		lname := strings.ToLower(name)
-		wireless := wifiVendors[ven] != "" || strings.Contains(lname, "wlan") || strings.Contains(lname, "wireless") ||
-			strings.Contains(lname, "802.11") || strings.Contains(lname, "wifi") || strings.Contains(lname, "wi-fi")
-		out = append(out, USBDevice{ID: ven + ":" + readTrim(filepath.Join(dir, "idProduct")), Name: name, Wireless: wireless})
+		d := USBDevice{ID: ven + ":" + readTrim(filepath.Join(dir, "idProduct")), Name: name}
+		for _, i := range ifs {
+			if readTrim(filepath.Join(i, "bInterfaceClass")) == "e0" { // wireless controller = Bluetooth
+				d.Bluetooth = true
+			}
+			if ma := readTrim(filepath.Join(i, "modalias")); ma != "" {
+				d.Modalias = append(d.Modalias, ma)
+				if d.Module == "" {
+					d.Module = ModuleFor(ma)
+				}
+			}
+		}
+		d.Bluetooth = d.Bluetooth || strings.Contains(lname, "bluetooth")
+		d.Wireless = !d.Bluetooth && (wifiVendors[ven] != "" || strings.Contains(lname, "wlan") || strings.Contains(lname, "wireless") ||
+			strings.Contains(lname, "802.11") || strings.Contains(lname, "wifi") || strings.Contains(lname, "wi-fi") || d.Module != "")
+		out = append(out, d)
 	}
 	return out
+}
+
+// ModulesAlias is the kernel's alias table (overridable in tests).
+var ModulesAlias = ""
+
+func aliasFile() string {
+	if ModulesAlias != "" {
+		return ModulesAlias
+	}
+	var u syscall.Utsname
+	_ = syscall.Uname(&u)
+	rel := make([]byte, 0, len(u.Release))
+	for _, c := range u.Release {
+		if c == 0 {
+			break
+		}
+		rel = append(rel, byte(c))
+	}
+	return filepath.Join("/lib/modules", string(rel), "modules.alias")
+}
+
+// ModuleFor returns the driver module in the image for a modalias, or "".
+func ModuleFor(modalias string) string {
+	b, err := os.ReadFile(aliasFile())
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		f := strings.Fields(line)
+		if len(f) != 3 || f[0] != "alias" || !strings.HasPrefix(f[1], "usb:") {
+			continue
+		}
+		if ok, _ := filepath.Match(f[1], modalias); ok {
+			return f[2]
+		}
+	}
+	return ""
+}
+
+// LoadDriver tries to load the module for a device and reports whether a
+// driver is bound afterwards, plus kernel messages that mention the module.
+func LoadDriver(d USBDevice) (bound bool, kernelMsgs []string) {
+	args := append([]string{"-a"}, d.Modalias...)
+	_ = exec.Command("modprobe", args...).Run()
+	for i := 0; i < 10; i++ {
+		time.Sleep(500 * time.Millisecond)
+		bound = true
+		for _, u := range USBWithoutDriver() {
+			if u.ID == d.ID {
+				bound = false
+			}
+		}
+		if bound {
+			return true, nil
+		}
+	}
+	short := strings.TrimSuffix(strings.Split(d.Module, "_")[0], "u")
+	for _, line := range strings.Split(Dmesg(), "\n") {
+		if d.Module != "" && (strings.Contains(line, d.Module) || strings.Contains(line, short)) {
+			kernelMsgs = append(kernelMsgs, strings.TrimSpace(line))
+		}
+	}
+	if len(kernelMsgs) > 6 {
+		kernelMsgs = kernelMsgs[len(kernelMsgs)-6:]
+	}
+	return false, kernelMsgs
 }
 
 var fwRx = regexp.MustCompile(`(?:Direct firmware load for (\S+) failed|firmware: failed to load (\S+)|[Ff]irmware file (\S+) not found|failed to (?:request|load) firmware[^\n]*?(\S+\.(?:bin|fw|ucode)))`)
