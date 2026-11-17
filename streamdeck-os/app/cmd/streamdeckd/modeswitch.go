@@ -21,7 +21,8 @@ func runModeswitch() error {
 	}
 	skip := ""
 	if b, err := os.ReadFile("/run/streamdeck-media"); err == nil {
-		skip = filepath.Base(strings.TrimSpace(string(b)))
+		dev, _, _ := strings.Cut(strings.TrimSpace(string(b)), ":")
+		skip = filepath.Base(dev)
 	}
 	doneRaw, _ := os.ReadFile(modeswitchDone)
 	done := string(doneRaw)

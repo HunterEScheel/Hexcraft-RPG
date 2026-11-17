@@ -220,6 +220,10 @@ type Progress func(format string, a ...any)
 // layoutDir is copied to /streamdeck (config.json, icons, govee-devices.txt);
 // stateDir is copied to /streamdeck/state (secrets, Wi-Fi).
 func Install(d Disk, payloadDir, layoutDir, stateDir string, say Progress) error {
+	// Check everything we need BEFORE touching the disk.
+	if err := CheckPayload(payloadDir); err != nil {
+		return err
+	}
 	ss, _ := strconv.ParseInt(readSys("/sys/block/"+d.Name+"/queue/logical_block_size"), 10, 64)
 	if ss == 0 {
 		ss = 512
@@ -326,6 +330,33 @@ func Install(d Disk, payloadDir, layoutDir, stateDir string, say Progress) error
 	}
 	say("Done.")
 	return nil
+}
+
+// PayloadFiles must all be on the live media for an install.
+var PayloadFiles = []string{"vmlinuz", "initrd.img", "BOOTX64.EFI"}
+
+// CheckPayload reports which installer files are missing, if any.
+func CheckPayload(dir string) error {
+	var missing []string
+	for _, f := range PayloadFiles {
+		if st, err := os.Stat(filepath.Join(dir, f)); err != nil || st.Size() == 0 {
+			missing = append(missing, f)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("installer files not found in %s (missing %s)", dir, strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// MediaDisk turns the /run/streamdeck-media entry ("/dev/sdb", "/dev/sdb1" or
+// "/dev/sdb1:streamdeck-os.iso" for an ISO file on the stick) into the disk name.
+func MediaDisk(sysBlock, media string) string {
+	dev, _, _ := strings.Cut(strings.TrimSpace(media), ":")
+	if dev == "" {
+		return ""
+	}
+	return DiskOf(sysBlock, dev)
 }
 
 // KernelArgs for the installed system.

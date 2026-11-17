@@ -81,3 +81,30 @@ func TestLoadOption(t *testing.T) {
 		t.Fatalf("bad end node % x", end)
 	}
 }
+
+func TestInstallRefusesBeforeTouchingDisk(t *testing.T) {
+	empty := t.TempDir()
+	// A disk that doesn't exist: if Install got as far as opening it, the error
+	// would mention /dev/... instead of the missing files.
+	err := Install(Disk{Name: "streamdeck-test-nodisk", SizeBytes: 8 << 30}, empty, empty, empty, func(string, ...any) {})
+	if err == nil || !strings.Contains(err.Error(), "installer files not found") || strings.Contains(err.Error(), "/dev/") {
+		t.Fatalf("got %v", err)
+	}
+	for _, f := range PayloadFiles {
+		os.WriteFile(empty+"/"+f, []byte("x"), 0o644)
+	}
+	if err := CheckPayload(empty); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestMediaDisk(t *testing.T) {
+	sys := t.TempDir()
+	os.MkdirAll(sys+"/sdb/sdb1", 0o755)
+	os.MkdirAll(sys+"/sr0", 0o755)
+	for in, want := range map[string]string{"/dev/sdb\n": "sdb", "/dev/sdb1": "sdb", "/dev/sdb1:streamdeck-os.iso": "sdb", "/dev/sr0": "sr0", "": ""} {
+		if got := MediaDisk(sys, in); got != want {
+			t.Errorf("%q: got %q want %q", in, got, want)
+		}
+	}
+}

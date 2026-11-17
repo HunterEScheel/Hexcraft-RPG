@@ -28,7 +28,7 @@ playlists on another device (a Spotify Connect speaker, PC, TV…).
 
 ## Install
 
-1. Write `streamdeck-os.iso` to a USB stick with [balenaEtcher](https://etcher.balena.io/), Rufus (in "DD image" mode) or `dd`.
+1. Put `streamdeck-os.iso` on a USB stick with any of: [balenaEtcher](https://etcher.balena.io/), Rufus (either mode), `dd`, or [Ventoy](https://www.ventoy.net/) (just copy the `.iso` onto the stick).
 2. Plug in the stick, the keyboard, the Wi-Fi dongle and the Stream Deck, then boot from USB (the boot menu key is often F7, F11 or F12).
 3. The installer asks for, in order:
    1. **Wi-Fi**
@@ -181,6 +181,7 @@ make test       # unit tests (config, MK.2 protocol, Govee/Spotify clients, inst
 make iso-test   # full end-to-end run in QEMU (needs qemu-system-x86, ovmf, mtools, fdisk, netpbm, hostapd)
 make wifi-test  # the same with no network at all, then a virtual USB Wi-Fi dongle
 make modeswitch-test  # a "driver CD" dongle plugged in after boot gets ejected into Wi-Fi mode
+make media-test       # install from sticks made with Rufus "ISO mode" and Ventoy; refuse without touching the disk otherwise
 ```
 
 `iso-test` builds a test ISO, then runs a virtual mini PC: UEFI firmware (OVMF), a USB

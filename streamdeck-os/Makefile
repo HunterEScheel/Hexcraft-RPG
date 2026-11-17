@@ -5,10 +5,11 @@
 #   make iso-test   end-to-end test in QEMU: UEFI USB boot -> install to NVMe -> reboot -> deck
 #   make wifi-test  same, with no Ethernet and a (virtual) USB Wi-Fi dongle plugged in mid-install
 #   make modeswitch-test  a "driver CD" Wi-Fi dongle plugged in after boot is switched to Wi-Fi mode
+#   make media-test       install from Rufus "ISO mode" / Ventoy sticks; never wipe a disk without the files
 
 WORK ?= $(CURDIR)/.iso
 
-.PHONY: iso docker-iso test iso-test wifi-test modeswitch-test clean
+.PHONY: iso docker-iso test iso-test wifi-test modeswitch-test media-test clean
 
 iso:
 	os/build-iso.sh $(WORK)
@@ -31,6 +32,10 @@ wifi-test:
 modeswitch-test:
 	os/build-iso.sh $(WORK) --test
 	test/modeswitch-test.py $(WORK)
+
+media-test:
+	os/build-iso.sh $(WORK) --test
+	test/media-test.py $(WORK)
 
 clean:
 	rm -rf $(WORK)

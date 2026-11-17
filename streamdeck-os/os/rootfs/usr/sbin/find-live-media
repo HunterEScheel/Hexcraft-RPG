@@ -1,0 +1,69 @@
+#!/bin/sh
+# Finds the StreamDeck OS installer files and mounts them at /media/live.
+# Prints the device (or ISO file) used, exits 1 if not found.
+#
+# Handles every common way of making the USB stick:
+#   - ISO written raw (balenaEtcher, Rufus "DD image" mode, dd): an ISO 9660
+#     filesystem on the whole stick
+#   - Rufus "ISO image" mode and similar: the files copied onto a
+#     FAT32 / exFAT / NTFS partition
+#   - Ventoy and similar: streamdeck-os*.iso kept as a file on the stick,
+#     which is loop-mounted
+MNT=/media/live
+PROBE=/run/media-probe
+MARK=streamdeck/boot/initrd.img
+WAIT=${1:-20}
+
+if [ -f "$MNT/$MARK" ]; then cat /run/streamdeck-media 2>/dev/null; exit 0; fi
+mkdir -p "$MNT" "$PROBE"
+modprobe -a -q isofs exfat ntfs3 udf nls_utf8 nls_cp437 nls_iso8859_1 2>/dev/null
+
+# Is the block device on a USB/removable disk? (only those are searched for ISO files)
+removable() {
+	d=${1#/dev/}
+	for b in /sys/block/*; do
+		n=${b##*/}
+		if [ "$n" = "$d" ] || [ -e "$b/$d" ]; then
+			[ "$(cat "$b/removable" 2>/dev/null)" = 1 ] && return 0
+			readlink -f "$b" | grep -q /usb && return 0
+			return 1
+		fi
+	done
+	return 1
+}
+
+found() { echo "$1" > /run/streamdeck-media; echo "$1"; exit 0; }
+
+try_dev() {
+	dev=$1
+	grep -q "^$dev " /proc/mounts && return   # already in use (e.g. our own /boot)
+	for fs in iso9660 vfat exfat ntfs3 udf; do
+		mount -t $fs -o ro "$dev" "$PROBE" 2>/dev/null || continue
+		if [ -f "$PROBE/$MARK" ]; then
+			umount "$PROBE"
+			mount -t $fs -o ro "$dev" "$MNT" && found "$dev"
+		fi
+		if removable "$dev"; then
+			for iso in "$PROBE"/*.iso "$PROBE"/*.ISO "$PROBE"/*/*.iso "$PROBE"/*/*.ISO; do
+				[ -f "$iso" ] || continue
+				if mount -t iso9660 -o ro,loop "$iso" "$MNT" 2>/dev/null; then
+					# keep $PROBE mounted: the ISO file lives there
+					[ -f "$MNT/$MARK" ] && found "$dev:${iso#$PROBE/}"
+					umount "$MNT"
+				fi
+			done
+		fi
+		umount "$PROBE"
+		break
+	done
+}
+
+i=0
+while [ $i -lt "$WAIT" ]; do
+	for dev in /dev/sr[0-9] /dev/sd[a-z] /dev/sd[a-z][0-9]* /dev/mmcblk[0-9] /dev/mmcblk[0-9]p[0-9]* /dev/vd[a-z] /dev/vd[a-z][0-9]*; do
+		[ -b "$dev" ] && try_dev "$dev"
+	done
+	i=$((i + 1))
+	[ $i -lt "$WAIT" ] && { sleep 1; mdev -s; }
+done
+exit 1

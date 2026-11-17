@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -140,6 +141,23 @@ func (w *Wizard) Run(ctx context.Context) error {
 // InstallStep offers to copy the system and settings onto an internal disk.
 func (w *Wizard) InstallStep() error {
 	w.say("\n--- Install to this computer ---\n")
+	if install.CheckPayload(w.PayloadDir) != nil {
+		// Not found at boot (slow USB stick, or an unusual way of writing it):
+		// look again before giving up.
+		w.say("Looking for the installer files on the USB stick...\n")
+		_ = exec.Command("/usr/sbin/find-live-media", "15").Run()
+	}
+	if err := install.CheckPayload(w.PayloadDir); err != nil {
+		w.trace("install-no-media")
+		w.say("Can't find StreamDeck OS's files on the USB stick, so it can't be installed.\n")
+		w.say("Nothing on this computer's disks was changed.\n")
+		w.say("Re-write the stick with balenaEtcher (or Rufus in \"DD Image\" mode) and boot it again.\n")
+		w.say("StreamDeck OS keeps running from the USB stick until then.\n")
+		return nil
+	}
+	if b, err := os.ReadFile("/run/streamdeck-media"); err == nil {
+		w.BootDisk = install.MediaDisk("/sys/block", string(b))
+	}
 	for {
 		disks := install.ListDisks("/sys/block", w.BootDisk)
 		if len(disks) == 0 {

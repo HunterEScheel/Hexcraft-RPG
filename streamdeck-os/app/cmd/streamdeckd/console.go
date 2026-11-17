@@ -37,7 +37,7 @@ func runConsole(cfgPath, secretsPath string, forceSetup bool) error {
 		w.Live = true
 		w.PayloadDir = "/media/live/streamdeck/boot"
 		if dev, err := os.ReadFile("/run/streamdeck-media"); err == nil {
-			w.BootDisk = install.DiskOf("/sys/block", strings.TrimSpace(string(dev)))
+			w.BootDisk = install.MediaDisk("/sys/block", string(dev))
 		}
 		w.Reboot = func() error {
 			syscall.Sync()

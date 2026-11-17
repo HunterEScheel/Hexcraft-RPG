@@ -10,26 +10,12 @@ find_label() {
 	done
 	return 1
 }
-# The ISO filesystem sits on the whole USB stick (sdb) or CD (sr0); its
-# partitions are boot-loader helpers. Find the one that holds our files.
-find_live() {
-	for i in $(seq 1 20); do
-		for dev in /dev/sr[0-9] /dev/sd[a-z] /dev/sd[a-z][0-9] /dev/vd[a-z]; do
-			[ -b "$dev" ] || continue
-			mount -t iso9660 -o ro "$dev" /media/live 2>/dev/null || continue
-			if [ -f /media/live/streamdeck/boot/initrd.img ]; then
-				echo "$dev" > /run/streamdeck-media
-				echo "Live media: $dev"
-				return 0
-			fi
-			umount /media/live
-		done
-		sleep 1; mdev -s
-	done
-	return 1
-}
 if grep -q streamdeck.live /proc/cmdline; then
-	find_live || echo "Live media not found (install will not be possible)"
+	if dev=$(/usr/sbin/find-live-media 20); then
+		echo "Live media: $dev"
+	else
+		echo "Live media not found yet (the installer will look again)"
+	fi
 else
 	if dev=$(find_label STREAMDECK) && mount -t vfat -o rw,noatime,flush "$dev" /boot; then
 		mkdir -p /boot/streamdeck/state
