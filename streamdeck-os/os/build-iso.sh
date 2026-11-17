@@ -53,7 +53,12 @@ mknod -m 600 "$R/dev/console" c 5 1
 mknod -m 666 "$R/dev/null" c 1 3
 
 # Kernel modules: the directories below plus everything they depend on.
-KEEP='^kernel/(drivers/(hid|usb|input|net/(ethernet|wireless|usb|phy|mdio|pcs|mii\.ko)|ata|nvme|scsi|mmc|cdrom|platform/x86/(wmi|intel)|thunderbolt|pinctrl|gpio|i2c)|net/(wireless|mac80211|rfkill|packet)|fs/(isofs|fat|nls)|crypto|lib)'
+# Networking is Wi-Fi only: no wired Ethernet chips and no USB Ethernet
+# adapters (drivers/net/ethernet, drivers/net/usb and their PHY helpers).
+# Storage: NVMe, SATA, eMMC and USB sticks only; server SCSI/FC/iSCSI cards
+# (which would drag in server Ethernet drivers) are left out. SCSI disk/CD
+# support itself is built into the kernel.
+KEEP='^kernel/(drivers/(hid|usb|input|net/wireless|ata|nvme|mmc|cdrom|platform/x86/(wmi|intel)|thunderbolt|pinctrl|gpio|i2c)|net/(wireless|mac80211|rfkill|packet)|fs/(isofs|fat|nls)|crypto|lib)'
 python3 - "$MODS" "$KEEP" > "$WORK/modules.list" <<'PY'
 import re, sys
 mods, keep = sys.argv[1], re.compile(sys.argv[2])
@@ -69,6 +74,11 @@ while todo:
         seen.add(m); todo += deps.get(m, [])
 print("\n".join(sorted(seen)))
 PY
+if grep -qE '^kernel/drivers/net/(ethernet|usb)/' "$WORK/modules.list"; then
+	echo "Ethernet drivers crept in via dependencies:" >&2
+	grep -E '^kernel/drivers/net/(ethernet|usb)/' "$WORK/modules.list" >&2
+	exit 1
+fi
 # Debug/legacy drivers that would grab the keyboard or spam the log.
 sed -i -e '/\/evbug\.ko/d' -e '/\/usbkbd\.ko/d' -e '/\/usbmouse\.ko/d' "$WORK/modules.list"
 while read -r m; do

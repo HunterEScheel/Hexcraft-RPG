@@ -65,7 +65,6 @@ func (w *Wizard) explainNoAdapter() {
 		w.trace("wifi-no-adapter")
 	}
 	w.say("Please send the line(s) above to whoever maintains this OS so support can be added.\n")
-	w.say("Meanwhile, an Ethernet cable works.\n")
 }
 
 // wifiSetup connects to a Wi-Fi network. ok is false if the user skipped.

@@ -246,7 +246,7 @@ def qemu(phase, usb_stick, nic=True, shell=None, extra=()):
     ]
     args += list(extra)
     if nic:
-        args += ["-nic", "user,model=e1000e,"
+        args += ["-nic", "user,model=virtio-net-pci,"
                  f"hostfwd=tcp:127.0.0.1:{PORT_WEB}-:8080,"
                  f"hostfwd=tcp:127.0.0.1:{PORT_API}-:9999,"
                  f"hostfwd=tcp:127.0.0.1:{PORT_DECK}-:7000"]

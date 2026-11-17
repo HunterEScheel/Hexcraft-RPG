@@ -212,35 +212,19 @@ func LocalIPv4() string {
 	return ""
 }
 
-// cablePlugged reports whether any wired port has a link.
-func cablePlugged() bool {
-	ents, _ := os.ReadDir("/sys/class/net")
-	for _, e := range ents {
-		d := filepath.Join("/sys/class/net", e.Name())
-		if e.Name() == "lo" {
-			continue
-		}
-		if _, err := os.Stat(filepath.Join(d, "phy80211")); err == nil {
-			continue
-		}
-		if b, _ := os.ReadFile(filepath.Join(d, "carrier")); strings.TrimSpace(string(b)) == "1" {
-			return true
-		}
-	}
-	return false
-}
-
-// waitForAddress gives DHCP (started by netwatch at boot) time to finish.
+// waitForAddress gives a saved Wi-Fi network (e.g. when the installer is run
+// again) time to connect before asking for one.
 func (w *Wizard) waitForAddress() string {
-	for i := 0; i < 20; i++ {
+	wait := 3
+	if ssid, _ := wifi.Config(); ssid != "" {
+		wait = 20
+	}
+	for i := 0; i < wait; i++ {
 		if ip := LocalIPv4(); ip != "" {
 			if i > 0 {
 				w.say("\n")
 			}
 			return ip
-		}
-		if i >= 5 && !cablePlugged() {
-			break // no cable: don't make Wi-Fi users wait
 		}
 		if i == 0 {
 			w.say("Waiting for the network")
@@ -270,7 +254,7 @@ func (w *Wizard) network(ctx context.Context) (string, error) {
 				return ip, nil
 			}
 		} else {
-			w.say("Network: not connected. Plug in Ethernet, or set up Wi-Fi.\n")
+			w.say("Network: not connected yet. Let's set up Wi-Fi.\n")
 		}
 		for {
 			again, err := w.wifiSetup()
@@ -287,7 +271,7 @@ func (w *Wizard) network(ctx context.Context) (string, error) {
 		if ip := LocalIPv4(); ip != "" {
 			return ip, nil
 		}
-		time.Sleep(2 * time.Second) // e.g. waiting for an Ethernet cable
+		time.Sleep(2 * time.Second)
 	}
 }
 

@@ -50,8 +50,11 @@ def phase1():
         check(True, "live system found and mounted its own USB stick")
         wait_log(r"TEST: modules=\d+ nvme=1 usbhid=1", 30)
         check(True, "NVMe disk and USB keyboard drivers loaded")
+        m = wait_log(r"TEST: netdrivers=(.*)", 60)
+        check("ethernet" not in m.group(1).split() and "usb" not in m.group(1).split(),
+              f"image has no Ethernet drivers (net drivers: {m.group(1).strip()})")
         m = wait_log(r"SETUP: network-ip (\S*)", 120)
-        check(m.group(1).startswith("10.0.2."), f"Ethernet (e1000e) driver loaded and DHCP got an address ({m.group(1)})")
+        check(m.group(1).startswith("10.0.2."), f"VM network (QEMU virtio, built into the kernel) got an address ({m.group(1)})")
 
         wait_log(r"SETUP: prompt wifi-optional", 120)
         mon.screenshot("p1-01-installer")

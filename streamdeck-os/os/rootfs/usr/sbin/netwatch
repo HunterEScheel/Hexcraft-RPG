@@ -1,13 +1,14 @@
 #!/bin/sh
 # Keeps the network up while adapters come and go. Run by init (respawn).
 #
-# USB Wi-Fi/Ethernet dongles show up a few seconds after boot (driver and
+# USB Wi-Fi dongles show up a few seconds after boot (driver and
 # firmware load) or get plugged in later, so instead of a one-shot boot
 # script this checks every few seconds and starts whatever is missing:
 #   - drivers for newly attached USB devices (and switching "driver CD"
 #     Wi-Fi dongles into Wi-Fi mode)
 #   - wpa_supplicant + DHCP on the Wi-Fi adapter (a USB one is preferred)
-#   - DHCP on every wired port
+#   - DHCP on any other network interface (none on real hardware: the image
+#     has no Ethernet drivers; the VM tests use QEMU's built-in virtio NIC)
 [ -f /etc/streamdeck-env ] && . /etc/streamdeck-env
 CONF=/var/lib/streamdeck/wpa_supplicant.conf
 RUN=/var/run/netwatch

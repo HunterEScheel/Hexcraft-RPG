@@ -14,7 +14,7 @@ playlists on another device (a Spotify Connect speaker, PC, TV…).
 
 ## Before you start
 
-- **Mini PC** (x86_64 with UEFI) plus an HDMI screen and a USB keyboard for the installer. Wired Ethernet, built-in Wi-Fi or a USB Wi-Fi dongle (see [Wi-Fi](#wi-fi)).
+- **Mini PC** (x86_64 with UEFI) plus an HDMI screen and a USB keyboard for the installer. Networking is **Wi-Fi only**, built-in or a USB dongle (see [Wi-Fi](#wi-fi)). Wired Ethernet is not supported: the image has no Ethernet drivers.
 - **Secure Boot must be off** in the mini PC's firmware setup (usually Del/F2 at power-on), because the boot loader isn't signed.
 - **The install erases the disk you choose**, Windows included.
 - **Stream Deck MK.2**: USB ID `0fd9:0080`, or `0fd9:00a5` for the scissor-key revision.
@@ -29,9 +29,9 @@ playlists on another device (a Spotify Connect speaker, PC, TV…).
 ## Install
 
 1. Write `streamdeck-os.iso` to a USB stick with [balenaEtcher](https://etcher.balena.io/), Rufus (in "DD image" mode) or `dd`.
-2. Plug in the stick, the keyboard, the network cable and the Stream Deck, then boot from USB (the boot menu key is often F7, F11 or F12).
+2. Plug in the stick, the keyboard, the Wi-Fi dongle and the Stream Deck, then boot from USB (the boot menu key is often F7, F11 or F12).
 3. The installer asks for, in order:
-   1. **Wi-Fi**, if there's no Ethernet.
+   1. **Wi-Fi**
    2. **Govee API key**. It's checked on the spot, and your lights are listed.
    3. **Spotify Client ID and Client Secret**.
    4. **Spotify login**. The screen shows `http://<mini-pc-ip>:8080`; open it on your phone. Tap *Log in with Spotify*, then *Agree*. You land on a `127.0.0.1` page that won't load. That's expected: Spotify only allows `http` redirects to the local machine. Copy that page's address and paste it into the setup page.
@@ -68,7 +68,7 @@ networks can be typed in). When something fails, they say what went wrong:
 
 ![](docs/wifi.png)
 
-- **No Wi-Fi adapter found**: the screen shows the USB ID of any device that has no driver (e.g. `0bda:b812`) and any firmware file that's missing. Send that line to whoever builds your ISO so support can be added. Ethernet works in the meantime.
+- **No Wi-Fi adapter found**: the screen shows the USB ID of any device that has no driver (e.g. `0bda:b812`) and any firmware file that's missing. Send that line to whoever builds your ISO so support can be added.
 - **Wrong password**: check what you typed; remember the keyboard is Dvorak.
 - **Couldn't find the network**: many dongles are 2.4 GHz only, so try your router's 2.4 GHz network name.
 - **Joined but no address**: the router's DHCP didn't answer.
@@ -143,7 +143,7 @@ While a button works, its key shows a yellow border. Green means it worked; red 
 ## Build the ISO yourself
 
 ```sh
-make iso          # on Ubuntu 24.04 → .iso/streamdeck-os.iso (~180 MB, builds in under a minute)
+make iso          # on Ubuntu 24.04 → .iso/streamdeck-os.iso (~160 MB, builds in under a minute)
 make docker-iso   # from any OS with Docker
 ```
 
@@ -152,8 +152,8 @@ The ISO contains:
 - busybox
 - `wpa_supplicant`
 - `streamdeckd` (Go, in `app/`)
-- kernel modules trimmed to USB, keyboard, storage, Ethernet and Wi-Fi drivers
-- Wi-Fi/Ethernet firmware: every file the included network drivers ask for, plus the Wi-Fi regulatory database
+- kernel modules trimmed to USB, keyboard, storage (NVMe, SATA, eMMC, USB sticks) and Wi-Fi drivers; no Ethernet
+- Wi-Fi firmware: every file the included Wi-Fi drivers ask for, plus the Wi-Fi regulatory database
 
 ## Disk layout
 
@@ -171,12 +171,13 @@ streamdeck/state/             secrets.json (API keys, Spotify token), wpa_suppli
 ```sh
 make test       # unit tests (config, MK.2 protocol, Govee/Spotify clients, installer, settings, GPT, UEFI entry)
 make iso-test   # full end-to-end run in QEMU (needs qemu-system-x86, ovmf, mtools, fdisk, netpbm, hostapd)
-make wifi-test  # the same with no Ethernet and a virtual USB Wi-Fi dongle
+make wifi-test  # the same with no network at all, then a virtual USB Wi-Fi dongle
 make modeswitch-test  # a "driver CD" dongle plugged in after boot gets ejected into Wi-Fi mode
 ```
 
 `iso-test` builds a test ISO, then runs a virtual mini PC: UEFI firmware (OVMF), a USB
-stick, a USB keyboard, an NVMe disk and an Intel network card. It also adds a **virtual
+stick, a USB keyboard, an NVMe disk and QEMU's virtio network card (built into the kernel,
+so it works even though the image has no Ethernet drivers). It also adds a **virtual
 Stream Deck MK.2**, created with Linux `uhid`. That device is a real `/dev/hidraw`
 device, so the real driver code runs unchanged. Govee and Spotify are replaced by a mock
 server inside the VM. The test then:
@@ -189,7 +190,7 @@ server inside the VM. The test then:
 6. presses deck keys and checks the exact Govee and Spotify requests
 7. changes the default speaker in the Settings menu and checks that the next press plays there
 
-`wifi-test` runs the same virtual mini PC with no Ethernet. Its Wi-Fi "dongle" and home
+`wifi-test` runs the same virtual mini PC with no network card at all. Its Wi-Fi "dongle" and home
 router are virtual radios made by the kernel's `mac80211_hwsim`; the router runs
 `hostapd` (WPA2) and DHCP. The test:
 
