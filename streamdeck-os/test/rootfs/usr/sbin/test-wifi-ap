@@ -1,0 +1,31 @@
+#!/bin/sh
+# TEST IMAGE ONLY: "plug in a Wi-Fi dongle". mac80211_hwsim creates two
+# virtual radios: wlan0 is the adapter StreamDeck OS uses, wlan1 plays the
+# home router (hostapd, WPA2 "StreamDeckTest" / "correct horse", DHCP).
+modprobe mac80211_hwsim radios=2 || exit 1
+for i in $(seq 1 20); do [ -e /sys/class/net/wlan1 ] && break; sleep 0.2; done
+cat > /tmp/hostapd.conf <<'C'
+interface=wlan1
+driver=nl80211
+ssid=StreamDeckTest
+hw_mode=g
+channel=6
+country_code=US
+wpa=2
+wpa_passphrase=correct horse
+wpa_key_mgmt=WPA-PSK
+rsn_pairwise=CCMP
+C
+hostapd -B -P /tmp/hostapd.pid /tmp/hostapd.conf > /dev/ttyS1 2>&1
+ifconfig wlan1 192.168.77.1 netmask 255.255.255.0 up
+cat > /tmp/udhcpd.conf <<'C'
+start 192.168.77.100
+end 192.168.77.150
+interface wlan1
+lease_file /tmp/udhcpd.leases
+opt router 192.168.77.1
+opt subnet 255.255.255.0
+C
+touch /tmp/udhcpd.leases
+udhcpd /tmp/udhcpd.conf
+echo "TEST: wifi dongle plugged in" > /dev/ttyS1

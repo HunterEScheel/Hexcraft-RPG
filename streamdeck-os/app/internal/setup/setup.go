@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -26,6 +25,7 @@ import (
 	"streamdeckd/internal/govee"
 	"streamdeckd/internal/install"
 	"streamdeckd/internal/spotify"
+	"streamdeckd/internal/wifi"
 )
 
 type Wizard struct {
@@ -39,10 +39,6 @@ type Wizard struct {
 	LayoutDir string
 	// WebAddr serves the phone page used for the Spotify login.
 	WebAddr string
-	// WifiConf is written when the user enters Wi-Fi details; WifiRestart applies it.
-	WifiConf    string
-	WifiRestart []string
-
 	// Live is set when running from the USB stick: the installer then
 	// offers to install onto the internal disk.
 	Live       bool
@@ -60,8 +56,6 @@ func New(in io.Reader, out io.Writer) *Wizard {
 		SecretsPath: config.DefaultSecretsPath,
 		LayoutDir:   "/boot/streamdeck",
 		WebAddr:     ":8080",
-		WifiConf:    "/var/lib/streamdeck/wpa_supplicant.conf",
-		WifiRestart: []string{"/etc/init.d/S35wifi", "restart"},
 	}
 }
 
@@ -218,9 +212,54 @@ func LocalIPv4() string {
 	return ""
 }
 
+// cablePlugged reports whether any wired port has a link.
+func cablePlugged() bool {
+	ents, _ := os.ReadDir("/sys/class/net")
+	for _, e := range ents {
+		d := filepath.Join("/sys/class/net", e.Name())
+		if e.Name() == "lo" {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(d, "phy80211")); err == nil {
+			continue
+		}
+		if b, _ := os.ReadFile(filepath.Join(d, "carrier")); strings.TrimSpace(string(b)) == "1" {
+			return true
+		}
+	}
+	return false
+}
+
+// waitForAddress gives DHCP (started by netwatch at boot) time to finish.
+func (w *Wizard) waitForAddress() string {
+	for i := 0; i < 20; i++ {
+		if ip := LocalIPv4(); ip != "" {
+			if i > 0 {
+				w.say("\n")
+			}
+			return ip
+		}
+		if i >= 5 && !cablePlugged() {
+			break // no cable: don't make Wi-Fi users wait
+		}
+		if i == 0 {
+			w.say("Waiting for the network")
+		}
+		w.say(".")
+		time.Sleep(time.Second)
+	}
+	w.say("\n")
+	return ""
+}
+
 func (w *Wizard) network(ctx context.Context) (string, error) {
+	first := true
 	for {
 		ip := LocalIPv4()
+		if first {
+			ip, first = w.waitForAddress(), false
+		}
+		w.trace("network-ip %s", ip)
 		if ip != "" {
 			w.say("Network: connected (%s)\n", ip)
 			ans, err := w.ask("wifi-optional", "Set up Wi-Fi as well? [y/N]: ")
@@ -233,70 +272,23 @@ func (w *Wizard) network(ctx context.Context) (string, error) {
 		} else {
 			w.say("Network: not connected. Plug in Ethernet, or set up Wi-Fi.\n")
 		}
-		if _, err := w.wifiSetup(); err != nil {
-			return "", err
+		for {
+			again, err := w.wifiSetup()
+			if err != nil {
+				return "", err
+			}
+			if wip := wifi.IfaceIPv4(firstAdapter()); wip != "" {
+				return wip, nil // Wi-Fi connected
+			}
+			if !again {
+				break // skipped
+			}
 		}
-	}
-}
-
-// wifiSetup asks for Wi-Fi details and connects. ok is false if the user
-// just pressed Enter.
-func (w *Wizard) wifiSetup() (ok bool, err error) {
-	ssid, err := w.ask("wifi-ssid", "Wi-Fi name (SSID), or Enter to skip: ")
-	if err != nil || ssid == "" {
-		if ssid == "" {
-			time.Sleep(2 * time.Second)
+		if ip := LocalIPv4(); ip != "" {
+			return ip, nil
 		}
-		return false, err
+		time.Sleep(2 * time.Second) // e.g. waiting for an Ethernet cable
 	}
-	pass, err := w.ask("wifi-pass", "Wi-Fi password: ")
-	if err != nil {
-		return false, err
-	}
-	country, err := w.ask("wifi-country", "Country code for Wi-Fi [US]: ")
-	if err != nil {
-		return false, err
-	}
-	if err := w.writeWifi(ssid, pass, country); err != nil {
-		w.say("Could not save Wi-Fi settings: %v\n", err)
-		return true, nil
-	}
-	w.say("Connecting to %q", ssid)
-	for i := 0; i < 30 && LocalIPv4() == ""; i++ {
-		w.say(".")
-		time.Sleep(time.Second)
-	}
-	w.say("\n")
-	if LocalIPv4() == "" {
-		w.say("Still no connection — check the name and password.\n")
-	} else {
-		w.say("Connected (%s).\n", LocalIPv4())
-	}
-	return true, nil
-}
-
-func (w *Wizard) writeWifi(ssid, pass, country string) error {
-	if country == "" {
-		country = "US"
-	}
-	quote := func(s string) string { return strconv.Quote(s) }
-	conf := "ctrl_interface=/var/run/wpa_supplicant\nupdate_config=1\ncountry=" + strings.ToUpper(country) + "\n\nnetwork={\n\tssid=" + quote(ssid) + "\n"
-	if pass == "" {
-		conf += "\tkey_mgmt=NONE\n"
-	} else {
-		conf += "\tpsk=" + quote(pass) + "\n"
-	}
-	conf += "}\n"
-	if err := os.WriteFile(w.WifiConf, []byte(conf), 0o600); err != nil {
-		return err
-	}
-	if len(w.WifiRestart) > 0 {
-		out, err := exec.Command(w.WifiRestart[0], w.WifiRestart[1:]...).CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("%v: %s", err, out)
-		}
-	}
-	return nil
 }
 
 func (w *Wizard) waitClock() {

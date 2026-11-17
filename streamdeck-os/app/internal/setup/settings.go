@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"streamdeckd/internal/config"
+	"streamdeckd/internal/wifi"
 )
 
 // mask shows just enough of a key to recognise it.
@@ -44,11 +45,7 @@ func (w *Wizard) Settings(ctx context.Context) error {
 			dev = "not set"
 		}
 		w.say("  4) Spotify speaker           %s\n", dev)
-		ip := LocalIPv4()
-		if ip == "" {
-			ip = "not connected"
-		}
-		w.say("  5) Wi-Fi                     %s\n", ip)
+		w.say("  5) Wi-Fi                     %s\n", WifiStatus())
 		if w.Live {
 			w.say("  6) Install to this computer's disk\n")
 		}
@@ -88,7 +85,12 @@ func (w *Wizard) Settings(ctx context.Context) error {
 			err = w.pickDevice(ctx, s)
 			changed = s.Spotify.DefaultDevice != before
 		case "5":
-			_, err = w.wifiSetup()
+			for again := true; again && err == nil; {
+				again, err = w.wifiSetup()
+				if again && err == nil && wifi.IfaceIPv4(firstAdapter()) != "" {
+					again = false
+				}
+			}
 			w.pause()
 		case "6":
 			if w.Live {
@@ -110,6 +112,13 @@ func (w *Wizard) Settings(ctx context.Context) error {
 			w.pause()
 		}
 	}
+}
+
+func firstAdapter() string {
+	if ads := wifi.Adapters(); len(ads) > 0 {
+		return ads[0].Name
+	}
+	return ""
 }
 
 func (w *Wizard) pause() {

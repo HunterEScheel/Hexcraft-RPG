@@ -2,6 +2,8 @@
 ::sysinit:/etc/init.d/rcS
 # HDMI console: installer on first boot, then status + settings menu.
 tty1::respawn:/usr/sbin/streamdeck-console
+# Network: Ethernet, Wi-Fi, USB dongles plugged in at any time.
+::respawn:/usr/sbin/netwatch
 # The Stream Deck daemon.
 ::respawn:/usr/sbin/streamdeckd-service
 # Maintenance shell on Ctrl+Alt+F2 (press Enter to activate).

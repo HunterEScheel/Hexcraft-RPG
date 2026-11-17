@@ -19,16 +19,23 @@ mkdir -p "$WORK/dl"
 need() { command -v "$1" >/dev/null || { echo "missing $1 — apt-get install $2" >&2; exit 1; }; }
 need grub-mkrescue "grub-common grub-efi-amd64-bin grub-pc-bin"
 need xorriso xorriso; need mformat mtools; need depmod kmod; need zstd zstd; need cpio cpio; need go golang
+[ "$TEST" = 0 ] || [ -x /usr/sbin/hostapd ] || { echo "missing hostapd — apt-get install hostapd" >&2; exit 1; }
 [ -x /usr/sbin/wpa_supplicant ] || { echo "missing wpa_supplicant — apt-get install wpasupplicant" >&2; exit 1; }
 [ -f /etc/ssl/certs/ca-certificates.crt ] || { echo "missing CA bundle — apt-get install ca-certificates" >&2; exit 1; }
 
 # ---- 1. download kernel, busybox, firmware ----
-KPKG=$(apt-cache depends linux-image-generic | grep -o 'linux-image-[0-9][^ ]*-generic' | head -1)
+# The HWE kernel: newer USB Wi-Fi drivers (e.g. Realtek RTL8812AU/8821AU/8814AU,
+# RTL8851BU/8852BU) that the 6.8 GA kernel lacks.
+KERNEL_META=${KERNEL_META:-linux-image-generic-hwe-24.04}
+KPKG=$(apt-cache depends "$KERNEL_META" | grep -o 'linux-image-[0-9][^ ]*-generic' | head -1)
 KVER=${KPKG#linux-image-}
-FW_PKGS="linux-firmware-intel-wireless linux-firmware-realtek linux-firmware-mediatek linux-firmware-qualcomm-wireless linux-firmware-broadcom-wireless"
+KPKGS="$KPKG linux-modules-$KVER"
+apt-cache show "linux-modules-extra-$KVER" >/dev/null 2>&1 && KPKGS="$KPKGS linux-modules-extra-$KVER"
+FW_PKGS="linux-firmware-intel-wireless linux-firmware-realtek linux-firmware-mediatek linux-firmware-qualcomm-wireless linux-firmware-broadcom-wireless linux-firmware-misc wireless-regdb"
 X="$WORK/extract-$KVER"
 if [ ! -f "$X/.done" ]; then
-	(cd "$WORK/dl" && apt-get download "$KPKG" "linux-modules-$KVER" "linux-modules-extra-$KVER" busybox-static $FW_PKGS)
+	rm -f "$WORK"/dl/linux-image-* "$WORK"/dl/linux-modules-*
+	(cd "$WORK/dl" && apt-get download $KPKGS busybox-static $FW_PKGS)
 	rm -rf "$X" && mkdir -p "$X"
 	for d in "$WORK"/dl/*.deb; do dpkg-deb -x "$d" "$X"; done
 	depmod -b "$X" "$KVER"
@@ -104,9 +111,32 @@ for f in files:
     # other versions and chips this driver cannot use are dropped
 ' | cpio -pdm --quiet "$R/lib/firmware")
 
-# wpa_supplicant and its libraries from the build host (Ubuntu 24.04).
-cp /usr/sbin/wpa_supplicant "$R/usr/sbin/"
-for lib in $(ldd /usr/sbin/wpa_supplicant | grep -o '/[^ ]*'); do
+# Plus every firmware file a network driver in the image says it needs
+# (modinfo), e.g. rt2870.bin (Ralink/MediaTek USB) or htc_9271.fw (Atheros
+# AR9271 USB). Symlinks bring their targets along.
+(cd "$MODS" && grep -E '^kernel/drivers/(net|usb)/' "$WORK/modules.list" | xargs modinfo -F firmware 2>/dev/null) | sort -u \
+	| python3 -c '
+import glob, os, sys
+fw = sys.argv[1]
+out = set()
+def add(rel):
+    p = os.path.join(fw, rel)
+    if os.path.lexists(p):
+        out.add("./" + rel)
+        if os.path.islink(p):
+            add(os.path.normpath(os.path.join(os.path.dirname(rel), os.readlink(p))))
+for name in sys.stdin.read().split():
+    for cand in glob.glob(os.path.join(fw, name)) + glob.glob(os.path.join(fw, name + ".zst")):
+        add(os.path.relpath(cand, fw))
+print("\n".join(sorted(out)))
+' "$FW" | (cd "$FW" && cpio -pdmu --quiet "$R/lib/firmware")
+# Wi-Fi regulatory database (allowed channels per country).
+cp "$FW/regulatory.db" "$R/lib/firmware/regulatory.db"
+cp "$FW/regulatory.db.p7s" "$R/lib/firmware/regulatory.db.p7s"
+
+# wpa_supplicant/wpa_cli and their libraries from the build host (Ubuntu 24.04).
+cp /usr/sbin/wpa_supplicant /usr/sbin/wpa_cli "$R/usr/sbin/"
+for lib in $(for b in /usr/sbin/wpa_supplicant /usr/sbin/wpa_cli; do ldd "$b"; done | grep -o '/[^ :]*\.so[^ ]*' | sort -u); do
 	mkdir -p "$R$(dirname "$lib")"; cp -L "$lib" "$R$lib"
 done
 cp /etc/ssl/certs/ca-certificates.crt "$R/etc/ssl/certs/"
@@ -128,6 +158,11 @@ if [ "$TEST" = 1 ]; then
 	T="$WORK/testfs"
 	rm -rf "$T" && mkdir -p "$T/usr/bin"
 	cp -a "$ROOT/test/rootfs/." "$T/"
+	# hostapd + libs: the virtual Wi-Fi router for the Wi-Fi test.
+	cp /usr/sbin/hostapd "$T/usr/sbin/"
+	for lib in $(ldd /usr/sbin/hostapd | grep -o '/[^ :]*\.so[^ ]*'); do
+		mkdir -p "$T$(dirname "$lib")"; cp -L "$lib" "$T$lib"
+	done
 	for t in fakedeck mockapi; do
 		CGO_ENABLED=0 GOFLAGS=-mod=vendor go build -trimpath -ldflags "-s -w" -o "$T/usr/bin/$t" "./testtools/$t"
 	done

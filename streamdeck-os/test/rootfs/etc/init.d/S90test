@@ -5,6 +5,18 @@ LOG=/dev/ttyS1
 modprobe uhid
 /usr/bin/mockapi > $LOG 2>&1 &
 /usr/bin/fakedeck > $LOG 2>&1 &
+# Root shell on ttyS0 for the test driver.
+setsid sh -c 'exec /bin/sh -i </dev/ttyS0 >/dev/ttyS0 2>&1' &
+# Wi-Fi test, installed system: the dongle shows up 5 s late, like a real
+# USB adapter loading its firmware. netwatch must still connect.
+if grep -q StreamDeckTest /var/lib/streamdeck/wpa_supplicant.conf 2>/dev/null; then
+	(sleep 5; /usr/sbin/test-wifi-ap
+	 for i in $(seq 1 60); do
+		ip=$(ifconfig wlan0 2>/dev/null | sed -n 's/.*inet addr:\([0-9.]*\).*/\1/p')
+		[ -n "$ip" ] && { echo "TEST: wifi connected ip=$ip after ${i}s" > $LOG; break; }
+		sleep 1
+	 done) &
+fi
 mode=installed; grep -q streamdeck.live /proc/cmdline && mode=live
 {
 	echo "TEST: boot complete mode=$mode ip=$(ifconfig | sed -n 's/.*inet addr:\([0-9.]*\).*Bcast.*/\1/p' | head -1)"

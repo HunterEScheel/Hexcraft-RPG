@@ -78,7 +78,6 @@ func TestWizardFlow(t *testing.T) {
 	w.SecretsPath = dir + "/secrets.json"
 	w.LayoutDir = dir
 	w.WebAddr = "127.0.0.1:0"
-	w.WifiRestart = nil
 	if err := w.Run(context.Background()); err != nil {
 		t.Fatalf("%v\n%s", err, out.String())
 	}

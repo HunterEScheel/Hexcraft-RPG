@@ -1,0 +1,60 @@
+#!/bin/sh
+# Keeps the network up while adapters come and go. Run by init (respawn).
+#
+# USB Wi-Fi/Ethernet dongles show up a few seconds after boot (driver and
+# firmware load) or get plugged in later, so instead of a one-shot boot
+# script this checks every few seconds and starts whatever is missing:
+#   - drivers for newly attached USB devices
+#   - wpa_supplicant + DHCP on the Wi-Fi adapter (a USB one is preferred)
+#   - DHCP on every wired port
+CONF=/var/lib/streamdeck/wpa_supplicant.conf
+RUN=/var/run/netwatch
+SCRIPT=/usr/share/udhcpc/default.script
+mkdir -p "$RUN" /var/run/wpa_supplicant
+
+coldplug() {
+	find /sys/devices -name modalias -exec cat {} + 2>/dev/null | sort -u | xargs modprobe -a -q 2>/dev/null
+}
+alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
+dhcp() {
+	alive "$RUN/dhcp.$1.pid" && return
+	ifconfig "$1" up
+	udhcpc -b -i "$1" -s "$SCRIPT" -p "$RUN/dhcp.$1.pid" -x hostname:streamdeck -t 3 -T 2 -A 3 >/dev/null 2>&1
+}
+# A USB adapter wins: a dongle is usually there because the built-in one
+# doesn't work.
+wifi_iface() {
+	first=""
+	for n in /sys/class/net/*; do
+		[ -e "$n/phy80211" ] || continue
+		i=${n##*/}
+		case "$(readlink -f "$n/device")" in */usb*) echo "$i"; return ;; esac
+		[ -n "$first" ] || first=$i
+	done
+	echo "$first"
+}
+
+[ -s "$CONF" ] || printf 'ctrl_interface=/var/run/wpa_supplicant\nupdate_config=1\np2p_disabled=1\ncountry=US\n' > "$CONF"
+ifconfig lo 127.0.0.1 up
+usb=""
+while true; do
+	n=$(ls /sys/bus/usb/devices 2>/dev/null | wc -l)
+	[ "$n" != "$usb" ] && { coldplug; usb=$n; }
+
+	w=$(wifi_iface)
+	echo "$w" > "$RUN/wifi"
+	if [ -n "$w" ]; then
+		if ! alive "$RUN/wpa.$w.pid"; then
+			logger -t netwatch "starting Wi-Fi on $w ($(basename "$(readlink -f "/sys/class/net/$w/device/driver")"))"
+			ifconfig "$w" up
+			wpa_supplicant -B -i "$w" -c "$CONF" -P "$RUN/wpa.$w.pid" -f /var/log/wpa_supplicant.log
+		fi
+		dhcp "$w"
+	fi
+	for p in /sys/class/net/*; do
+		i=${p##*/}
+		[ "$i" = lo ] || [ -e "$p/phy80211" ] && continue
+		dhcp "$i"
+	done
+	sleep 3
+done

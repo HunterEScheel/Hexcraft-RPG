@@ -32,9 +32,6 @@ func runConsole(cfgPath, secretsPath string, forceSetup bool) error {
 			w.Trace = f
 		}
 	}
-	if v := os.Getenv("STREAMDECKD_WIFI_RESTART"); v != "" {
-		w.WifiRestart = strings.Fields(v)
-	}
 	live := isLive()
 	if live {
 		w.Live = true
@@ -117,6 +114,7 @@ func printStatus(cfgPath, secretsPath string, live bool) {
 		fmt.Println("Running from the USB stick (not installed).")
 	}
 	fmt.Printf("Network:     %s\n", ip)
+	fmt.Printf("Wi-Fi:       %s\n", setup.WifiStatus())
 	fmt.Printf("Stream Deck: %s\n", dk)
 
 	s, _ := config.LoadSecrets(secretsPath)

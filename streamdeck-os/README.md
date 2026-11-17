@@ -14,7 +14,7 @@ playlists on another device (a Spotify Connect speaker, PC, TV…).
 
 ## Before you start
 
-- **Mini PC** (x86_64 with UEFI) plus an HDMI screen and a USB keyboard for the installer. Wired Ethernet or Wi-Fi.
+- **Mini PC** (x86_64 with UEFI) plus an HDMI screen and a USB keyboard for the installer. Wired Ethernet, built-in Wi-Fi or a USB Wi-Fi dongle (see [Wi-Fi](#wi-fi)).
 - **Secure Boot must be off** in the mini PC's firmware setup (usually Del/F2 at power-on), because the boot loader isn't signed.
 - **The install erases the disk you choose**, Windows included.
 - **Stream Deck MK.2**: USB ID `0fd9:0080`, or `0fd9:00a5` for the scissor-key revision.
@@ -41,6 +41,32 @@ playlists on another device (a Spotify Connect speaker, PC, TV…).
 
 The ISO also works without installing (just press Enter at the disk question), but its
 settings are lost when the PC restarts.
+
+## Wi-Fi
+
+Built-in Wi-Fi and most USB Wi-Fi dongles work. The image uses Linux 7.0 (Ubuntu's HWE
+kernel) with firmware for these chip families:
+
+| Maker | Common dongle chips |
+|---|---|
+| Realtek | RTL8188/8192 EU/FU, RTL8723BU/DU, RTL8811/8821CU, RTL8812/8821AU, RTL8814AU, RTL8812/8822BU, RTL8851BU, RTL8852AU/BU/CU |
+| MediaTek / Ralink | MT7601U, MT7610U/MT7612U, MT7921AU, MT7925U, RT2870/RT3070/RT5370/RT5572 |
+| Qualcomm Atheros | AR9271 / AR7010 (e.g. TP-Link TL-WN722N v1), AR9170 |
+| Intel / Broadcom | built-in cards (AX200/201/210/211, BE200, 9560 …), Broadcom USB |
+
+You can plug the dongle in at any time, including after boot. The system notices it
+within a few seconds and connects. If it has more than one Wi-Fi adapter, it uses the
+USB one.
+
+The installer and **Settings → Wi-Fi** list nearby networks to pick from (hidden
+networks can be typed in). When something fails, they say what went wrong:
+
+![](docs/wifi.png)
+
+- **No Wi-Fi adapter found**: the screen shows the USB ID of any device that has no driver (e.g. `0bda:b812`) and any firmware file that's missing. Send that line to whoever builds your ISO so support can be added. Ethernet works in the meantime.
+- **Wrong password**: check what you typed; remember the keyboard is Dvorak.
+- **Couldn't find the network**: many dongles are 2.4 GHz only, so try your router's 2.4 GHz network name.
+- **Joined but no address**: the router's DHCP didn't answer.
 
 ## Afterwards: status screen and Settings
 
@@ -112,17 +138,17 @@ While a button works, its key shows a yellow border. Green means it worked; red 
 ## Build the ISO yourself
 
 ```sh
-make iso          # on Ubuntu 24.04 → .iso/streamdeck-os.iso (~155 MB, builds in under a minute)
+make iso          # on Ubuntu 24.04 → .iso/streamdeck-os.iso (~180 MB, builds in under a minute)
 make docker-iso   # from any OS with Docker
 ```
 
 The ISO contains:
-- the Ubuntu 24.04 generic kernel
+- the Ubuntu 24.04 HWE kernel (Linux 7.0)
 - busybox
 - `wpa_supplicant`
 - `streamdeckd` (Go, in `app/`)
 - kernel modules trimmed to USB, keyboard, storage, Ethernet and Wi-Fi drivers
-- Wi-Fi/Ethernet firmware for Intel, Realtek, MediaTek, Qualcomm and Broadcom chips
+- Wi-Fi/Ethernet firmware: every file the included network drivers ask for, plus the Wi-Fi regulatory database
 
 ## Disk layout
 
@@ -139,7 +165,8 @@ streamdeck/state/             secrets.json (API keys, Spotify token), wpa_suppli
 
 ```sh
 make test       # unit tests (config, MK.2 protocol, Govee/Spotify clients, installer, settings, GPT, UEFI entry)
-make iso-test   # full end-to-end run in QEMU (needs qemu-system-x86, ovmf, mtools, fdisk, netpbm)
+make iso-test   # full end-to-end run in QEMU (needs qemu-system-x86, ovmf, mtools, fdisk, netpbm, hostapd)
+make wifi-test  # the same with no Ethernet and a virtual USB Wi-Fi dongle
 ```
 
 `iso-test` builds a test ISO, then runs a virtual mini PC: UEFI firmware (OVMF), a USB
@@ -155,6 +182,17 @@ server inside the VM. The test then:
 5. reboots from NVMe with the USB stick removed
 6. presses deck keys and checks the exact Govee and Spotify requests
 7. changes the default speaker in the Settings menu and checks that the next press plays there
+
+`wifi-test` runs the same virtual mini PC with no Ethernet. Its Wi-Fi "dongle" and home
+router are virtual radios made by the kernel's `mac80211_hwsim`; the router runs
+`hostapd` (WPA2) and DHCP. The test:
+
+1. checks that the installer explains there's no Wi-Fi adapter
+2. plugs the dongle in mid-install
+3. picks the network from the scan list
+4. checks that a wrong password is reported as a wrong password
+5. connects with the right password and installs
+6. reboots with the dongle showing up 5 s late, and checks that it reconnects on its own and the deck works
 
 ## Limits
 
