@@ -10,6 +10,7 @@
 //	streamdeckd spotify-auth   one-time login to get a Spotify refresh token
 //	streamdeckd press          run one button's actions without a deck
 //	streamdeckd timesync       set the clock from NTP
+//	streamdeckd modeswitch     switch driver-CD Wi-Fi dongles into Wi-Fi mode
 package main
 
 import (
@@ -99,6 +100,8 @@ func main() {
 		wait := fs.Duration("wait", 10*time.Minute, "keep retrying this long")
 		fs.Parse(args)
 		err = runTimesync(*server, *wait)
+	case "modeswitch":
+		err = runModeswitch()
 	case "version":
 		fmt.Println(version)
 	case "help", "-h", "--help":

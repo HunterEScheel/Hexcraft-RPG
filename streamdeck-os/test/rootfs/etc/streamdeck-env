@@ -5,3 +5,4 @@ export STREAMDECKD_SPOTIFY_TOKEN_URL=http://127.0.0.1:9999/spotify/token
 export STREAMDECKD_SPOTIFY_AUTH_URL=http://127.0.0.1:9999/spotify/authorize
 export STREAMDECKD_TRACE=/dev/ttyS1
 export STREAMDECKD_LOG=/dev/ttyS1
+export STREAMDECKD_MODESWITCH_EXTRA=46f4:0001  # QEMU usb-storage, only when it is a CD-ROM

@@ -45,19 +45,26 @@ class Shell:
         self.s.settimeout(1)
 
     def run(self, cmd, timeout=60):
+        """Run cmd in the VM's shell and return its output."""
         marker = f"__done_{time.time_ns()}__"
+        try:  # discard anything left over
+            while self.s.recv(65536):
+                pass
+        except socket.timeout:
+            pass
         self.s.sendall(f"{cmd}; echo {marker}\n".encode())
-        buf, end = b"", time.time() + timeout
+        rx = re.compile(rf"^{marker}\r?$", re.M)
+        buf, end = "", time.time() + timeout
         while time.time() < end:
             try:
-                buf += self.s.recv(65536)
+                buf += self.s.recv(65536).decode(errors="replace")
             except socket.timeout:
                 pass
-            # the marker appears once echoed in the command, once as output
-            if buf.decode(errors="replace").count(marker) >= 2 or (buf.decode(errors="replace").rstrip().endswith(marker)):
-                break
-        out = buf.decode(errors="replace")
-        return out[:out.rfind(marker)]
+            m = rx.search(buf)
+            if m:
+                return buf[:m.start()].replace("\r", "")
+        return buf.replace("\r", "")
+
 
 GOVEE_KEY = "tEsT-gOvEe-42xq"          # must match testtools/mockapi
 CLIENT_ID, CLIENT_SECRET = "mockclientid", "mocksecret"
@@ -147,6 +154,19 @@ class Monitor:
         time.sleep(0.04)
         self.drain()
 
+    def query(self, c):
+        """Run a monitor command and return its output."""
+        self.drain()
+        self.s.sendall((c + "\n").encode())
+        time.sleep(0.5)
+        out = b""
+        try:
+            while True:
+                out += self.s.recv(65536)
+        except socket.timeout:
+            pass
+        return out.decode(errors="replace")
+
     def type(self, text, layout=DVORAK, enter=True):
         for ch in text:
             key, shift = layout[ch]
@@ -201,7 +221,7 @@ def save_deck(name):
     print(f"     deck image {path}")
 
 
-def qemu(phase, usb_stick, nic=True, shell=None):
+def qemu(phase, usb_stick, nic=True, shell=None, extra=()):
     """Start the virtual mini PC. nic=False: no Ethernet at all.
     shell: path of a unix socket connected to ttyS0 (the test image's root shell)."""
     global LOG
@@ -224,6 +244,7 @@ def qemu(phase, usb_stick, nic=True, shell=None):
         "-serial", f"file:{LOG}",
         "-no-reboot",
     ]
+    args += list(extra)
     if nic:
         args += ["-nic", "user,model=e1000e,"
                  f"hostfwd=tcp:127.0.0.1:{PORT_WEB}-:8080,"

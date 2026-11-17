@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"streamdeckd/internal/modeswitch"
 	"streamdeckd/internal/wifi"
 )
 
@@ -32,6 +33,13 @@ func (w *Wizard) findAdapter() *wifi.Adapter {
 // explainNoAdapter tells the user why no Wi-Fi adapter shows up.
 func (w *Wizard) explainNoAdapter() {
 	w.say("\nNo Wi-Fi adapter found.\n")
+	if cd := modeswitch.Candidates(nil, ""); len(cd) > 0 {
+		// netwatch ejects these automatically; if we still see one, it failed.
+		w.say("Your adapter (USB ID %s) is stuck in its \"driver CD\" mode and didn't switch\n", cd[0].ID)
+		w.say("to Wi-Fi mode. Unplug it, plug it back in, and press Enter.\n")
+		w.trace("wifi-cd-mode %s", cd[0].ID)
+		return
+	}
 	fw := wifi.MissingFirmware(wifi.Dmesg())
 	usb := wifi.USBWithoutDriver()
 	switch {

@@ -4,9 +4,11 @@
 # USB Wi-Fi/Ethernet dongles show up a few seconds after boot (driver and
 # firmware load) or get plugged in later, so instead of a one-shot boot
 # script this checks every few seconds and starts whatever is missing:
-#   - drivers for newly attached USB devices
+#   - drivers for newly attached USB devices (and switching "driver CD"
+#     Wi-Fi dongles into Wi-Fi mode)
 #   - wpa_supplicant + DHCP on the Wi-Fi adapter (a USB one is preferred)
 #   - DHCP on every wired port
+[ -f /etc/streamdeck-env ] && . /etc/streamdeck-env
 CONF=/var/lib/streamdeck/wpa_supplicant.conf
 RUN=/var/run/netwatch
 SCRIPT=/usr/share/udhcpc/default.script
@@ -37,9 +39,21 @@ wifi_iface() {
 [ -s "$CONF" ] || printf 'ctrl_interface=/var/run/wpa_supplicant\nupdate_config=1\np2p_disabled=1\ncountry=US\n' > "$CONF"
 ifconfig lo 127.0.0.1 up
 usb=""
+settle=0
 while true; do
 	n=$(ls /sys/bus/usb/devices 2>/dev/null | wc -l)
-	[ "$n" != "$usb" ] && { coldplug; usb=$n; }
+	if [ "$n" != "$usb" ]; then
+		coldplug
+		usb=$n
+		settle=4
+	fi
+	# Dongles that first appear as a "driver CD" get switched to Wi-Fi mode.
+	# Retried for a few rounds after a USB change: a new device takes a
+	# moment to be fully set up. Each plug-in is only ever switched once.
+	if [ "$settle" -gt 0 ] 2>/dev/null; then
+		/usr/bin/streamdeckd modeswitch 2>&1 | logger -t modeswitch
+		settle=$((settle - 1))
+	fi
 
 	w=$(wifi_iface)
 	echo "$w" > "$RUN/wifi"

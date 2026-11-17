@@ -54,6 +54,11 @@ kernel) with firmware for these chip families:
 | Qualcomm Atheros | AR9271 / AR7010 (e.g. TP-Link TL-WN722N v1), AR9170 |
 | Intel / Broadcom | built-in cards (AX200/201/210/211, BE200, 9560 …), Broadcom USB |
 
+Many cheap dongles, including generic "AC600 Mini" Realtek sticks (RTL8811CU), first
+show up as a virtual CD-ROM holding Windows drivers (USB ID `0bda:1a2b`). Windows
+ejects that CD automatically, and StreamDeck OS now does the same (like Linux's
+`usb_modeswitch`). The dongle then re-appears as a Wi-Fi adapter a few seconds later.
+
 You can plug the dongle in at any time, including after boot. The system notices it
 within a few seconds and connects. If it has more than one Wi-Fi adapter, it uses the
 USB one.
@@ -167,6 +172,7 @@ streamdeck/state/             secrets.json (API keys, Spotify token), wpa_suppli
 make test       # unit tests (config, MK.2 protocol, Govee/Spotify clients, installer, settings, GPT, UEFI entry)
 make iso-test   # full end-to-end run in QEMU (needs qemu-system-x86, ovmf, mtools, fdisk, netpbm, hostapd)
 make wifi-test  # the same with no Ethernet and a virtual USB Wi-Fi dongle
+make modeswitch-test  # a "driver CD" dongle plugged in after boot gets ejected into Wi-Fi mode
 ```
 
 `iso-test` builds a test ISO, then runs a virtual mini PC: UEFI firmware (OVMF), a USB

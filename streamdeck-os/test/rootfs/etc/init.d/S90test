@@ -6,7 +6,7 @@ modprobe uhid
 /usr/bin/mockapi > $LOG 2>&1 &
 /usr/bin/fakedeck > $LOG 2>&1 &
 # Root shell on ttyS0 for the test driver.
-setsid sh -c 'exec /bin/sh -i </dev/ttyS0 >/dev/ttyS0 2>&1' &
+setsid sh -c 'stty -echo </dev/ttyS0; exec /bin/sh </dev/ttyS0 >/dev/ttyS0 2>&1' &
 # Wi-Fi test, installed system: the dongle shows up 5 s late, like a real
 # USB adapter loading its firmware. netwatch must still connect.
 if grep -q StreamDeckTest /var/lib/streamdeck/wpa_supplicant.conf 2>/dev/null; then
