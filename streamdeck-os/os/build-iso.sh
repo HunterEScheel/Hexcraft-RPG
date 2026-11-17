@@ -18,7 +18,7 @@ mkdir -p "$WORK/dl"
 
 need() { command -v "$1" >/dev/null || { echo "missing $1 — apt-get install $2" >&2; exit 1; }; }
 need grub-mkrescue "grub-common grub-efi-amd64-bin grub-pc-bin"
-need xorriso xorriso; need mformat mtools; need depmod kmod; need zstd zstd; need cpio cpio; need go golang
+need xorriso xorriso; need mformat mtools; need depmod kmod; need zstd zstd; need cpio cpio; need go golang; need git git; need make make; need patch patch; need nm binutils
 [ "$TEST" = 0 ] || [ -x /usr/sbin/hostapd ] || { echo "missing hostapd — apt-get install hostapd" >&2; exit 1; }
 [ -x /usr/sbin/wpa_supplicant ] || { echo "missing wpa_supplicant — apt-get install wpasupplicant" >&2; exit 1; }
 [ -f /etc/ssl/certs/ca-certificates.crt ] || { echo "missing CA bundle — apt-get install ca-certificates" >&2; exit 1; }
@@ -86,6 +86,47 @@ while read -r m; do
 	mkdir -p "$(dirname "$dst")"
 	zstd -qdc "$MODS/$m" > "$dst"
 done < "$WORK/modules.list"
+# ---- kernel driver patches (os/kernel-patches) ----
+# rtw88-8821c-rfe7.patch: generic "AC600" RTL8811CU dongles (0bda:c811) report
+# RFE type 7, which the in-kernel rtw88_8821c driver rejects ("rfe 7 isn't
+# supported"). Only that module is rebuilt, from the upstream source of this
+# kernel version with Ubuntu's headers and the same gcc as the kernel.
+patch_rtw8821c() {
+	local tag base cc hdr src b ko
+	base=${KVER%%-*}                       # 7.0.0
+	tag=v${base%.0}                        # v7.0 (v7.0.N for point releases)
+	cc=$(sed -n 's/^CONFIG_CC_VERSION_TEXT="\([^ ]*\).*/\1/p' "$X/boot/config-$KVER")   # x86_64-linux-gnu-gcc-13
+	command -v "$cc" >/dev/null || { echo "missing $cc (the kernel's compiler) — apt-get install $cc" >&2; exit 1; }
+	hdr="$WORK/headers-$KVER"
+	if [ ! -d "$hdr/usr/src/linux-headers-$KVER" ]; then
+		mkdir -p "$hdr/dl"
+		(cd "$hdr/dl" && apt-get download "linux-headers-$KVER" \
+			$(apt-cache depends "linux-headers-$KVER" | sed -n 's/^ *Depends: \(linux-.*headers.*\)/\1/p'))
+		for d in "$hdr"/dl/*.deb; do dpkg-deb -x "$d" "$hdr"; done
+	fi
+	src="$WORK/linux-src-$tag"
+	if [ ! -d "$src/drivers/net/wireless/realtek/rtw88" ]; then
+		rm -rf "$src"
+		git clone -q --depth 1 --filter=blob:none --sparse --branch "$tag" https://github.com/torvalds/linux.git "$src"
+		git -C "$src" sparse-checkout set drivers/net/wireless/realtek/rtw88
+	fi
+	b="$WORK/build-rtw88"
+	rm -rf "$b" && cp -r "$src/drivers/net/wireless/realtek/rtw88" "$b"
+	patch -s -d "$b" -p6 < "$HERE/kernel-patches/rtw88-8821c-rfe7.patch"
+	rm -f "$b/Makefile"
+	printf 'obj-m := rtw88_8821c.o\nrtw88_8821c-y := rtw8821c.o rtw8821c_table.o\n' > "$b/Kbuild"
+	make -s -C "$hdr/usr/src/linux-headers-$KVER" M="$b" CC="$cc" modules 2>&1 | grep -v -e pahole -e 'BTF generation' -e 'built with' -e 'You are using' || true
+	# Sanity check: the RFE table must have grown from 7 to 8 entries.
+	zstd -qdcf "$MODS/kernel/drivers/net/wireless/realtek/rtw88/rtw88_8821c.ko.zst" > "$b/shipped.ko"
+	old=$(nm -S "$b/shipped.ko" | awk '/rtw8821c_rfe_defs/{print $2}')
+	new=$(nm -S "$b/rtw88_8821c.ko" | awk '/rtw8821c_rfe_defs/{print $2}')
+	[ $((0x$new * 7)) -eq $((0x$old * 8)) ] || { echo "rtw88_8821c patch check failed ($old -> $new)" >&2; exit 1; }
+	ko="$R/lib/modules/$KVER/kernel/drivers/net/wireless/realtek/rtw88/rtw88_8821c.ko"
+	cp "$b/rtw88_8821c.ko" "$ko"
+	echo "patched rtw88_8821c: RFE 7 support"
+}
+patch_rtw8821c
+
 cp "$MODS"/modules.{builtin,builtin.modinfo,order} "$R/lib/modules/$KVER/"
 depmod -b "$R" "$KVER"
 

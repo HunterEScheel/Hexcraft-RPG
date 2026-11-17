@@ -1,0 +1,15 @@
+diff --git a/drivers/net/wireless/realtek/rtw88/rtw8821c.c b/drivers/net/wireless/realtek/rtw88/rtw8821c.c
+index 2078b06..4134cd9 100644
+--- a/drivers/net/wireless/realtek/rtw88/rtw8821c.c
++++ b/drivers/net/wireless/realtek/rtw88/rtw8821c.c
+@@ -1943,6 +1943,10 @@ static const struct rtw_rfe_def rtw8821c_rfe_defs[] = {
+ 	[2] = RTW_DEF_RFE_EXT(8821c, 0, 0, 0, 2),
+ 	[4] = RTW_DEF_RFE_EXT(8821c, 0, 0, 0, 2),
+ 	[6] = RTW_DEF_RFE(8821c, 0, 0, 0),
++	/* RFE 7 (2-Ant, DPDT, BTG) is handled like RFE 2 elsewhere in this
++	 * driver (rfe_btg, coex). Seen on generic AC600 RTL8811CU dongles.
++	 */
++	[7] = RTW_DEF_RFE_EXT(8821c, 0, 0, 0, 2),
+ };
+ 
+ static const struct rtw_reg_domain coex_info_hw_regs_8821c[] = {

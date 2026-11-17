@@ -75,6 +75,13 @@ def main():
         out = sh.run(f"for m in {mods}; do modprobe $m && echo ok:$m || echo FAIL:$m; done", timeout=60)
         bad = [l for l in out.split() if l.startswith("FAIL:")]
         check(not bad and out.count("ok:") == len(mods.split()), f"USB Wi-Fi drivers load ({', '.join(bad) or 'all ' + str(len(mods.split()))})")
+
+        # rtw88_8821c is rebuilt with the RFE 7 patch (os/kernel-patches): it must
+        # load against Ubuntu's stock rtw88_core without symbol/version errors.
+        out = sh.run("grep -c . /sys/module/rtw88_8821c/sections/.text >/dev/null && echo loaded; "
+                     "dmesg | grep -iE 'disagrees about version|Unknown symbol|rtw88' | tail -5")
+        check("loaded" in out and "disagrees" not in out and "Unknown symbol" not in out,
+              "patched rtw88_8821c (RFE 7) loads cleanly against the stock driver core")
     finally:
         vm.kill()
         vm.wait()

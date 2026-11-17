@@ -59,6 +59,14 @@ show up as a virtual CD-ROM holding Windows drivers (USB ID `0bda:1a2b`). Window
 ejects that CD automatically, and StreamDeck OS now does the same (like Linux's
 `usb_modeswitch`). The dongle then re-appears as a Wi-Fi adapter a few seconds later.
 
+Some of those AC600 sticks (USB ID `0bda:c811`) use an antenna layout ("RFE type 7")
+that the stock Linux driver rejects with `rfe 7 isn't supported`. The image rebuilds
+that one driver (`rtw88_8821c`) with a one-line patch, `os/kernel-patches/rtw88-8821c-rfe7.patch`,
+that treats it like the already-supported type 2, as the
+[siamsamix/rtw88](https://github.com/siamsamix/rtw88) fork does (tested there on the same
+`0bda:c811` hardware). The build checks the patched driver against Ubuntu's own build
+of the same source.
+
 You can plug the dongle in at any time, including after boot. The system notices it
 within a few seconds and connects. If it has more than one Wi-Fi adapter, it uses the
 USB one.
