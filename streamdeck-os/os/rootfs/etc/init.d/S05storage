@@ -1,0 +1,43 @@
+#!/bin/sh
+# Live USB: mount the installer media at /media/live.
+# Installed: mount the STREAMDECK EFI partition at /boot and keep settings
+# (secrets, Wi-Fi) in /boot/streamdeck/state.
+[ "$1" = stop ] && { sync; umount /boot 2>/dev/null; exit 0; }
+find_label() {
+	for i in $(seq 1 20); do
+		dev=$(findfs "LABEL=$1" 2>/dev/null) && { echo "$dev"; return 0; }
+		sleep 1; mdev -s
+	done
+	return 1
+}
+# The ISO filesystem sits on the whole USB stick (sdb) or CD (sr0); its
+# partitions are boot-loader helpers. Find the one that holds our files.
+find_live() {
+	for i in $(seq 1 20); do
+		for dev in /dev/sr[0-9] /dev/sd[a-z] /dev/sd[a-z][0-9] /dev/vd[a-z]; do
+			[ -b "$dev" ] || continue
+			mount -t iso9660 -o ro "$dev" /media/live 2>/dev/null || continue
+			if [ -f /media/live/streamdeck/boot/initrd.img ]; then
+				echo "$dev" > /run/streamdeck-media
+				echo "Live media: $dev"
+				return 0
+			fi
+			umount /media/live
+		done
+		sleep 1; mdev -s
+	done
+	return 1
+}
+if grep -q streamdeck.live /proc/cmdline; then
+	find_live || echo "Live media not found (install will not be possible)"
+else
+	if dev=$(find_label STREAMDECK) && mount -t vfat -o rw,noatime,flush "$dev" /boot; then
+		mkdir -p /boot/streamdeck/state
+		rm -rf /var/lib/streamdeck
+		ln -s /boot/streamdeck/state /var/lib/streamdeck
+		echo "System disk: $dev"
+	else
+		echo "STREAMDECK partition not found; settings will not be saved"
+	fi
+fi
+exit 0

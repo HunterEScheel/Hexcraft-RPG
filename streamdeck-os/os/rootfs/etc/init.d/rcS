@@ -1,0 +1,14 @@
+#!/bin/sh
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mount -t devtmpfs dev /dev 2>/dev/null
+mkdir -p /dev/pts /run /tmp /var/log /var/run /var/lib/streamdeck /media/live /boot
+mount -t devpts devpts /dev/pts
+mount -t tmpfs tmpfs /run
+mount -t tmpfs tmpfs /tmp
+[ -d /sys/firmware/efi/efivars ] && mount -t efivarfs efivarfs /sys/firmware/efi/efivars
+hostname streamdeck
+for s in /etc/init.d/S??*; do
+	[ -x "$s" ] && "$s" start
+done

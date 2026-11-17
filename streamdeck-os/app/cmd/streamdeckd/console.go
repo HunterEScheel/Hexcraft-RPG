@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"streamdeckd/internal/config"
 	"streamdeckd/internal/deck"
+	"streamdeckd/internal/install"
 	"streamdeckd/internal/setup"
 )
 
@@ -31,6 +34,18 @@ func runConsole(cfgPath, secretsPath string, forceSetup bool) error {
 	}
 	if v := os.Getenv("STREAMDECKD_WIFI_RESTART"); v != "" {
 		w.WifiRestart = strings.Fields(v)
+	}
+	live := isLive()
+	if live {
+		w.Live = true
+		w.PayloadDir = "/media/live/streamdeck/boot"
+		if dev, err := os.ReadFile("/run/streamdeck-media"); err == nil {
+			w.BootDisk = install.DiskOf("/sys/block", strings.TrimSpace(string(dev)))
+		}
+		w.Reboot = func() error {
+			syscall.Sync()
+			return exec.Command("reboot").Run()
+		}
 	}
 	ctx := context.Background()
 
@@ -56,21 +71,37 @@ func runConsole(cfgPath, secretsPath string, forceSetup bool) error {
 
 	lines := w.Lines()
 	for {
-		printStatus(cfgPath, secretsPath)
+		printStatus(cfgPath, secretsPath, live)
 		select {
 		case line, ok := <-lines:
 			if !ok {
 				return nil
 			}
-			if strings.EqualFold(line, "setup") {
+			switch strings.ToLower(line) {
+			case "1", "settings":
+				if err := w.Settings(ctx); err != nil {
+					fmt.Printf("settings: %v\n", err)
+				}
+			case "2", "setup":
 				runSetup()
+			case "3", "install":
+				if live {
+					if err := w.InstallStep(); err != nil {
+						fmt.Printf("install: %v\n", err)
+					}
+				}
 			}
 		case <-time.After(15 * time.Second):
 		}
 	}
 }
 
-func printStatus(cfgPath, secretsPath string) {
+func isLive() bool {
+	b, _ := os.ReadFile("/proc/cmdline")
+	return strings.Contains(string(b), "streamdeck.live")
+}
+
+func printStatus(cfgPath, secretsPath string, live bool) {
 	fmt.Print("\033[H\033[2J")
 	fmt.Println("StreamDeck OS")
 	fmt.Println("=============")
@@ -81,6 +112,9 @@ func printStatus(cfgPath, secretsPath string) {
 	dk := deck.Present()
 	if dk == "" {
 		dk = "not connected (plug in a Stream Deck MK.2)"
+	}
+	if live {
+		fmt.Println("Running from the USB stick (not installed).")
 	}
 	fmt.Printf("Network:     %s\n", ip)
 	fmt.Printf("Stream Deck: %s\n", dk)
@@ -107,5 +141,10 @@ func printStatus(cfgPath, secretsPath string) {
 		fmt.Printf("Layout:      %s OK\n", cfgPath)
 	}
 	fmt.Printf("\n%s\n", time.Now().Format("Mon Jan 2 15:04"))
-	fmt.Print("\nType setup and press Enter to run the installer again.\n> ")
+	fmt.Print("\n  1) Settings (change Govee/Spotify keys, speaker, Wi-Fi)\n")
+	fmt.Print("  2) Run the full installer again\n")
+	if live {
+		fmt.Print("  3) Install to this computer's disk\n")
+	}
+	fmt.Print("\nChoose and press Enter: ")
 }

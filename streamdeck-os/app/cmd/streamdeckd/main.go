@@ -9,6 +9,7 @@
 //	streamdeckd spotify-devices list Spotify Connect devices
 //	streamdeckd spotify-auth   one-time login to get a Spotify refresh token
 //	streamdeckd press          run one button's actions without a deck
+//	streamdeckd timesync       set the clock from NTP
 package main
 
 import (
@@ -18,6 +19,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"streamdeckd/internal/config"
 )
@@ -91,6 +93,12 @@ func main() {
 		key := fs.Int("key", -1, "key number")
 		fs.Parse(args)
 		err = runPress(context.Background(), *cfg, *sec, *page, *key)
+	case "timesync":
+		fs := flag.NewFlagSet("timesync", flag.ExitOnError)
+		server := fs.String("server", "pool.ntp.org", "NTP server")
+		wait := fs.Duration("wait", 10*time.Minute, "keep retrying this long")
+		fs.Parse(args)
+		err = runTimesync(*server, *wait)
 	case "version":
 		fmt.Println(version)
 	case "help", "-h", "--help":

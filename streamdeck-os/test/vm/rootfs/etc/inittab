@@ -1,7 +1,0 @@
-# VM test inittab. Mirrors the appliance: installer/status on tty1 and the
-# daemon under respawn. ttyS0 = debug shell, ttyS1 = log sink for the host.
-::sysinit:/etc/init.d/rcS
-tty1::respawn:/usr/bin/vm-run console
-::respawn:/usr/bin/vm-run daemon
-ttyS0::respawn:/bin/sh
-::shutdown:/bin/umount -a -r

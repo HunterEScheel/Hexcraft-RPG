@@ -1,0 +1,14 @@
+#!/bin/sh
+# TEST IMAGE ONLY: virtual Stream Deck MK.2 (uhid) + mock Govee/Spotify.
+[ "$1" = stop ] && exit 0
+LOG=/dev/ttyS1
+modprobe uhid
+/usr/bin/mockapi > $LOG 2>&1 &
+/usr/bin/fakedeck > $LOG 2>&1 &
+mode=installed; grep -q streamdeck.live /proc/cmdline && mode=live
+{
+	echo "TEST: boot complete mode=$mode ip=$(ifconfig | sed -n 's/.*inet addr:\([0-9.]*\).*Bcast.*/\1/p' | head -1)"
+	echo "TEST: storage=$(cat /run/streamdeck-media 2>/dev/null) boot=$(grep ' /boot ' /proc/mounts | cut -d' ' -f1)"
+	echo "TEST: modules=$(lsmod | wc -l) nvme=$(ls /sys/block | grep -c nvme) usbhid=$(lsmod | grep -c '^usbhid')"
+	ls -la /var/lib/streamdeck/ 2>&1 | sed 's/^/TEST: state /'
+} > $LOG

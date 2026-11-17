@@ -1,0 +1,9 @@
+#!/bin/sh
+# Run by init (respawn). Logs: grep streamdeckd /var/log/messages
+[ -f /etc/streamdeck-env ] && . /etc/streamdeck-env
+if [ -n "$STREAMDECKD_LOG" ]; then
+	/usr/bin/streamdeckd run >>"$STREAMDECKD_LOG" 2>&1
+else
+	/usr/bin/streamdeckd run 2>&1 | logger -t streamdeckd
+fi
+sleep 2

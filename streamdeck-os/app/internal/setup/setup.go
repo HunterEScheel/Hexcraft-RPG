@@ -24,6 +24,7 @@ import (
 
 	"streamdeckd/internal/config"
 	"streamdeckd/internal/govee"
+	"streamdeckd/internal/install"
 	"streamdeckd/internal/spotify"
 )
 
@@ -42,6 +43,13 @@ type Wizard struct {
 	WifiConf    string
 	WifiRestart []string
 
+	// Live is set when running from the USB stick: the installer then
+	// offers to install onto the internal disk.
+	Live       bool
+	PayloadDir string // kernel/initramfs/boot loader on the live media
+	BootDisk   string // disk the live system booted from (never offered)
+	Reboot     func() error
+
 	lines chan string
 }
 
@@ -52,7 +60,7 @@ func New(in io.Reader, out io.Writer) *Wizard {
 		SecretsPath: config.DefaultSecretsPath,
 		LayoutDir:   "/boot/streamdeck",
 		WebAddr:     ":8080",
-		WifiConf:    "/etc/wpa_supplicant.conf",
+		WifiConf:    "/var/lib/streamdeck/wpa_supplicant.conf",
 		WifiRestart: []string{"/etc/init.d/S35wifi", "restart"},
 	}
 }
@@ -128,9 +136,67 @@ func (w *Wizard) Run(ctx context.Context) error {
 		return fmt.Errorf("saving settings: %w", err)
 	}
 	w.trace("saved")
-	w.say("\nAll set! Settings saved. Your Stream Deck is ready.\n")
-	w.say("Edit the button layout in streamdeck/config.json on the SD card's boot partition.\n\n")
+	if w.Live {
+		return w.InstallStep()
+	}
+	w.say("\nAll set! Settings saved. Your Stream Deck is ready.\n\n")
 	return nil
+}
+
+// InstallStep offers to copy the system and settings onto an internal disk.
+func (w *Wizard) InstallStep() error {
+	w.say("\n--- Install to this computer ---\n")
+	for {
+		disks := install.ListDisks("/sys/block", w.BootDisk)
+		if len(disks) == 0 {
+			w.say("No disk found to install to. StreamDeck OS keeps running from the USB stick.\n")
+			return nil
+		}
+		for i, d := range disks {
+			w.say("  %d) %s\n", i+1, d)
+		}
+		ans, err := w.ask("install-disk", "Disk to install to (Enter = don't install, keep running from USB): ")
+		if err != nil {
+			return err
+		}
+		if ans == "" {
+			w.say("Not installing. Settings are kept until this computer restarts.\n")
+			return nil
+		}
+		n, err := strconv.Atoi(ans)
+		if err != nil || n < 1 || n > len(disks) {
+			w.say("Pick 1-%d.\n", len(disks))
+			continue
+		}
+		d := disks[n-1]
+		w.say("\nEVERYTHING on %s will be erased (Windows included).\n", d)
+		ok, err := w.ask("install-confirm", "Type ERASE to continue, or Enter to go back: ")
+		if err != nil {
+			return err
+		}
+		if ok != "ERASE" {
+			w.say("Cancelled.\n")
+			continue
+		}
+		err = install.Install(d, w.PayloadDir, w.LayoutDir, filepath.Dir(w.SecretsPath), func(f string, a ...any) {
+			w.say("  "+f+"\n", a...)
+		})
+		if err != nil {
+			w.trace("install-error %v", err)
+			w.say("Install failed: %v\n", err)
+			continue
+		}
+		w.trace("installed %s", d.Name)
+		w.say("\nInstalled! Remove the USB stick, then press Enter to restart.\n")
+		w.say("(If it boots the USB again, pick the internal disk in the boot menu, often F7/F11/F12.)\n")
+		if _, err := w.ask("reboot", ""); err != nil {
+			return err
+		}
+		if w.Reboot != nil {
+			return w.Reboot()
+		}
+		return nil
+	}
 }
 
 // ---- network ----
@@ -167,36 +233,46 @@ func (w *Wizard) network(ctx context.Context) (string, error) {
 		} else {
 			w.say("Network: not connected. Plug in Ethernet, or set up Wi-Fi.\n")
 		}
-		ssid, err := w.ask("wifi-ssid", "Wi-Fi name (SSID), or Enter to re-check Ethernet: ")
-		if err != nil {
+		if _, err := w.wifiSetup(); err != nil {
 			return "", err
-		}
-		if ssid == "" {
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		pass, err := w.ask("wifi-pass", "Wi-Fi password: ")
-		if err != nil {
-			return "", err
-		}
-		country, err := w.ask("wifi-country", "Country code for Wi-Fi [US]: ")
-		if err != nil {
-			return "", err
-		}
-		if err := w.writeWifi(ssid, pass, country); err != nil {
-			w.say("Could not save Wi-Fi settings: %v\n", err)
-			continue
-		}
-		w.say("Connecting to %q", ssid)
-		for i := 0; i < 30 && LocalIPv4() == ""; i++ {
-			w.say(".")
-			time.Sleep(time.Second)
-		}
-		w.say("\n")
-		if LocalIPv4() == "" {
-			w.say("Still no connection — check the name and password.\n")
 		}
 	}
+}
+
+// wifiSetup asks for Wi-Fi details and connects. ok is false if the user
+// just pressed Enter.
+func (w *Wizard) wifiSetup() (ok bool, err error) {
+	ssid, err := w.ask("wifi-ssid", "Wi-Fi name (SSID), or Enter to skip: ")
+	if err != nil || ssid == "" {
+		if ssid == "" {
+			time.Sleep(2 * time.Second)
+		}
+		return false, err
+	}
+	pass, err := w.ask("wifi-pass", "Wi-Fi password: ")
+	if err != nil {
+		return false, err
+	}
+	country, err := w.ask("wifi-country", "Country code for Wi-Fi [US]: ")
+	if err != nil {
+		return false, err
+	}
+	if err := w.writeWifi(ssid, pass, country); err != nil {
+		w.say("Could not save Wi-Fi settings: %v\n", err)
+		return true, nil
+	}
+	w.say("Connecting to %q", ssid)
+	for i := 0; i < 30 && LocalIPv4() == ""; i++ {
+		w.say(".")
+		time.Sleep(time.Second)
+	}
+	w.say("\n")
+	if LocalIPv4() == "" {
+		w.say("Still no connection — check the name and password.\n")
+	} else {
+		w.say("Connected (%s).\n", LocalIPv4())
+	}
+	return true, nil
 }
 
 func (w *Wizard) writeWifi(ssid, pass, country string) error {
@@ -337,7 +413,12 @@ func (w *Wizard) spotifyStep(ctx context.Context, s *config.Secrets, ip string) 
 	if err != nil {
 		return err
 	}
+	return w.spotifyLogin(ctx, s, id, secret, ip)
+}
 
+// spotifyLogin runs the browser login for the given app keys, then asks for
+// the default speaker.
+func (w *Wizard) spotifyLogin(ctx context.Context, s *config.Secrets, id, secret, ip string) error {
 	for {
 		code, err := w.spotifyCode(ctx, id, ip)
 		if err != nil {
@@ -402,7 +483,12 @@ func (w *Wizard) spotifyCode(ctx context.Context, clientID, ip string) (string, 
 	}
 	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	go srv.Serve(ln)
-	defer srv.Close()
+	defer func() {
+		// Graceful: let the phone receive its "Got it" page before closing.
+		sctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(sctx)
+	}()
 
 	port := w.WebAddr[strings.LastIndex(w.WebAddr, ":")+1:]
 	w.say("\nOn your phone or computer (same network), open:\n\n")

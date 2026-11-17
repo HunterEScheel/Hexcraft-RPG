@@ -1,0 +1,27 @@
+#!/bin/sh
+# Wi-Fi, configured by the installer / settings menu.
+CONF=/var/lib/streamdeck/wpa_supplicant.conf
+iface() {
+	for n in /sys/class/net/*; do [ -d "$n/wireless" ] && { basename "$n"; return; }; done
+}
+start() {
+	[ -f "$CONF" ] || return 0
+	IFACE=$(iface)
+	[ -n "$IFACE" ] || { echo "Wi-Fi configured but no Wi-Fi adapter found"; return 0; }
+	mkdir -p /var/run/wpa_supplicant
+	ifconfig "$IFACE" up
+	wpa_supplicant -B -i "$IFACE" -c "$CONF" -P /var/run/wpa_supplicant.pid
+	udhcpc -b -i "$IFACE" -s /usr/share/udhcpc/default.script -p /var/run/udhcpc.wifi.pid -x hostname:streamdeck -t 5 -T 2 >/dev/null 2>&1
+}
+stop() {
+	for p in /var/run/udhcpc.wifi.pid /var/run/wpa_supplicant.pid; do
+		[ -f "$p" ] && kill "$(cat "$p")" 2>/dev/null; rm -f "$p"
+	done
+	sleep 1
+}
+case "$1" in
+start|"") start ;;
+stop) stop ;;
+restart) stop; start ;;
+esac
+exit 0

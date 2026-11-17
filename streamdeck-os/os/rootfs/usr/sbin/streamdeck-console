@@ -1,0 +1,3 @@
+#!/bin/sh
+[ -f /etc/streamdeck-env ] && . /etc/streamdeck-env
+exec /usr/bin/streamdeckd console

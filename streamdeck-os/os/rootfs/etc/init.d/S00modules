@@ -1,0 +1,13 @@
+#!/bin/sh
+# Load drivers: a fixed set for keyboard/USB/disks, then whatever the
+# hardware asks for (network cards, Wi-Fi). New USB devices load via mdev.
+[ "$1" = stop ] && exit 0
+echo /sbin/mdev > /proc/sys/kernel/hotplug
+modprobe -a -q $(cat /etc/modules-boot)
+coldplug() {
+	find /sys/devices -name modalias -exec cat {} + 2>/dev/null | sort -u | xargs modprobe -a -q 2>/dev/null
+}
+coldplug
+sleep 2   # let USB enumerate
+coldplug
+mdev -s

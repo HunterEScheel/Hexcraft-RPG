@@ -1,0 +1,11 @@
+#!/bin/sh
+# Wired network: DHCP on every Ethernet port.
+[ "$1" = stop ] && exit 0
+ifconfig lo 127.0.0.1 up
+for n in /sys/class/net/*; do
+	i=$(basename "$n")
+	[ "$i" = lo ] || [ -d "$n/wireless" ] && continue
+	ifconfig "$i" up
+	udhcpc -b -i "$i" -s /usr/share/udhcpc/default.script -p "/var/run/udhcpc.$i.pid" -x hostname:streamdeck -t 3 -T 2 >/dev/null 2>&1
+done
+exit 0

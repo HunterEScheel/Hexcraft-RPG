@@ -1,67 +1,69 @@
 # StreamDeck OS
 
-A tiny Linux appliance OS (Buildroot) for a Raspberry Pi with one job: you press a
-key on an **Elgato Stream Deck MK.2**, and it applies **Govee** lighting scenes and
-starts **Spotify** playlists on another device (a Spotify Connect speaker, PC, TV…).
+A tiny Linux OS for an x86 **mini PC** with one job: you press a key on an **Elgato
+Stream Deck MK.2**, and it applies **Govee** lighting scenes and starts **Spotify**
+playlists on another device (a Spotify Connect speaker, PC, TV…).
 
-- Boots straight into the app. No desktop, no login prompt.
-- A **first-boot installer** on the HDMI screen asks for the Wi-Fi, the Govee API key
-  and the Spotify developer app credentials, then logs you in to Spotify.
-- The console keyboard layout is **Dvorak** (US).
-- The button layout is a JSON file on the SD card's boot partition, so you can edit it
-  from any computer.
+- Ships as an **installer ISO**: write it to a USB stick, boot the mini PC from it, answer the questions, and it installs itself to the internal disk.
+- The installer and the **Settings** menu run on the HDMI screen with a **Dvorak** keyboard layout. They ask for the Govee API key, the Spotify Client ID and Secret, the Spotify login, the default speaker and Wi-Fi.
+- The system boots in about 20 s and runs entirely from RAM. Settings are kept on the disk.
 
-| Installer (Spotify step) | Status screen after install | Deck (virtual MK.2 in the VM test) |
-|---|---|---|
-| ![](docs/03-installer-spotify.png) | ![](docs/05-status-screen.png) | ![](docs/06-deck-home.png) |
+| Installer: Spotify step | Installer: install to disk | Settings menu | Deck |
+|---|---|---|---|
+| ![](docs/installer-spotify.png) | ![](docs/installer-disk.png) | ![](docs/settings.png) | ![](docs/deck.png) |
 
-## What you need
+## Before you start
 
-- Raspberry Pi 4 (default), 5 or 3B/3B+, a microSD card (≥ 512 MB), an HDMI screen and a USB keyboard for the installer
-- Stream Deck MK.2 (USB IDs `0fd9:0080`, and `0fd9:00a5` for the scissor-key revision)
-- **Govee API key**: Govee Home app → Profile → ⚙ Settings → *Apply for API Key* (it arrives by email)
-- **Spotify Premium** (playback control in the Web API is Premium-only), plus a Spotify developer app:
+- **Mini PC** (x86_64 with UEFI) plus an HDMI screen and a USB keyboard for the installer. Wired Ethernet or Wi-Fi.
+- **Secure Boot must be off** in the mini PC's firmware setup (usually Del/F2 at power-on), because the boot loader isn't signed.
+- **The install erases the disk you choose**, Windows included.
+- **Stream Deck MK.2**: USB ID `0fd9:0080`, or `0fd9:00a5` for the scissor-key revision.
+- **Govee API key**: Govee Home app → Profile → ⚙ Settings → *Apply for API Key* (it arrives by email).
+- **Spotify Premium**: the Web API only controls playback for Premium accounts.
+- **A Spotify developer app** (this is where the Client ID and Secret come from):
   1. Go to <https://developer.spotify.com/dashboard> → *Create app*
   2. Tick **Web API**
   3. Add the Redirect URI **exactly**: `http://127.0.0.1:8888/callback`
-  4. Copy the **Client ID** and **Client Secret** (you type them into the installer)
+  4. Copy the **Client ID** and **Client Secret**
 
-## Why Spotify needs the developer key *and* a login
+## Install
 
-The Client ID and Client Secret identify your app. Spotify only allows a logged-in
-user to start or pause playback and to pick the speaker, so the installer also does a
-one-time login:
+1. Write `streamdeck-os.iso` to a USB stick with [balenaEtcher](https://etcher.balena.io/), Rufus (in "DD image" mode) or `dd`.
+2. Plug in the stick, the keyboard, the network cable and the Stream Deck, then boot from USB (the boot menu key is often F7, F11 or F12).
+3. The installer asks for, in order:
+   1. **Wi-Fi**, if there's no Ethernet.
+   2. **Govee API key**. It's checked on the spot, and your lights are listed.
+   3. **Spotify Client ID and Client Secret**.
+   4. **Spotify login**. The screen shows `http://<mini-pc-ip>:8080`; open it on your phone. Tap *Log in with Spotify*, then *Agree*. You land on a `127.0.0.1` page that won't load. That's expected: Spotify only allows `http` redirects to the local machine. Copy that page's address and paste it into the setup page.
+   5. **Default speaker**. Spotify must be open on that speaker (or have played recently) to appear in the list.
+   6. **Disk to install to**, confirmed by typing `ERASE`.
+4. Remove the stick and restart. The installer has already added a "StreamDeck OS" UEFI boot entry and put it first.
 
-1. You type the Client ID and Client Secret on the console.
-2. The screen shows `http://<pi-ip>:8080`. Open it on your phone.
-3. Tap **Log in with Spotify**, then **Agree**.
-4. You land on a `127.0.0.1` page that won't load. That's expected: Spotify only
-   allows `http` redirects to loopback addresses.
-5. Copy that page's address and paste it into the box on the setup page.
-6. The device swaps it for a long-lived refresh token, which it renews by itself.
-   You won't need to log in again.
-7. Pick the default speaker from the list. Spotify must be open on that speaker
-   (or have played recently) to show up.
+The ISO also works without installing (just press Enter at the disk question), but its
+settings are lost when the PC restarts.
 
-## Build and flash
+## Afterwards: status screen and Settings
 
-On Linux (Debian/Ubuntu) with Buildroot's [usual host packages](https://buildroot.org/downloads/manual/manual.html#requirement-mandatory):
+The HDMI screen shows the status: network, deck, Govee, Spotify and layout.
 
-```sh
-make rpi4            # or rpi5 / rpi3; the first build takes about an hour
-# write output/rpi4/images/sdcard.img to the SD card, e.g.:
-sudo dd if=output/rpi4/images/sdcard.img of=/dev/sdX bs=4M conv=fsync
-```
-
-Boot the Pi with the screen, the keyboard and the Stream Deck attached, and follow the
-installer. To run it again later, type `setup` and press Enter on the status screen.
+- **1** opens **Settings**, where you can change any single item:
+  - the Govee API key
+  - the Spotify Client ID/Secret (this triggers a new login)
+  - the Spotify login on its own
+  - the default speaker
+  - Wi-Fi
+  
+  Each change is checked against the service before it's saved. The deck uses it within a few seconds; no restart is needed.
+- **2** reruns the whole installer.
+- **Ctrl+Alt+F2** opens a maintenance shell.
 
 ## Button layout
 
-Edit `streamdeck/config.json` on the SD card's boot partition (it's FAT, so any PC can
-read it). The daemon notices changes within a few seconds. The installer also writes
-`streamdeck/govee-devices.txt` there, listing the exact device names and scene names
-for your account.
+The layout file is `streamdeck/config.json` on the mini PC's `STREAMDECK` partition.
+To edit it, open the maintenance shell on the mini PC and run `vi /boot/streamdeck/config.json`.
+The deck picks up changes within a few seconds. The installer also saves
+`/boot/streamdeck/govee-devices.txt`, which lists the exact names of your Govee devices
+and their scenes.
 
 The MK.2 keys are numbered 0–14, left to right, top to bottom:
 
@@ -77,7 +79,7 @@ The MK.2 keys are numbered 0–14, left to right, top to bottom:
   "idle_dim_seconds": 600,
   "pages": {
     "home": [
-      { "key": 1, "label": "Party", "color": "#b0186e", "icon": "icons/party.png",
+      { "key": 1, "label": "Party", "color": "#b0186e",
         "actions": [
           { "type": "govee_scene", "device": "TV Backlight", "scene": "Party" },
           { "type": "spotify_playlist",
@@ -91,14 +93,9 @@ The MK.2 keys are numbered 0–14, left to right, top to bottom:
 }
 ```
 
-A button's actions run in order. If Govee fails, the Spotify actions still run.
-While a button works, its key shows a yellow border. Green means it worked; red with
-"ERROR" means something failed, and the details are in `/var/log/messages`.
-
 | action `type` | fields |
 |---|---|
-| `govee_scene` | `device`, `scene` (a dynamic scene name as shown in the Govee app) |
-| `govee_diy_scene` | `device`, `scene` (one of your DIY scenes) |
+| `govee_scene` / `govee_diy_scene` | `device`, `scene` |
 | `govee_power` | `device`, `on` (`true`/`false`) |
 | `govee_brightness` | `device`, `brightness` (1–100) |
 | `govee_color` | `device`, `color` (`#rrggbb`) |
@@ -108,53 +105,60 @@ While a button works, its key shows a yellow border. Green means it worked; red 
 | `page` | `page` |
 | `delay` | `ms` |
 
-`spotify_device` falls back to the default speaker picked in the installer. Button
-fields are `key`, `label`, `color`, `text_color` and `icon` (a PNG/JPEG path relative
-to config.json).
+A button's actions run in order. If Govee fails, the Spotify actions still run.
+While a button works, its key shows a yellow border. Green means it worked; red with
+"ERROR" means something failed, and the details are in `/var/log/messages`.
 
-## How it fits together
-
-```
-app/                      Go, one static binary: streamdeckd
-  cmd/streamdeckd         run (daemon) | console (tty1 installer + status) | setup | check | press …
-  internal/deck           Stream Deck MK.2 driver over raw /dev/hidraw (no libusb/hidapi)
-  internal/govee          Govee Developer API (openapi.api.govee.com/router/api/v1)
-  internal/spotify        Spotify Web API (refresh-token auth, Connect device control)
-  internal/setup          first-boot installer + phone page for the Spotify login
-  internal/render         key images (Go font, icons, press feedback)
-  testtools/              virtual MK.2 (uhid) + mock Govee/Spotify used by the VM test
-buildroot-external/       BR2_EXTERNAL tree: package, defconfigs, rootfs overlay, boot scripts
-config/                   example button layout
-test/vm/                  QEMU end-to-end test
-```
-
-Boot sequence: load the Dvorak keymap → mount `/boot` → Ethernet DHCP → Wi-Fi (if set
-up) → chrony (the Pi has no clock battery, and TLS needs the right time). Then init
-starts `streamdeckd console` on tty1 and `streamdeckd run` under respawn. The secrets
-live in `/var/lib/streamdeck/secrets.json` (mode 0600) on the root filesystem, not on
-the FAT partition.
-
-## Testing
+## Build the ISO yourself
 
 ```sh
-make test       # unit tests: config, MK.2 protocol, Govee/Spotify clients, installer flow
-make vm-test    # full end-to-end run in QEMU
+make iso          # on Ubuntu 24.04 → .iso/streamdeck-os.iso (~155 MB, builds in under a minute)
+make docker-iso   # from any OS with Docker
 ```
 
-The VM test boots an Ubuntu kernel with busybox and the **real** `streamdeckd` binary,
-keymap script and keymap data. It also creates a **virtual Stream Deck MK.2** through
-Linux `uhid`, which shows up as a genuine `/dev/hidraw` device with ID `0fd9:0080`, so
-the real driver code runs unchanged. Then it:
+The ISO contains:
+- the Ubuntu 24.04 generic kernel
+- busybox
+- `wpa_supplicant`
+- `streamdeckd` (Go, in `app/`)
+- kernel modules trimmed to USB, keyboard, storage, Ethernet and Wi-Fi drivers
+- Wi-Fi/Ethernet firmware for Intel, Realtek, MediaTek, Qualcomm and Broadcom chips
 
-- types into the installer through the VM's emulated keyboard: first in QEMU's US-QWERTY key positions (must be rejected), then by Dvorak key positions (must be accepted)
-- completes the Spotify login through the phone page on :8080
-- checks that the daemon loads the settings, uploads 72×72 JPEGs to all 15 keys and sets the brightness
-- presses keys and checks the exact Govee and Spotify requests that come out
+## Disk layout
 
-Govee and Spotify are mocked in the VM, so the test needs no accounts and no internet.
+The installer creates a GPT disk with a single 1 GB EFI System Partition labelled `STREAMDECK`:
+
+```
+EFI/BOOT/BOOTX64.EFI          GRUB, finds the partition by a marker file
+streamdeck/boot/              vmlinuz, initrd.img, installed.cfg
+streamdeck/config.json        button layout
+streamdeck/state/             secrets.json (API keys, Spotify token), wpa_supplicant.conf
+```
+
+## Tests
+
+```sh
+make test       # unit tests (config, MK.2 protocol, Govee/Spotify clients, installer, settings, GPT, UEFI entry)
+make iso-test   # full end-to-end run in QEMU (needs qemu-system-x86, ovmf, mtools, fdisk, netpbm)
+```
+
+`iso-test` builds a test ISO, then runs a virtual mini PC: UEFI firmware (OVMF), a USB
+stick, a USB keyboard, an NVMe disk and an Intel network card. It also adds a **virtual
+Stream Deck MK.2**, created with Linux `uhid`. That device is a real `/dev/hidraw`
+device, so the real driver code runs unchanged. Govee and Spotify are replaced by a mock
+server inside the VM. The test then:
+
+1. boots the ISO from the USB stick and checks that the drivers load and DHCP works
+2. types into the installer on the USB keyboard by physical key position: typing in QWERTY positions must be rejected, and typing in Dvorak positions must be accepted
+3. completes the Spotify login through the phone page
+4. installs to NVMe and checks the GPT, the partition label and the files on it
+5. reboots from NVMe with the USB stick removed
+6. presses deck keys and checks the exact Govee and Spotify requests
+7. changes the default speaker in the Settings menu and checks that the next press plays there
 
 ## Limits
 
 - Supports the Stream Deck MK.2 only. Other models are recognised and refused.
+- Needs UEFI with Secure Boot off.
 - The Spotify target speaker has to be online and visible to Spotify Connect when the button is pressed.
-- The Govee calls go through Govee's cloud API (10,000 requests a day per key), not LAN control.
+- The Govee calls go through Govee's cloud API (10,000 requests a day per key).

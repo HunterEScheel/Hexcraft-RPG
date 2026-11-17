@@ -1,0 +1,4 @@
+#!/bin/sh
+# Logs: /var/log/messages (in RAM, rotated at 1 MB).
+[ "$1" = stop ] && { killall syslogd 2>/dev/null; exit 0; }
+syslogd -O /var/log/messages -s 1024 -b 1

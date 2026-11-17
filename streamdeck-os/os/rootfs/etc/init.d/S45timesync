@@ -1,0 +1,4 @@
+#!/bin/sh
+# Set the clock from NTP in the background (TLS needs a correct clock).
+[ "$1" = stop ] && exit 0
+(/usr/bin/streamdeckd timesync 2>&1 | logger -t timesync) &

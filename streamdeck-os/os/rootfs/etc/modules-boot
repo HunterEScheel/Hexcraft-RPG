@@ -1,0 +1,16 @@
+hid
+hid-generic
+usbhid
+xhci-pci
+ehci-pci
+ohci-pci
+uhci-hcd
+usb-storage
+uas
+isofs
+nvme
+ahci
+mmc_block
+sdhci-pci
+nls_cp437
+nls_iso8859_1

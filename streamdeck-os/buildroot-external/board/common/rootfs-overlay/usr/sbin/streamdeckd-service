@@ -1,4 +1,0 @@
-#!/bin/sh
-# Run by init (respawn). Logs go to syslog: grep streamdeckd /var/log/messages
-/usr/bin/streamdeckd run 2>&1 | logger -t streamdeckd
-sleep 2

@@ -93,3 +93,39 @@ func TestWizardFlow(t *testing.T) {
 		t.Fatalf("output:\n%s\ntrace:\n%s", out.String(), trace.String())
 	}
 }
+
+func TestSettingsMenuChangesGoveeKey(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Govee-API-Key") != "new-key" {
+			w.WriteHeader(401)
+			io.WriteString(w, `{"code":401,"message":"Invalid API Key"}`)
+			return
+		}
+		io.WriteString(w, `{"code":200,"data":[],"payload":{"capabilities":[]}}`)
+	}))
+	defer srv.Close()
+	t.Setenv("STREAMDECKD_GOVEE_URL", srv.URL)
+
+	dir := t.TempDir()
+	sp := dir + "/secrets.json"
+	orig := &config.Secrets{Govee: config.GoveeConfig{APIKey: "old-key-1234"},
+		Spotify: config.SpotifyConfig{ClientID: "cid", ClientSecret: "sec", RefreshToken: "RT", DefaultDevice: "Den"}}
+	if err := config.SaveSecrets(sp, orig); err != nil {
+		t.Fatal(err)
+	}
+	// 1 = Govee, wrong key, right key, Enter to continue, 0 = back
+	in := strings.Join([]string{"1", "bad", "new-key", "", "0"}, "\n") + "\n"
+	var out bytes.Buffer
+	w := New(strings.NewReader(in), &out)
+	w.SecretsPath, w.LayoutDir = sp, dir
+	if err := w.Settings(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	s, _ := config.LoadSecrets(sp)
+	if s.Govee.APIKey != "new-key" || s.Spotify.RefreshToken != "RT" || s.Spotify.DefaultDevice != "Den" {
+		t.Fatalf("saved %+v\n%s", s, out.String())
+	}
+	if !strings.Contains(out.String(), "old-****1234") || !strings.Contains(out.String(), "Saved.") {
+		t.Fatalf("menu output:\n%s", out.String())
+	}
+}
