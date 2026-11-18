@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 // Config is the whole appliance configuration.
@@ -25,8 +26,8 @@ type Config struct {
 	// Page shown at startup. Defaults to "home".
 	StartPage string `json:"start_page"`
 
-	Govee   GoveeConfig         `json:"govee"`
-	Spotify SpotifyConfig       `json:"spotify"`
+	Govee   GoveeConfig         `json:"govee,omitzero"`
+	Spotify SpotifyConfig       `json:"spotify,omitzero"`
 	Pages   map[string][]Button `json:"pages"`
 
 	// Dir is the directory the config was loaded from; icon paths are relative to it.
@@ -190,7 +191,11 @@ func SaveSecrets(path string, s *Secrets) error {
 	if err := f.Close(); err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	syscall.Sync() // FAT: get the rename and allocation tables onto the disk now
+	return nil
 }
 
 // Parse decodes and validates config JSON.

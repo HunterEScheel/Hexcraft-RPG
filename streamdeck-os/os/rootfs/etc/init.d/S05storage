@@ -17,7 +17,10 @@ if grep -q streamdeck.live /proc/cmdline; then
 		echo "Live media not found yet (the installer will look again)"
 	fi
 else
-	if dev=$(find_label STREAMDECK) && mount -t vfat -o rw,noatime,flush "$dev" /boot; then
+	# Repair the FAT first in case power was cut while saving, then mount
+	# with synchronous writes so a later power cut can't lose a saved change.
+	if dev=$(find_label STREAMDECK) && { fsck.fat -a -w "$dev" >/dev/null 2>&1; true; } &&
+		mount -t vfat -o rw,noatime,sync,dirsync "$dev" /boot; then
 		mkdir -p /boot/streamdeck/state
 		rm -rf /var/lib/streamdeck
 		ln -s /boot/streamdeck/state /var/lib/streamdeck

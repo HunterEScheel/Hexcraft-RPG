@@ -6,10 +6,11 @@
 #   make wifi-test  same, with no Ethernet and a (virtual) USB Wi-Fi dongle plugged in mid-install
 #   make modeswitch-test  a "driver CD" Wi-Fi dongle plugged in after boot is switched to Wi-Fi mode
 #   make media-test       install from Rufus "ISO mode" / Ventoy sticks; never wipe a disk without the files
+#   make editor-test      build a key with the on-screen editor (keyboard + deck presses), then use it
 
 WORK ?= $(CURDIR)/.iso
 
-.PHONY: iso docker-iso test iso-test wifi-test modeswitch-test media-test clean
+.PHONY: iso docker-iso test iso-test wifi-test modeswitch-test media-test editor-test clean
 
 iso:
 	os/build-iso.sh $(WORK)
@@ -36,6 +37,10 @@ modeswitch-test:
 media-test:
 	os/build-iso.sh $(WORK) --test
 	test/media-test.py $(WORK)
+
+editor-test:
+	os/build-iso.sh $(WORK) --test
+	test/editor-test.py $(WORK)
 
 clean:
 	rm -rf $(WORK)

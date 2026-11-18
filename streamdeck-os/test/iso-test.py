@@ -16,6 +16,7 @@ Spotify speaker in the Settings menu.
 Usage: test/iso-test.py <workdir containing streamdeck-os-test.iso>
 """
 import html
+import os
 import re
 import subprocess
 import sys
@@ -156,8 +157,8 @@ def phase2():
         check('PUT /spotify/api/me/player/play?device_id=dev-living {"context_uri":"spotify:playlist:37i9dQZF1DXaXB8fQg7xif"}' in calls,
               "Party: playlist started on Living Room (settings survived reboot)")
 
-        # Settings menu: change the default speaker to Kitchen Echo.
-        mon.type("1")
+        # Settings menu (status screen option 2): change the default speaker to Kitchen Echo.
+        mon.type("2")
         wait_log(r"SETUP: prompt settings", 30, mark)
         mon.screenshot("p2-03-settings")
         mark = len(log_text())
@@ -180,11 +181,75 @@ def phase2():
         vm.wait()
 
 
+def check_fat(when):
+    """The settings partition must be consistent after the VM's power is cut."""
+    out = subprocess.run(["sfdisk", "--dump", vmlib.DISK], capture_output=True, text=True).stdout
+    start = int(re.search(r"start=\s*(\d+)", out).group(1))
+    size = int(re.search(r"size=\s*(\d+)", out).group(1))
+    part = os.path.join(vmlib.WORK, "esp-check.img")
+    subprocess.run(["dd", f"if={vmlib.DISK}", f"of={part}", "bs=512", f"skip={start}", f"count={size}", "status=none"], check=True)
+    # Same repair the system runs at boot (S05storage), then it must be clean.
+    subprocess.run(["fsck.fat", "-a", "-w", part], capture_output=True, text=True)
+    r = subprocess.run(["fsck.fat", "-n", part], capture_output=True, text=True)
+    sec = subprocess.run(["mtype", "-i", part, "::/streamdeck/state/secrets.json"], capture_output=True, text=True).stdout
+    check(r.returncode == 0 and "Kitchen Echo" in sec,
+          f"{when}: after the boot-time repair the FAT is clean and the last saved setting is on disk (fsck rc={r.returncode})")
+    os.remove(part)
+
+
+def phase3_update():
+    """Boot the USB stick again on the installed PC: update in place."""
+    vm = vm_start("3-update", usb_stick=True)
+    try:
+        mon = Monitor(vmlib.MON)
+        wait_log(r"TEST: boot complete mode=live", 300)
+        wait_log(r"SETUP: prompt update", 60)
+        check(True, "USB stick on an installed PC offers to update it")
+        mon.screenshot("p3-update-offer")
+        mon.type("1")
+        m = wait_log(r"SETUP: (updated|update-error.*)", 120)
+        check(m.group(1) == "updated", f"update in place ({m.group(1)})")
+        mon.type("")
+        vm.wait(timeout=120)
+    finally:
+        if vm.poll() is None:
+            vm.kill()
+            vm.wait()
+    out = subprocess.run(["sfdisk", "--dump", vmlib.DISK], capture_output=True, text=True).stdout
+    off = int(re.search(r"start=\s*(\d+)", out).group(1)) * 512
+    a, b = os.path.join(vmlib.WORK, "cmp-esp.img"), os.path.join(vmlib.WORK, "cmp-iso.img")
+    for f in (a, b):
+        if os.path.exists(f):
+            os.remove(f)
+    subprocess.run(["mcopy", "-n", "-i", f"{vmlib.DISK}@@{off}", "::/streamdeck/boot/initrd.img", a], check=True)
+    subprocess.run(["xorriso", "-osirrox", "on", "-indev", vmlib.ISO, "-extract", "/streamdeck/boot/initrd.img", b],
+                   check=True, capture_output=True)
+    check(open(a, "rb").read() == open(b, "rb").read(), "installed initrd now matches the ISO")
+
+
+def phase4_after_update():
+    vm = vm_start("4-after-update", usb_stick=False)
+    try:
+        wait_log(r"TEST: boot complete mode=installed", 300)
+        wait_log(r"config loaded: 2 page", 90)
+        check(wait_images(15), "deck works after the update")
+        mark = len(log_text())
+        deck("press 1")
+        wait_log(r'key 1 "Party" done', 60, mark)
+        check("play?device_id=dev-kitchen" in log_text()[mark:], "settings survived the update (Party still plays on Kitchen Echo)")
+    finally:
+        vm.kill()
+        vm.wait()
+
+
 def main():
     setup(sys.argv[1])
     phase1()
     inspect_disk()
     phase2()
+    check_fat("power cut right after saving a setting")
+    phase3_update()
+    phase4_after_update()
     finish()
 
 

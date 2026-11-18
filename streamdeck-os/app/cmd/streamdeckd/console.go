@@ -27,9 +27,11 @@ func runConsole(cfgPath, secretsPath string, forceSetup bool) error {
 	w := setup.New(os.Stdin, os.Stdout)
 	w.SecretsPath = secretsPath
 	w.LayoutDir = filepath.Dir(cfgPath)
+	var traceFile *os.File
 	if p := os.Getenv("STREAMDECKD_TRACE"); p != "" {
 		if f, err := os.OpenFile(p, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o644); err == nil {
 			w.Trace = f
+			traceFile = f
 		}
 	}
 	live := isLive()
@@ -62,6 +64,9 @@ func runConsole(cfgPath, secretsPath string, forceSetup bool) error {
 		runSetup()
 		return nil
 	}
+	if live {
+		offerUpdate(w)
+	}
 	if !configured(secretsPath) {
 		runSetup()
 	}
@@ -75,13 +80,15 @@ func runConsole(cfgPath, secretsPath string, forceSetup bool) error {
 				return nil
 			}
 			switch strings.ToLower(line) {
-			case "1", "settings":
+			case "1", "edit", "buttons":
+				runEditor(ctx, w, cfgPath, secretsPath, traceFile)
+			case "2", "settings":
 				if err := w.Settings(ctx); err != nil {
 					fmt.Printf("settings: %v\n", err)
 				}
-			case "2", "setup":
+			case "3", "setup":
 				runSetup()
-			case "3", "install":
+			case "4", "install":
 				if live {
 					if err := w.InstallStep(); err != nil {
 						fmt.Printf("install: %v\n", err)
@@ -139,10 +146,58 @@ func printStatus(cfgPath, secretsPath string, live bool) {
 		fmt.Printf("Layout:      %s OK\n", cfgPath)
 	}
 	fmt.Printf("\n%s\n", time.Now().Format("Mon Jan 2 15:04"))
-	fmt.Print("\n  1) Settings (change Govee/Spotify keys, speaker, Wi-Fi)\n")
-	fmt.Print("  2) Run the full installer again\n")
+	fmt.Printf("Buttons:     %s\n", buttonSummary(cfgPath))
+	fmt.Print("\n  1) Edit buttons\n")
+	fmt.Print("  2) Settings (Govee/Spotify keys, speaker, Wi-Fi)\n")
+	fmt.Print("  3) Run the full installer again\n")
 	if live {
-		fmt.Print("  3) Install to this computer's disk\n")
+		fmt.Print("  4) Install to this computer's disk\n")
 	}
 	fmt.Print("\nChoose and press Enter: ")
+}
+
+// offerUpdate: booted from the USB stick on a PC that already has StreamDeck
+// OS installed -> offer to update it in place, keeping settings and buttons.
+func offerUpdate(w *setup.Wizard) {
+	part := install.FindInstalled()
+	if part == "" || install.CheckPayload(w.PayloadDir) != nil {
+		return
+	}
+	trace := func(m string) {
+		if w.Trace != nil {
+			fmt.Fprintln(w.Trace, "SETUP: "+m)
+		}
+	}
+	lines := w.Lines()
+	for {
+		fmt.Print("\033[H\033[2J")
+		fmt.Println("StreamDeck OS is already installed on this computer (" + part + ").")
+		fmt.Println()
+		fmt.Println("  1) Update it to this version (keeps your keys, Wi-Fi and buttons)")
+		fmt.Println("  2) Set up from scratch instead")
+		fmt.Print("\nChoose and press Enter: ")
+		trace("prompt update")
+		line, ok := <-lines
+		if !ok {
+			return
+		}
+		switch strings.TrimSpace(line) {
+		case "1":
+			err := install.Update(part, w.PayloadDir, func(f string, a ...any) { fmt.Printf("  "+f+"\n", a...) })
+			if err != nil {
+				fmt.Printf("\nUpdate failed: %v\nPress Enter to continue.\n", err)
+				trace("update-error " + err.Error())
+				<-lines
+				return
+			}
+			trace("updated")
+			fmt.Println("\nUpdated! Remove the USB stick, then press Enter to restart.")
+			<-lines
+			syscall.Sync()
+			_ = exec.Command("reboot").Run()
+			return
+		case "2":
+			return
+		}
+	}
 }

@@ -167,6 +167,12 @@ class Monitor:
             pass
         return out.decode(errors="replace")
 
+    def key(self, *names):
+        """Special keys by QEMU name: up, down, left, right, ret, esc, delete, pgup, pgdn."""
+        for n in names:
+            self.cmd(f"sendkey {n}")
+            time.sleep(0.05)
+
     def type(self, text, layout=DVORAK, enter=True):
         for ch in text:
             key, shift = layout[ch]

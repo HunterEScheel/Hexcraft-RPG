@@ -3,7 +3,6 @@
 package setup
 
 import (
-	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -20,6 +19,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"streamdeckd/internal/config"
@@ -47,7 +47,9 @@ type Wizard struct {
 	BootDisk   string // disk the live system booted from (never offered)
 	Reboot     func() error
 
-	lines chan string
+	lines   chan string
+	rawMu   sync.Mutex
+	rawSink chan []byte
 }
 
 // Defaults for the real appliance.
@@ -73,13 +75,60 @@ func (w *Wizard) startInput() {
 		return
 	}
 	w.lines = make(chan string)
+	// One reader owns the console. Normally it hands out whole lines; while
+	// the full-screen editor runs it hands raw bytes to the editor instead.
 	go func() {
-		sc := bufio.NewScanner(w.In)
-		for sc.Scan() {
-			w.lines <- strings.TrimSpace(sc.Text())
+		buf := make([]byte, 4096)
+		pending := ""
+		for {
+			n, err := w.In.Read(buf)
+			if n > 0 {
+				w.rawMu.Lock()
+				sink := w.rawSink
+				w.rawMu.Unlock()
+				if sink != nil {
+					sink <- append([]byte(nil), buf[:n]...)
+				} else {
+					pending += string(buf[:n])
+					for {
+						i := strings.IndexAny(pending, "\r\n")
+						if i < 0 {
+							break
+						}
+						line := pending[:i]
+						step := 1 // one line ending: \n, \r or \r\n (blank lines matter: Enter)
+						if pending[i] == '\r' && i+1 < len(pending) && pending[i+1] == '\n' {
+							step = 2
+						}
+						pending = pending[i+step:]
+						w.lines <- strings.TrimSpace(line)
+					}
+				}
+			}
+			if err != nil {
+				if strings.TrimSpace(pending) != "" {
+					w.lines <- strings.TrimSpace(pending)
+				}
+				close(w.lines)
+				return
+			}
 		}
-		close(w.lines)
 	}()
+}
+
+// RawInput diverts console input to the returned channel (for the
+// full-screen editor) until release is called.
+func (w *Wizard) RawInput() (in <-chan []byte, release func()) {
+	w.startInput()
+	ch := make(chan []byte, 64)
+	w.rawMu.Lock()
+	w.rawSink = ch
+	w.rawMu.Unlock()
+	return ch, func() {
+		w.rawMu.Lock()
+		w.rawSink = nil
+		w.rawMu.Unlock()
+	}
 }
 
 // Lines exposes console input so the status screen can share it.
@@ -134,7 +183,8 @@ func (w *Wizard) Run(ctx context.Context) error {
 	if w.Live {
 		return w.InstallStep()
 	}
-	w.say("\nAll set! Settings saved. Your Stream Deck is ready.\n\n")
+	w.say("\nAll set! Settings saved.\n")
+	w.say("Next: choose \"1) Edit buttons\" on the following screen to set up your Stream Deck.\n\n")
 	return nil
 }
 
@@ -200,6 +250,7 @@ func (w *Wizard) InstallStep() error {
 		}
 		w.trace("installed %s", d.Name)
 		w.say("\nInstalled! Remove the USB stick, then press Enter to restart.\n")
+		w.say("After the restart, choose \"1) Edit buttons\" to set up your Stream Deck.\n")
 		w.say("(If it boots the USB again, pick the internal disk in the boot menu, often F7/F11/F12.)\n")
 		if _, err := w.ask("reboot", ""); err != nil {
 			return err

@@ -113,6 +113,12 @@ func player(w http.ResponseWriter, r *http.Request, p string) {
 		w.WriteHeader(401)
 		return
 	}
+	if p == "/me/playlists" {
+		io.WriteString(w, `{"items":[`+
+			`{"uri":"spotify:playlist:PLDINNER","name":"Dinner Jazz","owner":{"display_name":"Hunter"},"tracks":{"total":42},"images":[{"url":"https://i.scdn.co/x.jpg","width":60}]},`+
+			`{"uri":"spotify:playlist:PLWORKOUT","name":"Workout Mix","owner":{"display_name":"Hunter"},"tracks":{"total":30},"images":[]}],"next":null}`)
+		return
+	}
 	if p == "/me/player/devices" {
 		io.WriteString(w, `{"devices":[{"id":"dev-living","name":"Living Room","type":"Speaker","is_active":false},`+
 			`{"id":"dev-kitchen","name":"Kitchen Echo","type":"Speaker","is_active":false}]}`)

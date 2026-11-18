@@ -18,7 +18,9 @@ import (
 	"time"
 )
 
-const Scopes = "user-read-playback-state user-modify-playback-state"
+// Scopes requested at login. playlist-read-* lets the button editor list the
+// user's playlists (logins made before it was added need to reconnect once).
+const Scopes = "user-read-playback-state user-modify-playback-state playlist-read-private playlist-read-collaborative"
 
 // RedirectURI must be added to the Spotify app's settings. Spotify only allows
 // plain http for loopback addresses, so the browser lands on an error page and
@@ -367,4 +369,66 @@ func NormalizeURI(s string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("spotify: can't find a playlist/album/artist in %q", s)
+}
+
+// Playlist is one of the user's playlists.
+type Playlist struct {
+	URI    string `json:"uri"`
+	Name   string `json:"name"`
+	Owner  string `json:"owner"`
+	Tracks int    `json:"tracks"`
+	Image  string `json:"image"`
+}
+
+// ErrNeedsReconnect means the saved login predates the playlist permission.
+var ErrNeedsReconnect = errors.New("spotify login lacks playlist permission; reconnect Spotify")
+
+// Playlists lists the playlists the user owns or follows (up to max).
+func (c *Client) Playlists(ctx context.Context, max int) ([]Playlist, error) {
+	var out []Playlist
+	for offset := 0; offset < max; offset += 50 {
+		var page struct {
+			Items []struct {
+				URI   string `json:"uri"`
+				Name  string `json:"name"`
+				Owner struct {
+					DisplayName string `json:"display_name"`
+				} `json:"owner"`
+				Tracks struct {
+					Total int `json:"total"`
+				} `json:"tracks"`
+				Images []struct {
+					URL   string `json:"url"`
+					Width *int   `json:"width"`
+				} `json:"images"`
+			} `json:"items"`
+			Next *string `json:"next"`
+		}
+		err := c.call(ctx, http.MethodGet, "/me/playlists",
+			url.Values{"limit": {"50"}, "offset": {strconv.Itoa(offset)}}, nil, &page)
+		var ae *APIError
+		if errors.As(err, &ae) && (ae.Status == http.StatusForbidden || ae.Status == http.StatusUnauthorized) {
+			return nil, ErrNeedsReconnect
+		}
+		if err != nil {
+			return nil, err
+		}
+		for _, it := range page.Items {
+			if it.URI == "" {
+				continue
+			}
+			p := Playlist{URI: it.URI, Name: it.Name, Owner: it.Owner.DisplayName, Tracks: it.Tracks.Total}
+			// Smallest image that is still >= 60px, for a light-weight picker.
+			for _, im := range it.Images {
+				if p.Image == "" || (im.Width != nil && *im.Width >= 60) {
+					p.Image = im.URL
+				}
+			}
+			out = append(out, p)
+		}
+		if page.Next == nil || len(page.Items) == 0 {
+			break
+		}
+	}
+	return out, nil
 }

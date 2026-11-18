@@ -397,3 +397,119 @@ func copyTree(src, dst string) error {
 		return copyFile(p, filepath.Join(dst, rel))
 	})
 }
+
+// FindInstalled returns the partition of an existing StreamDeck OS install
+// (FAT label STREAMDECK with our boot files), or "".
+func FindInstalled() string {
+	out, err := exec.Command("findfs", "LABEL="+Label).Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// Update replaces the system files of an existing install, keeping the
+// button layout and settings (streamdeck/config.json, streamdeck/state).
+func Update(part, payloadDir string, say Progress) error {
+	if err := CheckPayload(payloadDir); err != nil {
+		return err
+	}
+	mnt, err := os.MkdirTemp("", "esp")
+	if err != nil {
+		return err
+	}
+	if err := syscall.Mount(part, mnt, "vfat", 0, ""); err != nil {
+		return fmt.Errorf("mount %s: %w", part, err)
+	}
+	defer func() {
+		syscall.Sync()
+		_ = syscall.Unmount(mnt, 0)
+	}()
+	if _, err := os.Stat(filepath.Join(mnt, "streamdeck", "boot", "installed.cfg")); err != nil {
+		return fmt.Errorf("%s doesn't look like a StreamDeck OS install", part)
+	}
+	say("Updating system files on %s (your settings and buttons are kept)...", part)
+	boot := filepath.Join(mnt, "streamdeck", "boot")
+	var initrds []string
+	ents, err := os.ReadDir(payloadDir)
+	if err != nil {
+		return err
+	}
+	// Remove old initramfs parts first so a removed one doesn't linger.
+	old, _ := filepath.Glob(filepath.Join(boot, "*.img"))
+	for _, o := range old {
+		os.Remove(o)
+	}
+	for _, e := range ents {
+		n := e.Name()
+		switch {
+		case n == "BOOTX64.EFI":
+			if err := copyFile(filepath.Join(payloadDir, n), filepath.Join(mnt, "EFI", "BOOT", "BOOTX64.EFI")); err != nil {
+				return err
+			}
+		case n == "vmlinuz" || strings.HasSuffix(n, ".img"):
+			if err := copyFile(filepath.Join(payloadDir, n), filepath.Join(boot, n)); err != nil {
+				return err
+			}
+			if strings.HasSuffix(n, ".img") {
+				initrds = append(initrds, "/streamdeck/boot/"+n)
+			}
+		}
+	}
+	sort.Strings(initrds)
+	cfg := "set timeout=0\nmenuentry \"StreamDeck OS\" {\n" +
+		"\tlinux /streamdeck/boot/vmlinuz " + KernelArgs + "\n" +
+		"\tinitrd " + strings.Join(initrds, " ") + "\n}\n"
+	if err := os.WriteFile(filepath.Join(boot, "installed.cfg"), []byte(cfg), 0o644); err != nil {
+		return err
+	}
+	// Firmware can forget boot entries (e.g. after booting a USB stick or a
+	// settings reset): register StreamDeck OS again.
+	if l, err := layoutOf(part); err == nil {
+		if err := AddBootEntry(l); err != nil {
+			say("Note: could not refresh the UEFI boot entry (%v)", err)
+		}
+	}
+	say("Done.")
+	return nil
+}
+
+// layoutOf reads partition 1's position and GUID from the disk's GPT.
+func layoutOf(part string) (GPTLayout, error) {
+	disk := DiskOf("/sys/block", part)
+	if disk == "" {
+		return GPTLayout{}, fmt.Errorf("no disk for %s", part)
+	}
+	ss, _ := strconv.ParseInt(readSys("/sys/block/"+disk+"/queue/logical_block_size"), 10, 64)
+	if ss == 0 {
+		ss = 512
+	}
+	f, err := os.Open("/dev/" + disk)
+	if err != nil {
+		return GPTLayout{}, err
+	}
+	defer f.Close()
+	return readGPT(f, ss)
+}
+
+// readGPT parses the primary GPT header and first partition entry.
+func readGPT(r io.ReaderAt, ss int64) (GPTLayout, error) {
+	h := make([]byte, 92)
+	if _, err := r.ReadAt(h, ss); err != nil {
+		return GPTLayout{}, err
+	}
+	if string(h[0:8]) != "EFI PART" {
+		return GPTLayout{}, errors.New("no GPT")
+	}
+	entriesLBA := int64(binary.LittleEndian.Uint64(h[72:]))
+	e := make([]byte, 128)
+	if _, err := r.ReadAt(e, entriesLBA*ss); err != nil {
+		return GPTLayout{}, err
+	}
+	var l GPTLayout
+	l.SectorSize = ss
+	copy(l.PartGUID[:], e[16:32])
+	l.FirstLBA = int64(binary.LittleEndian.Uint64(e[32:]))
+	l.LastLBA = int64(binary.LittleEndian.Uint64(e[40:]))
+	return l, nil
+}

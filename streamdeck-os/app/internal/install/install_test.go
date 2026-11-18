@@ -1,6 +1,7 @@
 package install
 
 import (
+	"bytes"
 	"os"
 	"os/exec"
 	"strings"
@@ -106,5 +107,20 @@ func TestMediaDisk(t *testing.T) {
 		if got := MediaDisk(sys, in); got != want {
 			t.Errorf("%q: got %q want %q", in, got, want)
 		}
+	}
+}
+
+func TestReadGPTRoundTrip(t *testing.T) {
+	size := int64(8 << 30)
+	primary, _, _, want, err := BuildGPT(size, 512, espSizeMiB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := readGPT(bytes.NewReader(primary), 512)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("got %+v want %+v", got, want)
 	}
 }

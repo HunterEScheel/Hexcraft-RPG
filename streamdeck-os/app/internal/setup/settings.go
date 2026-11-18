@@ -156,3 +156,18 @@ func (w *Wizard) changeSpotifyKeys(ctx context.Context, s *config.Secrets) (bool
 	}
 	return true, nil
 }
+
+// ReconnectSpotify logs in to Spotify again with the saved app keys (e.g. to
+// grant the playlist permission) and saves the new login.
+func (w *Wizard) ReconnectSpotify(ctx context.Context) error {
+	s, err := config.LoadSecrets(w.SecretsPath)
+	if err != nil || s.Spotify.ClientID == "" || s.Spotify.ClientSecret == "" {
+		return fmt.Errorf("set up Spotify first (Settings > Spotify Client ID/Secret)")
+	}
+	w.say("\033[H\033[2J")
+	w.say("Reconnecting Spotify so the editor can list your playlists.\n")
+	if err := w.spotifyLogin(ctx, s, s.Spotify.ClientID, s.Spotify.ClientSecret, LocalIPv4()); err != nil {
+		return err
+	}
+	return config.SaveSecrets(w.SecretsPath, s)
+}

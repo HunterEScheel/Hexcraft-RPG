@@ -20,6 +20,7 @@ need() { command -v "$1" >/dev/null || { echo "missing $1 — apt-get install $2
 need grub-mkrescue "grub-common grub-efi-amd64-bin grub-pc-bin"
 need xorriso xorriso; need mformat mtools; need depmod kmod; need zstd zstd; need cpio cpio; need go golang; need git git; need make make; need patch patch; need nm binutils
 [ "$TEST" = 0 ] || [ -x /usr/sbin/hostapd ] || { echo "missing hostapd — apt-get install hostapd" >&2; exit 1; }
+[ -x /usr/sbin/fsck.fat ] || { echo "missing fsck.fat — apt-get install dosfstools" >&2; exit 1; }
 [ -x /usr/sbin/wpa_supplicant ] || { echo "missing wpa_supplicant — apt-get install wpasupplicant" >&2; exit 1; }
 [ -f /etc/ssl/certs/ca-certificates.crt ] || { echo "missing CA bundle — apt-get install ca-certificates" >&2; exit 1; }
 
@@ -186,8 +187,9 @@ cp "$FW/regulatory.db" "$R/lib/firmware/regulatory.db"
 cp "$FW/regulatory.db.p7s" "$R/lib/firmware/regulatory.db.p7s"
 
 # wpa_supplicant/wpa_cli and their libraries from the build host (Ubuntu 24.04).
-cp /usr/sbin/wpa_supplicant /usr/sbin/wpa_cli "$R/usr/sbin/"
-for lib in $(for b in /usr/sbin/wpa_supplicant /usr/sbin/wpa_cli; do ldd "$b"; done | grep -o '/[^ :]*\.so[^ ]*' | sort -u); do
+# fsck.fat repairs the settings partition after a power cut.
+cp /usr/sbin/wpa_supplicant /usr/sbin/wpa_cli /usr/sbin/fsck.fat "$R/usr/sbin/"
+for lib in $(for b in /usr/sbin/wpa_supplicant /usr/sbin/wpa_cli /usr/sbin/fsck.fat; do ldd "$b"; done | grep -o '/[^ :]*\.so[^ ]*' | sort -u); do
 	mkdir -p "$R$(dirname "$lib")"; cp -L "$lib" "$R$lib"
 done
 cp /etc/ssl/certs/ca-certificates.crt "$R/etc/ssl/certs/"

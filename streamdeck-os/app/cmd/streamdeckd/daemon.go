@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"sync"
@@ -13,6 +16,7 @@ import (
 
 	"streamdeckd/internal/config"
 	"streamdeckd/internal/deck"
+	"streamdeckd/internal/deckipc"
 	"streamdeckd/internal/render"
 	"streamdeckd/internal/runner"
 )
@@ -30,6 +34,80 @@ type daemon struct {
 	busy        map[int]bool
 	dimmed      bool
 	lastUsed    time.Time
+	edit        *editSession // set while the on-screen editor is open
+}
+
+// editSession is the on-screen button editor connected over deckipc.
+type editSession struct {
+	conn   net.Conn
+	wmu    sync.Mutex
+	layout config.Layout
+	page   string
+	sel    int
+}
+
+func (e *editSession) send(m deckipc.Msg) {
+	e.wmu.Lock()
+	defer e.wmu.Unlock()
+	_ = e.conn.SetWriteDeadline(time.Now().Add(time.Second))
+	_ = json.NewEncoder(e.conn).Encode(m)
+}
+
+// serveEditor accepts editor connections (one at a time; a new one wins).
+func (d *daemon) serveEditor(ctx context.Context) {
+	_ = os.Remove(deckipc.Socket)
+	ln, err := net.Listen("unix", deckipc.Socket)
+	if err != nil {
+		log.Printf("editor socket: %v", err)
+		return
+	}
+	go func() { <-ctx.Done(); ln.Close() }()
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		go d.editorConn(conn)
+	}
+}
+
+func (d *daemon) editorConn(conn net.Conn) {
+	sess := &editSession{conn: conn, sel: -1}
+	d.mu.Lock()
+	if old := d.edit; old != nil {
+		old.conn.Close()
+	}
+	d.edit = sess
+	d.dimmed = false
+	if d.dev != nil {
+		_ = d.dev.SetBrightness(max(d.cfg.Brightness, 30))
+	}
+	d.mu.Unlock()
+	log.Printf("button editor connected")
+	sc := bufio.NewScanner(conn)
+	sc.Buffer(make([]byte, 64<<10), 4<<20)
+	for sc.Scan() {
+		var m deckipc.Msg
+		if json.Unmarshal(sc.Bytes(), &m) != nil || m.Op != "preview" || m.Layout == nil {
+			continue
+		}
+		d.mu.Lock()
+		if d.edit != sess {
+			d.mu.Unlock()
+			break
+		}
+		sess.layout, sess.page, sess.sel = *m.Layout, m.Page, m.Select
+		d.mu.Unlock()
+		d.renderPage()
+	}
+	conn.Close()
+	d.mu.Lock()
+	if d.edit == sess {
+		d.edit = nil
+	}
+	d.mu.Unlock()
+	log.Printf("button editor closed")
+	d.renderPage()
 }
 
 // setupConfig is shown on the deck until the installer has run.
@@ -58,6 +136,7 @@ func runDaemon(cfgPath, secretsPath string) error {
 		}
 	}()
 	go d.watch(ctx)
+	go d.serveEditor(ctx)
 
 	notFoundLogged := false
 	for ctx.Err() == nil {
@@ -224,7 +303,7 @@ func (d *daemon) idleLoop(done <-chan struct{}, dev *deck.Device) {
 		case <-t.C:
 			d.mu.Lock()
 			idle := d.cfg.IdleDimSeconds
-			if idle > 0 && !d.dimmed && time.Since(d.lastUsed) > time.Duration(idle)*time.Second {
+			if idle > 0 && !d.dimmed && d.edit == nil && time.Since(d.lastUsed) > time.Duration(idle)*time.Second {
 				d.dimmed = true
 				_ = dev.SetBrightness(d.cfg.IdleBrightness)
 			}
@@ -243,6 +322,12 @@ func (d *daemon) press(ctx context.Context, key int) {
 			_ = d.dev.SetBrightness(d.cfg.Brightness)
 		}
 		d.mu.Unlock()
+		return
+	}
+	if e := d.edit; e != nil {
+		// Editing: a press selects the key in the editor instead of running it.
+		d.mu.Unlock()
+		e.send(deckipc.Msg{Op: "press", Key: key})
 		return
 	}
 	page := d.page
@@ -324,17 +409,64 @@ func (d *daemon) drawKey(page string, key int, btn config.Button, st render.Stat
 
 func (d *daemon) renderPage() {
 	d.mu.Lock()
-	dev, page, cfg := d.dev, d.page, d.cfg
+	dev, page, cfg, edit, placeholder := d.dev, d.page, d.cfg, d.edit, d.placeholder
+	var sess editSession
+	if edit != nil {
+		sess = editSession{layout: edit.layout, page: edit.page, sel: edit.sel}
+	}
 	d.mu.Unlock()
 	if dev == nil {
 		return
 	}
 	blank := render.Blank(dev.Model.Pixels)
+
+	if edit != nil {
+		// Live preview of the editor's (possibly unsaved) layout.
+		for k := 0; k < dev.Model.Keys; k++ {
+			b, ok := layoutButton(sess.layout, sess.page, k)
+			switch {
+			case k == sess.sel && !ok:
+				d.drawRaw(dev, k, config.Button{Color: "#000000"}, cfg.Dir, render.Busy)
+			case k == sess.sel:
+				d.drawRaw(dev, k, b, cfg.Dir, render.Busy)
+			case ok:
+				d.drawRaw(dev, k, b, cfg.Dir, render.Normal)
+			default:
+				_ = dev.SetKeyImage(k, blank)
+			}
+		}
+		return
+	}
+
+	empty := len(cfg.Pages[page]) == 0
 	for k := 0; k < dev.Model.Keys; k++ {
 		if b, ok := cfg.Button(page, k); ok {
 			d.drawKey(page, k, b, render.Normal)
+		} else if empty && !placeholder && k == 7 {
+			d.drawRaw(dev, k, config.Button{Label: "Edit buttons on the PC screen", Color: "#1d5fa0"}, cfg.Dir, render.Normal)
 		} else {
 			_ = dev.SetKeyImage(k, blank)
 		}
+	}
+}
+
+func layoutButton(l config.Layout, page string, key int) (config.Button, bool) {
+	for _, b := range l.Pages[page] {
+		if b.Key == key {
+			return b, true
+		}
+	}
+	return config.Button{}, false
+}
+
+// drawRaw draws a key unconditionally (used for previews and hints).
+func (d *daemon) drawRaw(dev *deck.Device, key int, btn config.Button, dir string, st render.State) {
+	m := dev.Model
+	img, err := render.Key(m.Pixels, btn, dir, st, m.FlipH, m.FlipV)
+	if err != nil {
+		return
+	}
+	if err := dev.SetKeyImage(key, img); err != nil && !errors.Is(err, os.ErrClosed) {
+		log.Printf("draw key %d: %v", key, err)
 	}
 }

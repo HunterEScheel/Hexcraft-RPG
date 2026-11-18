@@ -81,56 +81,63 @@ networks can be typed in). When something fails, they say what went wrong:
 - **Couldn't find the network**: many dongles are 2.4 GHz only, so try your router's 2.4 GHz network name.
 - **Joined but no address**: the router's DHCP didn't answer.
 
-## Afterwards: status screen and Settings
+## Editing your buttons
 
-The HDMI screen shows the status: network, deck, Govee, Spotify and layout.
+The mini PC is the editor. On its status screen press **1 (Edit buttons)**.
 
-- **1** opens **Settings**, where you can change any single item:
+| Editor | Editing a key | Picking a playlist | The deck while editing |
+|---|---|---|---|
+| ![](docs/editor-grid.png) | ![](docs/editor-key.png) | ![](docs/editor-playlists.png) | ![](docs/editor-deck-preview.png) |
+
+- **Choose a key:** press it on the Stream Deck, or use the arrow keys. While the editor is open, pressing a deck key selects it instead of running it.
+- **Enter** edits the key:
+  - its label and colours
+  - what it does, in order. **Lights** actions (scene, on/off, brightness, colour) let you pick a light and scene from your Govee account. **Music** actions (play a playlist, pause, next, volume) let you pick a playlist and speaker from your Spotify account. **Other** actions go to another page or wait.
+  
+  Long lists filter as you type.
+- **Live preview:** the deck shows your changes as you make them, with the selected key outlined in yellow.
+- **Saving:** leaving a key saves it, after checking it. If something can't work, for example a Govee action with no Govee key, the editor says why and offers to undo.
+- **Other keys:**
+  - **T** tries the selected key right now
+  - **Del** clears it
+  - **C** / **V** copy and paste a key
+  - **[** / **]** switch pages
+  - **P** manages pages (add, rename, start page, delete, start over)
+  - **D** sets deck brightness and dimming
+  - **Esc** leaves the editor
+- **Playlist permission:** listing your playlists needs one more Spotify permission than playing them. If you logged in before this existed, the playlist picker offers **Reconnect Spotify**, a one-time login on your phone. You can always type a playlist link instead.
+
+The layout is saved in `streamdeck/config.json` on the mini PC's disk. That file never contains your keys or Spotify login.
+
+## Status screen and Settings
+
+The HDMI screen shows the status: network, Wi-Fi, deck, Govee, Spotify and buttons.
+
+- **1** opens the button editor.
+- **2** opens **Settings**, where you can change any single item:
   - the Govee API key
   - the Spotify Client ID/Secret (this triggers a new login)
   - the Spotify login on its own
   - the default speaker
   - Wi-Fi
   
-  Each change is checked against the service before it's saved. The deck uses it within a few seconds; no restart is needed.
-- **2** reruns the whole installer.
+  Each change is checked against the service before it's saved, and takes effect within seconds.
+- **3** reruns the whole installer.
 - **Ctrl+Alt+F2** opens a maintenance shell.
 
-## Button layout
+## Updating
 
-The layout file is `streamdeck/config.json` on the mini PC's `STREAMDECK` partition.
-To edit it, open the maintenance shell on the mini PC and run `vi /boot/streamdeck/config.json`.
-The deck picks up changes within a few seconds. The installer also saves
-`/boot/streamdeck/govee-devices.txt`, which lists the exact names of your Govee devices
-and their scenes.
+Boot the new ISO's USB stick on the mini PC. When it finds StreamDeck OS already
+installed, it offers **Update** first. That replaces only the system files; your keys,
+Wi-Fi and buttons stay. Remove the stick and restart.
 
-The MK.2 keys are numbered 0–14, left to right, top to bottom:
+Settings are written straight to disk, and the disk is checked and repaired at every
+boot, so unplugging the mini PC right after a change doesn't lose it.
 
-```
- 0  1  2  3  4
- 5  6  7  8  9
-10 11 12 13 14
-```
+## Layout file reference (advanced)
 
-```json
-{
-  "brightness": 70,
-  "idle_dim_seconds": 600,
-  "pages": {
-    "home": [
-      { "key": 1, "label": "Party", "color": "#b0186e",
-        "actions": [
-          { "type": "govee_scene", "device": "TV Backlight", "scene": "Party" },
-          { "type": "spotify_playlist",
-            "playlist": "https://open.spotify.com/playlist/37i9dQZF1DXaXB8fQg7xif",
-            "shuffle": true, "volume": 60 }
-        ] },
-      { "key": 4, "label": "Music >", "actions": [ { "type": "page", "page": "music" } ] }
-    ],
-    "music": [ { "key": 4, "label": "< Back", "actions": [ { "type": "page", "page": "home" } ] } ]
-  }
-}
-```
+The editor writes this file for you. For reference, the MK.2 keys are numbered 0–14,
+left to right, top to bottom, and each action looks like this:
 
 | action `type` | fields |
 |---|---|
@@ -182,6 +189,7 @@ make iso-test   # full end-to-end run in QEMU (needs qemu-system-x86, ovmf, mtoo
 make wifi-test  # the same with no network at all, then a virtual USB Wi-Fi dongle
 make modeswitch-test  # a "driver CD" dongle plugged in after boot gets ejected into Wi-Fi mode
 make media-test       # install from sticks made with Rufus "ISO mode" and Ventoy; refuse without touching the disk otherwise
+make editor-test      # build a key on the console editor using the keyboard and the deck, then use it
 ```
 
 `iso-test` builds a test ISO, then runs a virtual mini PC: UEFI firmware (OVMF), a USB
