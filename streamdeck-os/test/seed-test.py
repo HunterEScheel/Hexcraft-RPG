@@ -32,8 +32,76 @@ SEED = "\r\n".join([
 ]) + "\r\n"
 
 
+def fat_stick(path, label, files, size="512M"):
+    subprocess.run(["truncate", "-s", "0", path], check=True)
+    subprocess.run(["truncate", "-s", size, path], check=True)
+    subprocess.run(["sfdisk", "-q", path], input="label: dos\nstart=2048, type=c, bootable\n", text=True, check=True)
+    img = f"{path}@@1M"
+    subprocess.run(["mformat", "-i", img, "-F", "-v", label, "::"], check=True)
+    for f in files:
+        subprocess.run(["mcopy", "-s", "-i", img, f, "::/"], check=True)
+
+
+def one_stick_case(name, stick, kernel, initrd, expect_where):
+    """Only one USB stick: installer and setup file on the same stick."""
+    subprocess.run(["truncate", "-s", "0", vmlib.DISK], check=True)   # blank internal disk
+    subprocess.run(["truncate", "-s", "16G", vmlib.DISK], check=True)
+    vm = vmlib.qemu(f"seed-{name}", usb_stick=False, extra=[
+        "-kernel", kernel, "-initrd", initrd, "-append", "streamdeck.live quiet loglevel=3",
+        "-drive", f"if=none,id=onestick,format=raw,file={stick}",
+        "-device", "usb-storage,bus=xhci.0,drive=onestick,removable=on",
+    ])
+    try:
+        mon = Monitor(vmlib.MON)
+        wait_log(r"TEST: boot complete", 300)
+        wait_log(r"SETUP: prompt use-seed", 90)
+        check(True, f"{name}: setup file found on the installer stick itself")
+        mon.type("")
+        wait_log(r"SETUP: prompt wifi-optional", 60)  # VM has a cable; file has no Wi-Fi
+        mon.type("n")
+        wait_log(r"SETUP: spotify-ok seeded", 90)
+        wait_log(r"SETUP: prompt install-disk", 60)
+        log = vmlib.log_text()
+        asked = [p for p in ("prompt govee-key", "prompt spotify-id", "spotify-wait", "prompt spotify-device", "prompt wifi-ssid") if p in log]
+        check(not asked, f"{name}: nothing typed except 'Use it?' (asked: {asked or 'nothing'})")
+        mon.type("1")
+        wait_log(r"SETUP: prompt install-confirm", 30)
+        mon.type("ERASE")
+        m = wait_log(r"SETUP: (installed \w+|install-error .*)", 180)
+        check(m.group(1) == "installed nvme0n1", f"{name}: installed from the same stick ({m.group(1)})")
+    finally:
+        vm.kill()
+        vm.wait()
+
+
+def one_stick_cases():
+    W = vmlib.WORK
+    iso_dir = os.path.join(W, "seed-iso-contents")
+    subprocess.run(["rm", "-rf", iso_dir], check=True)
+    os.makedirs(iso_dir)
+    subprocess.run(["xorriso", "-osirrox", "on", "-indev", vmlib.ISO, "-extract", "/", iso_dir], check=True, capture_output=True)
+    subprocess.run(["chmod", "-R", "u+w", iso_dir], check=True)
+    boot = os.path.join(iso_dir, "streamdeck", "boot")
+    initrd = os.path.join(W, "seed-initrd.img")
+    with open(initrd, "wb") as out:
+        for part in ("initrd.img", "test.img"):
+            out.write(open(os.path.join(boot, part), "rb").read())
+    seedfile = os.path.join(W, "streamdeck-setup.txt")
+    no_wifi = "\r\n".join(l for l in SEED.split("\r\n") if not l.startswith("wifi_")) + "\r\n"
+    open(seedfile, "w", newline="").write(no_wifi)
+
+    rufus = os.path.join(W, "stick-rufus-seed.img")
+    fat_stick(rufus, "RUFUS_USB", [os.path.join(iso_dir, d) for d in ("streamdeck", "boot", "efi")] + [seedfile])
+    ventoy = os.path.join(W, "stick-ventoy-seed.img")
+    fat_stick(ventoy, "VENTOY", [vmlib.ISO, seedfile])
+    kernel = os.path.join(boot, "vmlinuz")
+    one_stick_case("rufus-iso-mode", rufus, kernel, initrd, "/dev/sda1")
+    one_stick_case("ventoy", ventoy, kernel, initrd, "/dev/sda1")
+
+
 def main():
     setup(sys.argv[1], results="results-seed")
+    one_stick_cases()
     stick = os.path.join(vmlib.WORK, "stick-seed.img")
     subprocess.run(["truncate", "-s", "0", stick], check=True)
     subprocess.run(["truncate", "-s", "64M", stick], check=True)
@@ -44,6 +112,8 @@ def main():
     open(seedfile, "w", newline="").write(SEED)
     subprocess.run(["mcopy", "-i", img, seedfile, "::/"], check=True)
 
+    subprocess.run(["truncate", "-s", "0", vmlib.DISK], check=True)   # blank internal disk
+    subprocess.run(["truncate", "-s", "16G", vmlib.DISK], check=True)
     sock = os.path.join(vmlib.WORK, "ttyS0.sock")
     vm = vmlib.qemu("seed", usb_stick=True, nic=False, shell=sock, extra=[
         "-drive", f"if=none,id=seedstick,format=raw,file={stick}",

@@ -28,7 +28,7 @@ playlists on another device (a Spotify Connect speaker, PC, TV…).
 
 ## Install
 
-1. Put `streamdeck-os.iso` on a USB stick with any of: [balenaEtcher](https://etcher.balena.io/), Rufus (either mode), `dd`, or [Ventoy](https://www.ventoy.net/) (just copy the `.iso` onto the stick).
+1. Put `streamdeck-os.iso` on a USB stick with any of: [balenaEtcher](https://etcher.balena.io/), Rufus (either mode), `dd`, or [Ventoy](https://www.ventoy.net/) (just copy the `.iso` onto the stick). Rufus (ISO mode) and Ventoy leave the stick writable, so a [setup file](#skip-the-typing-a-setup-file) can go on it too.
 2. Plug in the stick, the keyboard, the Wi-Fi dongle and the Stream Deck, then boot from USB (the boot menu key is often F7, F11 or F12).
 3. The installer asks for, in order:
    1. **Wi-Fi**
@@ -48,9 +48,9 @@ Put your Wi-Fi, Govee key and Spotify keys in a text file named
 **`streamdeck-setup.txt`** on a USB stick, and the installer uses them instead of
 asking. It shows what it found and asks only **"Use it?"**.
 
-- **Where the file goes:**
-  - **Ventoy or Rufus "ISO mode" stick:** on the installer stick itself.
-  - **balenaEtcher / `dd` stick:** that stick is read-only, so use any second FAT32 or exFAT stick, plugged in at the same time.
+- **Where the file goes:** next to the installer's files on the installer stick, so a single USB port is enough. That needs a writable stick:
+  - **Rufus** in its default "ISO image" mode, or **Ventoy**: copy `streamdeck-setup.txt` onto the stick.
+  - **balenaEtcher / `dd`**: those make a read-only stick, so the file has to go on a second stick plugged in at the same time.
 - **Starting point:** the ISO includes `streamdeck-setup.example.txt`, or copy this:
 
   ```
@@ -63,7 +63,7 @@ asking. It shows what it found and asks only **"Use it?"**.
   spotify_refresh_token =
   spotify_speaker = Living Room
   ```
-- **Let the mini PC write it:** on an already set-up mini PC, **Settings → 6) Save these settings to a USB stick** writes the file. That includes your Spotify login (`spotify_refresh_token`), so a reinstall needs no phone login either.
+- **Let the mini PC write it:** plug the installer stick (made with Rufus or Ventoy) into an already set-up mini PC and choose **Settings → 6) Save these settings to a USB stick**. It writes the file straight onto that stick. That includes your Spotify login (`spotify_refresh_token`), so a reinstall needs no phone login either.
 - **Empty values:** a key left empty is asked for as usual. A key that doesn't work (e.g. a mistyped Govee key) falls back to asking.
 - **Windows quirks are fine:** a name like `streamdeck-setup.txt.txt` (Windows hiding the extension) and Windows line endings both work.
 
@@ -218,7 +218,7 @@ make wifi-test  # the same with no network at all, then a virtual USB Wi-Fi dong
 make modeswitch-test  # a "driver CD" dongle plugged in after boot gets ejected into Wi-Fi mode
 make media-test       # install from sticks made with Rufus "ISO mode" and Ventoy; refuse without touching the disk otherwise
 make editor-test      # build a key on the console editor using the keyboard and the deck, then use it
-make seed-test        # install from a setup file on a second USB stick with nothing typed; save settings back to it
+make seed-test        # install with nothing typed from a setup file on the installer stick (Rufus, Ventoy) or a second stick; save settings back
 ```
 
 `iso-test` builds a test ISO, then runs a virtual mini PC: UEFI firmware (OVMF), a USB

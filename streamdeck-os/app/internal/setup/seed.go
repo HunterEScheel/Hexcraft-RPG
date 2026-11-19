@@ -139,8 +139,11 @@ func (s *Seed) Summary() []string {
 // usbPart is a filesystem on a USB/removable drive.
 type usbPart struct {
 	Dev      string // /dev/sdb1
+	Disk     string // sdb
 	Mounted  string // existing mount point, if any
 	ReadOnly bool
+	DevRO    bool   // the device itself is read-only
+	Desc     string // size and model, for menus
 }
 
 var sysClassBlock = "/sys/class/block"
@@ -181,7 +184,18 @@ func usbParts() []usbPart {
 		if !rem && !strings.Contains(real, "/usb") {
 			continue
 		}
-		p := usbPart{Dev: "/dev/" + n}
+		p := usbPart{Dev: "/dev/" + n, Disk: disk}
+		p.DevRO = strings.TrimSpace(readFile(filepath.Join(dir, "ro"))) == "1"
+		if sectors, err := strconv.ParseInt(strings.TrimSpace(readFile(filepath.Join(dir, "size"))), 10, 64); err == nil {
+			p.Desc = fmt.Sprintf("%.1f GB", float64(sectors*512)/1e9)
+			if sectors*512 < 1e9 {
+				p.Desc = fmt.Sprintf("%d MB", sectors*512/1e6)
+			}
+		}
+		if m := strings.TrimSpace(readFile(filepath.Join("/sys/block", disk, "device", "vendor")) + " " +
+			readFile(filepath.Join("/sys/block", disk, "device", "model"))); m != "" {
+			p.Desc += "  " + strings.Join(strings.Fields(m), " ")
+		}
 		if m, ok := mounts[p.Dev]; ok {
 			p.Mounted = m[0]
 			p.ReadOnly = strings.HasPrefix(m[1], "ro")
@@ -301,15 +315,20 @@ func wifiPassword() string {
 // ExportSeedStep asks which USB stick to write the setup file to.
 func (w *Wizard) ExportSeedStep() error {
 	seed := SeedFromCurrent(w.SecretsPath)
-	media := ""
+	mediaDisk := ""
 	if b, err := os.ReadFile("/run/streamdeck-media"); err == nil {
-		media, _, _ = strings.Cut(strings.TrimSpace(string(b)), ":")
+		dev, _, _ := strings.Cut(strings.TrimSpace(string(b)), ":")
+		mediaDisk = mediaDiskOf(dev)
 	}
 	var parts []usbPart
 	for _, p := range usbParts() {
-		if p.Dev != media && !(p.Mounted != "" && p.ReadOnly) {
-			parts = append(parts, p)
+		switch {
+		case p.DevRO, p.Mounted != "" && p.ReadOnly:
+			continue // can't write there
+		case mediaDisk != "" && p.Disk == mediaDisk && p.Mounted == "":
+			continue // the installer stick's own (read-only) partitions
 		}
+		parts = append(parts, p)
 	}
 	w.say("\n--- Save settings to a USB stick ---\n")
 	w.say("Writes %s with your Wi-Fi, Govee key and Spotify app keys and login,\n", SeedFileName)
@@ -320,7 +339,7 @@ func (w *Wizard) ExportSeedStep() error {
 		return nil
 	}
 	for i, p := range parts {
-		w.say("  %d) %s\n", i+1, p.Dev)
+		w.say("  %d) %-10s %s\n", i+1, p.Dev, p.Desc)
 	}
 	ans, err := w.ask("export-stick", "Which one? (Enter = cancel): ")
 	if err != nil || ans == "" {
@@ -346,4 +365,15 @@ func (w *Wizard) ExportSeedStep() error {
 	w.trace("exported %s", parts[n-1].Dev)
 	w.say("Saved %s to %s.\n", SeedFileName, parts[n-1].Dev)
 	return nil
+}
+
+// mediaDiskOf maps /dev/sdb or /dev/sdb1 to "sdb".
+func mediaDiskOf(dev string) string {
+	n := filepath.Base(dev)
+	if _, err := os.Stat(filepath.Join(sysClassBlock, n, "partition")); err == nil {
+		if real, err := filepath.EvalSymlinks(filepath.Join(sysClassBlock, n)); err == nil {
+			return filepath.Base(filepath.Dir(real))
+		}
+	}
+	return n
 }
