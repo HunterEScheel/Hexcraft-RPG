@@ -46,7 +46,10 @@ type Wizard struct {
 	PayloadDir string // kernel/initramfs/boot loader on the live media
 	BootDisk   string // disk the live system booted from (never offered)
 	Reboot     func() error
+	// SeedFinder looks for a setup file (streamdeck-setup.txt) with answers.
+	SeedFinder func() (*Seed, string, error)
 
+	seed    *Seed
 	lines   chan string
 	rawMu   sync.Mutex
 	rawSink chan []byte
@@ -59,6 +62,7 @@ func New(in io.Reader, out io.Writer) *Wizard {
 		SecretsPath: config.DefaultSecretsPath,
 		LayoutDir:   "/boot/streamdeck",
 		WebAddr:     ":8080",
+		SeedFinder:  FindSeedOnUSB,
 	}
 }
 
@@ -164,6 +168,28 @@ func (w *Wizard) Run(ctx context.Context) error {
 	w.say("==============================================\n")
 	w.say("Keyboard layout: Dvorak.\n\n")
 
+	w.seed = nil
+	if w.SeedFinder != nil {
+		if sd, where, err := w.SeedFinder(); sd != nil {
+			w.say("Found a setup file (%s) with:\n", where)
+			for _, l := range sd.Summary() {
+				w.say("  - %s\n", l)
+			}
+			if err != nil {
+				w.say("  (some lines were ignored: %v)\n", err)
+			}
+			ans, aerr := w.ask("use-seed", "Use it? [Y/n]: ")
+			if aerr != nil {
+				return aerr
+			}
+			if !strings.HasPrefix(strings.ToLower(ans), "n") {
+				w.seed = sd
+				w.trace("seed-used")
+			}
+			w.say("\n")
+		}
+	}
+
 	ip, err := w.network(ctx)
 	if err != nil {
 		return err
@@ -180,6 +206,9 @@ func (w *Wizard) Run(ctx context.Context) error {
 		return fmt.Errorf("saving settings: %w", err)
 	}
 	w.trace("saved")
+	if w.seed != nil {
+		w.say("\nReminder: the setup file holds your keys in plain text. Keep that USB stick safe.\n")
+	}
 	if w.Live {
 		return w.InstallStep()
 	}
@@ -313,6 +342,18 @@ func (w *Wizard) network(ctx context.Context) (string, error) {
 			ip, first = w.waitForAddress(), false
 		}
 		w.trace("network-ip %s", ip)
+		if w.seed.HasWifi() {
+			if ip != "" {
+				// Already online (e.g. a cable): just keep the Wi-Fi details for later.
+				_ = wifi.WriteConfig(w.seed.WifiName, w.seed.WifiPassword, w.seed.WifiCountry, true)
+				w.say("Network: connected (%s). Wi-Fi details from the setup file saved too.\n", ip)
+				return ip, nil
+			}
+			if wip := w.seedWifi(); wip != "" {
+				return wip, nil
+			}
+			w.say("Couldn't connect with the setup file's Wi-Fi details; let's do it by hand.\n")
+		}
 		if ip != "" {
 			w.say("Network: connected (%s)\n", ip)
 			ans, err := w.ask("wifi-optional", "Set up Wi-Fi as well? [y/N]: ")
@@ -360,6 +401,21 @@ func (w *Wizard) waitClock() {
 
 func (w *Wizard) goveeStep(ctx context.Context, s *config.Secrets) error {
 	w.say("\n--- Govee ---\n")
+	if w.seed != nil && w.seed.GoveeKey != "" {
+		g := govee.New(w.seed.GoveeKey)
+		cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		devs, err := g.Devices(cctx)
+		cancel()
+		if err == nil {
+			s.Govee.APIKey = w.seed.GoveeKey
+			w.trace("govee-ok %d", len(devs))
+			w.say("Govee key from the setup file works. Found %d device(s).\n", len(devs))
+			w.writeGoveeList(ctx, g, devs)
+			return nil
+		}
+		w.trace("govee-error %v", err)
+		w.say("The Govee key in the setup file didn't work (%v). Please type it.\n", err)
+	}
 	w.say("Get an API key in the Govee Home app: Profile > Settings > Apply for API Key.\n")
 	for {
 		prompt := "Govee API key (Enter to skip): "
@@ -437,6 +493,35 @@ func (w *Wizard) writeGoveeList(ctx context.Context, g *govee.Client, devs []gov
 
 func (w *Wizard) spotifyStep(ctx context.Context, s *config.Secrets, ip string) error {
 	w.say("\n--- Spotify (Premium required) ---\n")
+	if sd := w.seed; sd.HasSpotify() {
+		if sd.SpotifyRefresh != "" {
+			c := spotify.New(sd.SpotifyID, sd.SpotifySecret, sd.SpotifyRefresh)
+			cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+			_, err := c.Devices(cctx)
+			cancel()
+			if err == nil {
+				s.Spotify.ClientID, s.Spotify.ClientSecret, s.Spotify.RefreshToken = sd.SpotifyID, sd.SpotifySecret, sd.SpotifyRefresh
+				w.trace("spotify-ok seeded")
+				w.say("Spotify login from the setup file works.\n")
+				if sd.SpotifySpeaker != "" {
+					s.Spotify.DefaultDevice = sd.SpotifySpeaker
+					w.trace("spotify-device %q", sd.SpotifySpeaker)
+					w.say("Default speaker: %s\n", sd.SpotifySpeaker)
+					return nil
+				}
+				return w.pickDevice(ctx, s)
+			}
+			w.trace("spotify-error %v", err)
+			w.say("The Spotify login in the setup file didn't work (%v); logging in again.\n", err)
+		}
+		if err := w.spotifyLogin(ctx, s, sd.SpotifyID, sd.SpotifySecret, ip); err != nil {
+			return err
+		}
+		if sd.SpotifySpeaker != "" {
+			s.Spotify.DefaultDevice = sd.SpotifySpeaker
+		}
+		return nil
+	}
 	w.say("At developer.spotify.com/dashboard create an app, select \"Web API\", and add\n")
 	w.say("this Redirect URI:  %s\n", spotify.RedirectURI)
 	keep := s.Spotify.ClientID != "" && s.Spotify.RefreshToken != ""

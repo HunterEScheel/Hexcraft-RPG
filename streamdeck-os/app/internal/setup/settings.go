@@ -46,8 +46,9 @@ func (w *Wizard) Settings(ctx context.Context) error {
 		}
 		w.say("  4) Spotify speaker           %s\n", dev)
 		w.say("  5) Wi-Fi                     %s\n", WifiStatus())
+		w.say("  6) Save these settings to a USB stick (for reinstalling)\n")
 		if w.Live {
-			w.say("  6) Install to this computer's disk\n")
+			w.say("  7) Install to this computer's disk\n")
 		}
 		w.say("  0) Back\n\n")
 
@@ -93,6 +94,9 @@ func (w *Wizard) Settings(ctx context.Context) error {
 			}
 			w.pause()
 		case "6":
+			err = w.ExportSeedStep()
+			w.pause()
+		case "7":
 			if w.Live {
 				err = w.InstallStep()
 			}

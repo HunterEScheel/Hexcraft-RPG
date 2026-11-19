@@ -74,6 +74,7 @@ func TestWizardFlow(t *testing.T) {
 	}
 	var out, trace bytes.Buffer
 	w := New(strings.NewReader(input), &out)
+	w.SeedFinder = nil
 	w.Trace = &trace
 	w.SecretsPath = dir + "/secrets.json"
 	w.LayoutDir = dir
@@ -116,6 +117,7 @@ func TestSettingsMenuChangesGoveeKey(t *testing.T) {
 	in := strings.Join([]string{"1", "bad", "new-key", "", "0"}, "\n") + "\n"
 	var out bytes.Buffer
 	w := New(strings.NewReader(in), &out)
+	w.SeedFinder = nil
 	w.SecretsPath, w.LayoutDir = sp, dir
 	if err := w.Settings(context.Background()); err != nil {
 		t.Fatal(err)

@@ -1,0 +1,23 @@
+# StreamDeck OS setup file
+#
+# Fill this in, rename it to streamdeck-setup.txt and put it on a USB stick
+# (the installer stick if it was made with Rufus "ISO mode" or Ventoy, or any
+# other FAT32/exFAT stick). Plug it in while installing: the installer uses
+# these instead of asking. Leave a value empty to be asked as usual.
+#
+# It holds your keys in plain text: keep the stick safe.
+# Tip: on a set-up mini PC, Settings > "Save these settings to a USB stick"
+# writes this file for you, including your Spotify login.
+
+wifi_name =
+wifi_password =
+wifi_country = US
+
+govee_api_key =
+
+spotify_client_id =
+spotify_client_secret =
+# Optional: your Spotify login (only "Save settings to a USB stick" can fill
+# this in). Without it you log in once on your phone during install.
+spotify_refresh_token =
+spotify_speaker =

@@ -42,6 +42,33 @@ playlists on another device (a Spotify Connect speaker, PC, TV…).
 The ISO also works without installing (just press Enter at the disk question), but its
 settings are lost when the PC restarts.
 
+## Skip the typing: a setup file
+
+Put your Wi-Fi, Govee key and Spotify keys in a text file named
+**`streamdeck-setup.txt`** on a USB stick, and the installer uses them instead of
+asking. It shows what it found and asks only **"Use it?"**.
+
+- **Where the file goes:**
+  - **Ventoy or Rufus "ISO mode" stick:** on the installer stick itself.
+  - **balenaEtcher / `dd` stick:** that stick is read-only, so use any second FAT32 or exFAT stick, plugged in at the same time.
+- **Starting point:** the ISO includes `streamdeck-setup.example.txt`, or copy this:
+
+  ```
+  wifi_name = MyWifi
+  wifi_password = my wifi password
+  wifi_country = US
+  govee_api_key = 12345678-abcd-...
+  spotify_client_id = 0123456789abcdef...
+  spotify_client_secret = fedcba9876543210...
+  spotify_refresh_token =
+  spotify_speaker = Living Room
+  ```
+- **Let the mini PC write it:** on an already set-up mini PC, **Settings → 6) Save these settings to a USB stick** writes the file. That includes your Spotify login (`spotify_refresh_token`), so a reinstall needs no phone login either.
+- **Empty values:** a key left empty is asked for as usual. A key that doesn't work (e.g. a mistyped Govee key) falls back to asking.
+- **Windows quirks are fine:** a name like `streamdeck-setup.txt.txt` (Windows hiding the extension) and Windows line endings both work.
+
+The file holds your keys in plain text, so keep that stick somewhere safe, or delete the file after installing.
+
 ## Wi-Fi
 
 Built-in Wi-Fi and most USB Wi-Fi dongles work. The image uses Linux 7.0 (Ubuntu's HWE
@@ -120,6 +147,7 @@ The HDMI screen shows the status: network, Wi-Fi, deck, Govee, Spotify and butto
   - the Spotify login on its own
   - the default speaker
   - Wi-Fi
+  - **Save these settings to a USB stick**: writes `streamdeck-setup.txt` for hands-free reinstalls
   
   Each change is checked against the service before it's saved, and takes effect within seconds.
 - **3** reruns the whole installer.
@@ -190,6 +218,7 @@ make wifi-test  # the same with no network at all, then a virtual USB Wi-Fi dong
 make modeswitch-test  # a "driver CD" dongle plugged in after boot gets ejected into Wi-Fi mode
 make media-test       # install from sticks made with Rufus "ISO mode" and Ventoy; refuse without touching the disk otherwise
 make editor-test      # build a key on the console editor using the keyboard and the deck, then use it
+make seed-test        # install from a setup file on a second USB stick with nothing typed; save settings back to it
 ```
 
 `iso-test` builds a test ISO, then runs a virtual mini PC: UEFI firmware (OVMF), a USB

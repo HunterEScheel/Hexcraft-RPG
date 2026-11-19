@@ -230,6 +230,7 @@ grub-mkstandalone -O x86_64-efi -o "$ISO/streamdeck/boot/BOOTX64.EFI" \
 	--locales= --fonts= "boot/grub/grub.cfg=$HERE/grub/embedded.cfg"
 
 sed "s#@INITRDS@#$INITRDS#" "$HERE/grub/live.cfg" > "$ISO/boot/grub/grub.cfg"
+cp "$HERE/streamdeck-setup.example.txt" "$ISO/"
 grub-mkrescue -o "$WORK/$NAME.iso" "$ISO" -- -volid STREAMDECK_LIVE 2>&1 | grep -v '^xorriso : UPDATE' || true
 
 echo

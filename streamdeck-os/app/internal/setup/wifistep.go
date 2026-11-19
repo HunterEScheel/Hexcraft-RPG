@@ -304,3 +304,28 @@ func WifiStatus() string {
 		return fmt.Sprintf("%s: %s", ssid, state)
 	}
 }
+
+// seedWifi connects using the setup file's Wi-Fi details; returns the address.
+func (w *Wizard) seedWifi() string {
+	w.say("\n--- Wi-Fi (from the setup file) ---\n")
+	ad := w.findAdapter()
+	if ad == nil {
+		w.explainNoAdapter()
+		return ""
+	}
+	w.trace("wifi-adapter %s %s usb=%v", ad.Name, ad.Driver, ad.USB)
+	w.say("Wi-Fi adapter: %s\n", ad)
+	ctl := wifi.Ctl{Iface: ad.Name}
+	if !ctl.Ready(15 * time.Second) {
+		w.trace("wifi-not-ready %s", ad.Name)
+		return ""
+	}
+	sd := w.seed
+	// scan_ssid=1 also finds hidden networks; harmless for visible ones.
+	if err := wifi.WriteConfig(sd.WifiName, sd.WifiPassword, sd.WifiCountry, true); err != nil {
+		w.say("Could not save Wi-Fi settings: %v\n", err)
+		return ""
+	}
+	w.connectWifi(ctl, sd.WifiName)
+	return wifi.IfaceIPv4(ad.Name)
+}
