@@ -3,8 +3,7 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
+	"io"
 
 	"streamdeckd/internal/config"
 	"streamdeckd/internal/deckipc"
@@ -13,16 +12,8 @@ import (
 	"streamdeckd/internal/runner"
 	"streamdeckd/internal/setup"
 	"streamdeckd/internal/spotify"
-	"streamdeckd/internal/tui"
+	"streamdeckd/internal/ui"
 )
-
-// swapScreen lets the editor survive the terminal being handed back to
-// line-based prompts (Spotify reconnect) and taken again.
-type swapScreen struct{ t *tui.Term }
-
-func (s *swapScreen) Size() (int, int)     { return s.t.Size() }
-func (s *swapScreen) Draw(l []string)      { s.t.Draw(l) }
-func (s *swapScreen) Keys() <-chan tui.Key { return s.t.Keys() }
 
 type deckAdapter struct{ c *deckipc.Client }
 
@@ -35,9 +26,7 @@ func (d deckAdapter) Presses() <-chan int { return d.c.Presses }
 // Settings apply without restarting the editor.
 type realSources struct {
 	secretsPath string
-	w           *setup.Wizard
-	suspend     func()
-	resume      func() error
+	app         *setup.App
 }
 
 func (r *realSources) secrets() *config.Secrets {
@@ -107,66 +96,16 @@ func (r *realSources) Run(ctx context.Context, actions []config.Action) error {
 }
 
 func (r *realSources) ReconnectSpotify(ctx context.Context) error {
-	r.suspend()
-	err := r.w.ReconnectSpotify(ctx)
-	if rerr := r.resume(); rerr != nil && err == nil {
-		err = rerr
-	}
-	return err
+	return r.app.ReconnectSpotify(ctx)
 }
 
-// runEditor runs the full-screen button editor on the console.
-func runEditor(ctx context.Context, w *setup.Wizard, cfgPath, secretsPath string, trace *os.File) {
-	scr := &swapScreen{}
-	var release func()
-	open := func() error {
-		in, rel := w.RawInput()
-		t, err := tui.Open(int(os.Stdin.Fd()), os.Stdout, in)
-		if err != nil {
-			rel()
-			return err
-		}
-		scr.t, release = t, rel
-		return nil
-	}
-	closeTerm := func() {
-		scr.t.Close()
-		release()
-	}
-	if err := open(); err != nil {
-		fmt.Printf("Can't open the editor: %v\n", err)
-		return
-	}
-	defer closeTerm()
-
-	src := &realSources{secretsPath: secretsPath, w: w, suspend: closeTerm, resume: open}
-	e := &editor.Editor{S: scr, Src: src, LayoutPath: cfgPath, Secrets: src.secrets}
-	if trace != nil {
-		e.Trace = trace
-	}
+// runEditor runs the button editor; the Stream Deck shows the layout live.
+func runEditor(ctx context.Context, u ui.UI, app *setup.App, cfgPath, secretsPath string, trace io.Writer) {
+	src := &realSources{secretsPath: secretsPath, app: app}
+	e := &editor.Editor{U: u, Src: src, LayoutPath: cfgPath, Secrets: src.secrets, Trace: trace}
 	if c, err := deckipc.Dial(); err == nil {
 		defer c.Close()
 		e.Deck = deckAdapter{c}
 	}
 	_ = e.Run(ctx)
-}
-
-// buttonSummary is the status screen's one-liner about the layout.
-func buttonSummary(cfgPath string) string {
-	l, err := config.ReadLayout(cfgPath)
-	if err != nil {
-		return "layout can't be read: " + err.Error()
-	}
-	n := 0
-	for _, b := range l.Pages {
-		n += len(b)
-	}
-	pages := "page"
-	if len(l.Pages) != 1 {
-		pages = "pages"
-	}
-	if n == 0 {
-		return "none yet: choose 1 to set them up"
-	}
-	return fmt.Sprintf("%d on %d %s", n, len(l.Pages), pages)
 }

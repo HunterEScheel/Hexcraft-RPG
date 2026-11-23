@@ -14,6 +14,8 @@ import (
 	"streamdeckd/internal/config"
 	"streamdeckd/internal/spotify"
 	"streamdeckd/internal/tui"
+	"streamdeckd/internal/ui"
+	"streamdeckd/internal/ui/text"
 )
 
 type fakeSrc struct {
@@ -90,7 +92,7 @@ func setup(t *testing.T, layout string, src *fakeSrc) (*Editor, *tui.Fake, *fake
 	if src.spotify {
 		secrets.Spotify = config.SpotifyConfig{ClientID: "i", ClientSecret: "s", RefreshToken: "r", DefaultDevice: "Living Room"}
 	}
-	e := &Editor{S: scr, Src: src, Deck: deck, LayoutPath: p, Trace: tr, Secrets: func() *config.Secrets { return secrets }}
+	e := &Editor{U: text.New(scr, ui.Tracer{W: tr}), Src: src, Deck: deck, LayoutPath: p, Trace: tr, Secrets: func() *config.Secrets { return secrets }}
 	done := make(chan error, 1)
 	go func() { done <- e.Run(context.Background()) }()
 	return e, scr, deck, tr, done
@@ -225,14 +227,66 @@ func TestPlaylistReconnect(t *testing.T) {
 
 var _ = errors.New
 
-func TestConsoleColorByHue(t *testing.T) {
-	for hex, want := range map[string]int{
-		"#3a1d6e": 5, "#b0186e": 5, "#105a6e": 6, "#1db954": 2, "#c0262d": 1, "#e0701b": 3,
-		"#1d5fa0": 4, "#202020": 0, "#ffffff": 7, "#6b6b6b": 0, "#e8c020": 3,
-	} {
-		c, _ := config.ParseColor(hex)
-		if got := consoleColor(float64(c.R)/255, float64(c.G)/255, float64(c.B)/255); got != want {
-			t.Errorf("%s: got %d want %d", hex, got, want)
+func TestNewFolderHereAndNavigate(t *testing.T) {
+	src := &fakeSrc{govee: true, spotify: true}
+	e, scr, deck, tr, done := setup(t, "", src)
+	waitFor(t, tr, "open")
+	scr.Press("n", "Lights", "enter") // new folder on empty key 1
+	waitFor(t, tr, "folder-open Lights")
+	waitFor(t, tr, "grid page=Lights sel=0")
+	if txt := scr.Text(); !strings.Contains(txt, "Buttons > Lights") || !strings.Contains(txt, "Back") {
+		t.Fatalf("not inside the folder:\n%s", txt)
+	}
+	scr.Press("right", "enter", "enter", "Lamp", "enter", "esc") // key 2 in the folder
+	waitFor(t, tr, "saved")
+	scr.Press("esc") // up to the main buttons
+	waitFor(t, tr, "folder-up home")
+	// Pressing the folder key on the deck twice opens it again.
+	deck.p <- 0
+	deck.p <- 0
+	for i := 0; strings.Count(tr.String(), "folder-open Lights") < 2; i++ {
+		if i > 200 {
+			t.Fatalf("deck double press didn't open the folder:\n%s", tr.String())
 		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	// Opening a folder key that points back up returns to the parent.
+	scr.Press("o")
+	waitFor(t, tr, "grid page=home")
+	scr.Press("esc")
+	finish(t, done)
+
+	l, _ := config.ReadLayout(e.LayoutPath)
+	h := l.Pages["home"]
+	if len(h) != 1 || h[0].Label != "Lights" || folderOf(h[0]) != "Lights" {
+		t.Fatalf("home: %+v", h)
+	}
+	f := l.Pages["Lights"]
+	if len(f) != 2 || folderOf(f[0]) != "home" || f[1].Key != 1 || f[1].Label != "Lamp" {
+		t.Fatalf("Lights: %+v", f)
+	}
+}
+
+func TestFolderActionCreatesAndOpens(t *testing.T) {
+	src := &fakeSrc{govee: true, spotify: true}
+	e, scr, _, tr, done := setup(t, "", src)
+	scr.Press("right", "enter", "down", "down", "down", "enter") // key 2: add an action (no label yet)
+	waitFor(t, tr, "screen add-action")
+	scr.Press("down", "down", "down", "down", "down", "down", "down", "down", "enter") // Open a folder
+	waitFor(t, tr, "screen pick-folder")
+	scr.Press("enter", "Music", "enter") // + New folder…
+	waitFor(t, tr, "folder-new Music")
+	scr.Press("esc") // done: saves, asks to open
+	waitFor(t, tr, "menu open-new-folder")
+	scr.Press("down", "enter")
+	waitFor(t, tr, "folder-open Music")
+	scr.Press("esc", "esc")
+	finish(t, done)
+	l, _ := config.ReadLayout(e.LayoutPath)
+	if b := l.Pages["home"]; len(b) != 1 || b[0].Key != 1 || b[0].Label != "Music" || folderOf(b[0]) != "Music" {
+		t.Fatalf("home: %+v", l.Pages)
+	}
+	if b := l.Pages["Music"]; len(b) != 1 || folderOf(b[0]) != "home" {
+		t.Fatalf("Music: %+v", b)
 	}
 }

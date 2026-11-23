@@ -383,6 +383,12 @@ func copyFile(src, dst string) error {
 }
 
 func copyTree(src, dst string) error {
+	if src == "" {
+		return nil
+	}
+	if _, err := os.Stat(src); os.IsNotExist(err) {
+		return nil
+	}
 	return filepath.Walk(src, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

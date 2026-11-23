@@ -60,7 +60,8 @@ func face(size float64) font.Face {
 }
 
 // Key renders one button to a JPEG of px×px pixels, mirrored as requested.
-func Key(px int, b config.Button, baseDir string, st State, flipH, flipV bool) ([]byte, error) {
+// KeyImage draws a key at px×px (unmirrored), e.g. for on-screen previews.
+func KeyImage(px int, b config.Button, baseDir string, st State) *image.RGBA {
 	renderMu.Lock()
 	defer renderMu.Unlock()
 	img := image.NewRGBA(image.Rect(0, 0, px, px))
@@ -105,7 +106,11 @@ func Key(px int, b config.Button, baseDir string, st State, flipH, flipV bool) (
 	case OK:
 		border(img, max(3, px/16), color.RGBA{0x20, 0xe0, 0x60, 0xff})
 	}
+	return img
+}
 
+func Key(px int, b config.Button, baseDir string, st State, flipH, flipV bool) ([]byte, error) {
+	img := KeyImage(px, b, baseDir, st)
 	out := image.Image(img)
 	if flipH || flipV {
 		out = flip(img, flipH, flipV)

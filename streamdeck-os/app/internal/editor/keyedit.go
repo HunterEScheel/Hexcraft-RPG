@@ -8,7 +8,7 @@ import (
 
 	"streamdeckd/internal/config"
 	"streamdeckd/internal/spotify"
-	"streamdeckd/internal/tui"
+	"streamdeckd/internal/ui"
 )
 
 // editKey edits the selected key; changes show on the deck immediately and
@@ -19,67 +19,94 @@ func (e *Editor) editKey(ctx context.Context) {
 	b.Key = e.sel
 	b.Actions = append([]config.Action(nil), orig.Actions...)
 	sel := 0
+	e.fresh = ""
 	for {
 		e.setButton(e.page, b)
 		e.preview()
 
-		items := []tui.Item{
-			{Label: "Label", Detail: orDash(b.Label)},
-			{Label: "Colour", Detail: colorName(b.Color, "#202020"), Swatch: colorEsc(or(b.Color, "#202020"), true)},
-			{Label: "Text colour", Detail: colorName(b.TextColor, "#ffffff"), Swatch: colorEsc(or(b.TextColor, "#ffffff"), true)},
-			{Label: "What it does (in order)", Header: true},
+		var items []ui.Item
+		openIdx := -1
+		if f := folderOf(b); f != "" {
+			openIdx = len(items)
+			items = append(items, ui.Item{Label: "Open this folder", Detail: "add and edit the buttons inside " + f, Icon: "folder"})
 		}
+		base := len(items)
+		items = append(items,
+			ui.Item{Label: "Appearance", Header: true},
+			ui.Item{Label: "Label", Value: orDash(b.Label), Icon: "key"},
+			ui.Item{Label: "Key colour", Value: colorName(b.Color, "#202020"), Swatch: or(b.Color, "#202020"), Icon: "light"},
+			ui.Item{Label: "Text colour", Value: colorName(b.TextColor, "#ffffff"), Swatch: or(b.TextColor, "#ffffff"), Icon: "light"},
+			ui.Item{Label: "What it does, in order", Header: true},
+		)
+		labelIdx, colIdx, txtIdx := base+1, base+2, base+3
+		firstAct := len(items)
 		for i, a := range b.Actions {
 			s, warn := e.describe(a)
+			it := ui.Item{Label: fmt.Sprintf("%d. %s", i+1, s), Icon: actionIcon(a.Type)}
 			if warn != "" {
-				s += "  ! " + warn
+				it.Detail = "! " + warn
+				it.Danger = true
 			}
-			items = append(items, tui.Item{Label: fmt.Sprintf("%d. %s", i+1, s)})
+			items = append(items, it)
 		}
 		addIdx := len(items)
-		items = append(items, tui.Item{Label: "+ Add an action"}, tui.Item{Label: "", Header: true},
-			tui.Item{Label: "Try it now"}, tui.Item{Label: "Clear this key"}, tui.Item{Label: "Done"})
+		items = append(items, ui.Item{Label: "+ Add an action", Icon: "plus"}, ui.Item{Label: "", Header: true},
+			ui.Item{Label: "Try it now", Icon: "play"}, ui.Item{Label: "Clear this key", Icon: "trash", Danger: true}, ui.Item{Label: "Done", Icon: "check"})
 		tryIdx, clearIdx, doneIdx := addIdx+2, addIdx+3, addIdx+4
-		if sel == 0 && len(b.Actions) == 0 && b.Label != "" {
-			sel = addIdx
+		if sel == 0 {
+			sel = labelIdx
+		}
+		if sel == labelIdx && b.Label != "" && len(b.Actions) == 0 {
+			sel = addIdx // named it: next, say what it does
 		}
 		e.trace("screen key %d", e.sel)
-		r := tui.Menu(e.S, tui.MenuOpts{
-			Title:    fmt.Sprintf("Key %d  (page %s)", e.sel+1, e.page),
-			Items:    items,
-			Selected: sel,
-			Help:     "Up/Down: choose   Enter: change   Esc: done (saves)",
-		})
+		title := fmt.Sprintf("Key %d", e.sel+1)
+		if len(e.stack) > 1 {
+			title += "  ·  " + e.page
+		}
+		r := e.U.Menu(ui.MenuOpts{ID: "key", Title: title, Items: items, Selected: sel})
 		if !r.OK {
 			r.Index = doneIdx
 		}
 		sel = r.Index
 		switch {
-		case r.Index == 0:
-			if v, ok := tui.Input(e.S, "Label", []string{"Text shown on the key. Keep it short: about 2 lines of 7 letters."}, "Label:", b.Label); ok {
+		case r.Index == openIdx:
+			e.setButton(e.page, b)
+			if e.save() {
+				e.open(folderOf(b))
+				return
+			}
+			e.U.Message(ui.Note{ID: "save-error", Kind: ui.ErrorNote, Title: "Can't save this key", Lines: strings.Split(e.err, "\n")})
+		case r.Index == labelIdx:
+			if v, ok := e.U.Input(ui.InputOpts{ID: "label", Title: "Label", Intro: []string{"Text shown on the key. Keep it short: about 2 lines of 7 letters."}, Label: "Label", Initial: b.Label}); ok {
 				b.Label = v
 				e.trace("label %q", v)
 			}
-		case r.Index == 1:
+		case r.Index == colIdx:
 			if c, ok := e.pickColor("Key colour", b.Color, "#202020"); ok {
 				b.Color = c
 			}
-		case r.Index == 2:
+		case r.Index == txtIdx:
 			if c, ok := e.pickColor("Text colour", b.TextColor, "#ffffff"); ok {
 				b.TextColor = c
 			}
-		case r.Index >= 4 && r.Index < addIdx:
-			i := r.Index - 4
-			b.Actions = e.actionMenu(ctx, b.Actions, i)
+		case r.Index >= firstAct && r.Index < addIdx:
+			b.Actions = e.actionMenu(ctx, b.Actions, r.Index-firstAct)
 		case r.Index == addIdx:
 			if a, ok := e.newAction(ctx); ok {
 				b.Actions = append(b.Actions, a)
-				sel = addIdx + 1 // land on "+ Add" again (list grew by one)
+				if a.Type == config.Page && b.Label == "" {
+					b.Label = a.Page
+				}
+				sel = addIdx + 1 // "+ Add" again: the list grew by one
+				if a.Type == config.Page && openIdx < 0 {
+					sel++ // and "Open this folder" appeared at the top
+				}
 			}
 		case r.Index == tryIdx:
 			e.try(ctx, b)
 		case r.Index == clearIdx:
-			if tui.Confirm(e.S, "Clear key", fmt.Sprintf("Remove everything from key %d?", e.sel+1)) {
+			if e.U.Confirm(ui.ConfirmOpts{ID: "clear-key", Title: "Clear key", Question: fmt.Sprintf("Remove everything from key %d?", e.sel+1), Yes: "Clear", Danger: true}) {
 				b = config.Button{Key: e.sel}
 				e.setButton(e.page, b)
 				e.save()
@@ -88,10 +115,11 @@ func (e *Editor) editKey(ctx context.Context) {
 		case r.Index == doneIdx:
 			e.setButton(e.page, b)
 			if !e.save() {
-				r := tui.Menu(e.S, tui.MenuOpts{
+				r := e.U.Menu(ui.MenuOpts{
+					ID:    "save-error",
 					Title: "Can't save this key",
-					Intro: append([]string{"  " + tui.Red + "Problem:" + tui.Reset}, indent(strings.Split(e.err, "\n"))...),
-					Items: []tui.Item{{Label: "Go back and fix it"}, {Label: "Undo my changes to this key"}},
+					Intro: append([]string{"Problem:"}, strings.Split(e.err, "\n")...),
+					Items: []ui.Item{{Label: "Go back and fix it", Icon: "back"}, {Label: "Undo my changes to this key", Icon: "trash", Danger: true}},
 				})
 				if r.OK && r.Index == 1 {
 					// Back to what's already saved on disk: nothing to write.
@@ -100,23 +128,26 @@ func (e *Editor) editKey(ctx context.Context) {
 					} else {
 						e.setButton(e.page, config.Button{Key: e.sel})
 					}
+					if e.fresh != "" {
+						delete(e.L.Pages, e.fresh)
+						e.fresh = ""
+					}
 					e.err = ""
 					e.trace("undo %d", e.sel)
 					return
 				}
 				continue
 			}
+			if f := e.fresh; f != "" && folderOf(b) == f {
+				e.fresh = ""
+				if e.U.Confirm(ui.ConfirmOpts{ID: "open-new-folder", Title: "Folder created",
+					Question: fmt.Sprintf("Open %q now to add its buttons? It already has a Back key.", f), Yes: "Open it", No: "Later"}) {
+					e.open(f)
+				}
+			}
 			return
 		}
 	}
-}
-
-func indent(lines []string) []string {
-	out := make([]string, len(lines))
-	for i, l := range lines {
-		out[i] = "  " + l
-	}
-	return out
 }
 
 func or(s, def string) string {
@@ -129,10 +160,12 @@ func or(s, def string) string {
 // actionMenu changes, moves or deletes action i.
 func (e *Editor) actionMenu(ctx context.Context, acts []config.Action, i int) []config.Action {
 	s, _ := e.describe(acts[i])
-	r := tui.Menu(e.S, tui.MenuOpts{
-		Title: fmt.Sprintf("Action %d", i+1),
-		Intro: []string{"  " + s},
-		Items: []tui.Item{{Label: "Change it"}, {Label: "Move up"}, {Label: "Move down"}, {Label: "Delete it"}, {Label: "Back"}},
+	r := e.U.Menu(ui.MenuOpts{
+		ID:       "action",
+		Title:    fmt.Sprintf("Action %d", i+1),
+		Subtitle: s,
+		Items: []ui.Item{{Label: "Change it", Icon: "gear"}, {Label: "Move up", Icon: "chevron"}, {Label: "Move down", Icon: "chevron"},
+			{Label: "Delete it", Icon: "trash", Danger: true}},
 	})
 	if !r.OK {
 		return acts
@@ -167,25 +200,25 @@ var actionTypes = []struct {
 	{"Music (Spotify)", "Pause", config.SpotifyPause},
 	{"Music (Spotify)", "Next song", config.SpotifyNext},
 	{"Music (Spotify)", "Set volume", config.SpotifyVolume},
-	{"Other", "Go to another page of buttons", config.Page},
+	{"Folders", "Open a folder of buttons", config.Page},
 	{"Other", "Wait a moment", config.Delay},
 }
 
 func (e *Editor) newAction(ctx context.Context) (config.Action, bool) {
-	var items []tui.Item
+	var items []ui.Item
 	var types []string
 	group := ""
 	for _, t := range actionTypes {
 		if t.group != group {
-			items = append(items, tui.Item{Label: t.group, Header: true})
+			items = append(items, ui.Item{Label: t.group, Header: true})
 			types = append(types, "")
 			group = t.group
 		}
-		items = append(items, tui.Item{Label: t.label})
+		items = append(items, ui.Item{Label: t.label, Icon: actionIcon(t.typ)})
 		types = append(types, t.typ)
 	}
 	e.trace("screen add-action")
-	r := tui.Menu(e.S, tui.MenuOpts{Title: "Add an action", Items: items})
+	r := e.U.Menu(ui.MenuOpts{ID: "add-action", Title: "Add an action", Items: items})
 	if !r.OK {
 		return config.Action{}, false
 	}
@@ -217,7 +250,7 @@ func (e *Editor) buildAction(ctx context.Context, typ string, cur *config.Action
 		if !ok {
 			return a, false
 		}
-		r := tui.Menu(e.S, tui.MenuOpts{Title: dev, Items: []tui.Item{{Label: "Turn on"}, {Label: "Turn off"}}})
+		r := e.U.Menu(ui.MenuOpts{ID: "power", Title: dev, Items: []ui.Item{{Label: "Turn on", Icon: "check"}, {Label: "Turn off", Icon: "pause"}}})
 		if !r.OK {
 			return a, false
 		}
@@ -228,7 +261,7 @@ func (e *Editor) buildAction(ctx context.Context, typ string, cur *config.Action
 		if !ok {
 			return a, false
 		}
-		v, ok := tui.Number(e.S, dev, "Brightness:", or0(a.Brightness, 50), 1, 100, 5, "%")
+		v, ok := e.U.Number(ui.NumberOpts{ID: "brightness", Title: dev, Label: "Brightness", Value: or0(a.Brightness, 50), Min: 1, Max: 100, Step: 5, Unit: "%"})
 		if !ok {
 			return a, false
 		}
@@ -252,7 +285,7 @@ func (e *Editor) buildAction(ctx context.Context, typ string, cur *config.Action
 		if !ok {
 			return a, false
 		}
-		r := tui.Menu(e.S, tui.MenuOpts{Title: "Shuffle?", Items: []tui.Item{{Label: "Play in order"}, {Label: "Shuffle"}}, Selected: b2i(a.Shuffle)})
+		r := e.U.Menu(ui.MenuOpts{ID: "shuffle", Title: "Shuffle?", Items: []ui.Item{{Label: "Play in order", Icon: "play"}, {Label: "Shuffle", Icon: "next"}}, Selected: b2i(a.Shuffle)})
 		if !r.OK {
 			return a, false
 		}
@@ -261,7 +294,7 @@ func (e *Editor) buildAction(ctx context.Context, typ string, cur *config.Action
 		if a.Volume != nil {
 			vsel = 1
 		}
-		r = tui.Menu(e.S, tui.MenuOpts{Title: "Volume", Items: []tui.Item{{Label: "Leave the volume as it is"}, {Label: "Set the volume"}}, Selected: vsel})
+		r = e.U.Menu(ui.MenuOpts{ID: "set-volume", Title: "Volume", Items: []ui.Item{{Label: "Leave the volume as it is", Icon: "volume"}, {Label: "Set the volume", Icon: "volume"}}, Selected: vsel})
 		if !r.OK {
 			return a, false
 		}
@@ -271,7 +304,7 @@ func (e *Editor) buildAction(ctx context.Context, typ string, cur *config.Action
 			if a.Volume != nil {
 				start = *a.Volume
 			}
-			v, ok := tui.Number(e.S, "Volume", "Volume:", start, 0, 100, 5, "%")
+			v, ok := e.U.Number(ui.NumberOpts{ID: "volume", Title: "Volume", Label: "Volume", Value: start, Min: 0, Max: 100, Step: 5, Unit: "%"})
 			if !ok {
 				return a, false
 			}
@@ -293,19 +326,19 @@ func (e *Editor) buildAction(ctx context.Context, typ string, cur *config.Action
 		if a.Volume != nil {
 			start = *a.Volume
 		}
-		v, ok := tui.Number(e.S, "Volume", "Volume:", start, 0, 100, 5, "%")
+		v, ok := e.U.Number(ui.NumberOpts{ID: "volume", Title: "Volume", Label: "Volume", Value: start, Min: 0, Max: 100, Step: 5, Unit: "%"})
 		if !ok {
 			return a, false
 		}
 		a.SpotifyDevice, a.Volume = spk, &v
 	case config.Page:
-		p, ok := e.pickPage(a.Page)
+		p, ok := e.pickFolder(a.Page)
 		if !ok {
 			return a, false
 		}
 		a.Page = p
 	case config.Delay:
-		v, ok := tui.Number(e.S, "Wait", "Seconds to wait:", max(1, a.Ms/1000), 1, 60, 1, " s")
+		v, ok := e.U.Number(ui.NumberOpts{ID: "wait", Title: "Wait", Label: "Seconds to wait", Value: max(1, a.Ms/1000), Min: 1, Max: 60, Step: 1, Unit: " s"})
 		if !ok {
 			return a, false
 		}
@@ -332,26 +365,26 @@ func b2i(b bool) int {
 // ---- pickers ----
 
 func (e *Editor) pickLight(ctx context.Context, cur string) (string, bool) {
-	tui.Busy(e.S, "Lights", "Getting your lights from Govee…")
+	e.U.Info(ui.InfoView{ID: "loading-lights", Title: "Lights", Spinner: true, Lines: []string{"Getting your lights from Govee…"}})
 	devs, err := e.loadGovee(ctx)
 	if err != nil {
-		tui.Message(e.S, "Lights", []string{tui.Red + "Couldn't get your lights:" + tui.Reset, err.Error()})
+		e.U.Message(ui.Note{ID: "lights-error", Kind: ui.ErrorNote, Title: "Couldn't get your lights", Lines: []string{err.Error()}})
 		return "", false
 	}
 	if len(devs) == 0 {
-		tui.Message(e.S, "Lights", []string{"Your Govee account has no lights that work with the Govee API."})
+		e.U.Message(ui.Note{ID: "no-lights", Kind: ui.WarningNote, Title: "No lights", Lines: []string{"Your Govee account has no lights that work with the Govee API."}})
 		return "", false
 	}
-	items := make([]tui.Item, len(devs))
+	items := make([]ui.Item, len(devs))
 	sel := 0
 	for i, d := range devs {
-		items[i] = tui.Item{Label: d.Name, Detail: fmt.Sprintf("%d scenes", len(d.Scenes)+len(d.DIY))}
+		items[i] = ui.Item{Label: d.Name, Detail: fmt.Sprintf("%d scenes", len(d.Scenes)+len(d.DIY))}
 		if strings.EqualFold(d.Name, cur) {
 			sel = i
 		}
 	}
 	e.trace("screen pick-light")
-	r := tui.Menu(e.S, tui.MenuOpts{Title: "Which light?", Items: items, Selected: sel, Filter: len(items) > 8})
+	r := e.U.Menu(ui.MenuOpts{ID: "pick-light", Title: "Which light?", Items: items, Selected: sel, Filter: len(items) > 8})
 	if !r.OK {
 		return "", false
 	}
@@ -366,7 +399,7 @@ func (e *Editor) pickScene(ctx context.Context, light, cur string) (string, bool
 			d = x
 		}
 	}
-	var items []tui.Item
+	var items []ui.Item
 	var names []string
 	var diy []bool
 	sel := 0
@@ -374,14 +407,14 @@ func (e *Editor) pickScene(ctx context.Context, light, cur string) (string, bool
 		if len(list) == 0 {
 			return
 		}
-		items = append(items, tui.Item{Label: header, Header: true})
+		items = append(items, ui.Item{Label: header, Header: true})
 		names = append(names, "")
 		diy = append(diy, false)
 		for _, n := range list {
 			if strings.EqualFold(n, cur) {
 				sel = len(items)
 			}
-			items = append(items, tui.Item{Label: n})
+			items = append(items, ui.Item{Label: n})
 			names = append(names, n)
 			diy = append(diy, isDIY)
 		}
@@ -389,11 +422,11 @@ func (e *Editor) pickScene(ctx context.Context, light, cur string) (string, bool
 	add("Scenes", d.Scenes, false)
 	add("Your DIY scenes", d.DIY, true)
 	if len(names) == 0 {
-		tui.Message(e.S, light, []string{"This light has no scenes."})
+		e.U.Message(ui.Note{ID: "no-scenes", Kind: ui.WarningNote, Title: light, Lines: []string{"This light has no scenes."}})
 		return "", false, false
 	}
 	e.trace("screen pick-scene")
-	r := tui.Menu(e.S, tui.MenuOpts{Title: "Scene for " + light, Items: items, Selected: sel, Filter: true})
+	r := e.U.Menu(ui.MenuOpts{ID: "pick-scene", Title: "Scene for " + light, Items: items, Selected: sel, Filter: true})
 	if !r.OK {
 		return "", false, false
 	}
@@ -403,58 +436,58 @@ func (e *Editor) pickScene(ctx context.Context, light, cur string) (string, bool
 func (e *Editor) pickPlaylist(ctx context.Context, cur string) (string, bool) {
 	curURI, _ := spotify.NormalizeURI(cur)
 	for {
-		tui.Busy(e.S, "Playlists", "Getting your playlists from Spotify…")
+		e.U.Info(ui.InfoView{ID: "loading-playlists", Title: "Playlists", Spinner: true, Lines: []string{"Getting your playlists from Spotify…"}})
 		pls, err := e.loadPlaylists(ctx)
-		var items []tui.Item
+		var items []ui.Item
 		type choice struct{ uri, kind string }
 		var choices []choice
 		if errors.Is(err, spotify.ErrNeedsReconnect) {
-			items = append(items, tui.Item{Label: "Reconnect Spotify so your playlists can be listed", Detail: "one time, uses your phone"})
+			items = append(items, ui.Item{Label: "Reconnect Spotify so your playlists can be listed", Detail: "one time, uses your phone"})
 			choices = append(choices, choice{kind: "reconnect"})
 		} else if err != nil {
-			items = append(items, tui.Item{Label: "Couldn't get your playlists", Detail: err.Error(), Header: true})
+			items = append(items, ui.Item{Label: "Couldn't get your playlists", Detail: err.Error(), Header: true})
 			choices = append(choices, choice{})
 		}
 		sel := 0
 		if len(pls) > 0 {
-			items = append(items, tui.Item{Label: "Your playlists", Header: true})
+			items = append(items, ui.Item{Label: "Your playlists", Header: true})
 			choices = append(choices, choice{})
 			for _, p := range pls {
 				if p.URI == curURI {
 					sel = len(items)
 				}
-				items = append(items, tui.Item{Label: p.Name, Detail: fmt.Sprintf("by %s · %d songs", p.Owner, p.Tracks)})
+				items = append(items, ui.Item{Label: p.Name, Detail: fmt.Sprintf("by %s · %d songs", p.Owner, p.Tracks)})
 				choices = append(choices, choice{uri: p.URI})
 			}
 		}
-		items = append(items, tui.Item{Label: "", Header: true}, tui.Item{Label: "Type a playlist link instead…"})
+		items = append(items, ui.Item{Label: "", Header: true}, ui.Item{Label: "Type a playlist link instead…"})
 		choices = append(choices, choice{}, choice{kind: "type"})
 		e.trace("screen pick-playlist %d", len(pls))
-		r := tui.Menu(e.S, tui.MenuOpts{Title: "Which playlist?", Items: items, Selected: sel, Filter: len(pls) > 8})
+		r := e.U.Menu(ui.MenuOpts{ID: "pick-playlist", Title: "Which playlist?", Items: items, Selected: sel, Filter: len(pls) > 8})
 		if !r.OK {
 			return "", false
 		}
 		switch c := choices[r.Index]; {
 		case c.kind == "reconnect":
 			if err := e.Src.ReconnectSpotify(ctx); err != nil {
-				tui.Message(e.S, "Spotify", []string{tui.Red + "Reconnecting failed:" + tui.Reset, err.Error()})
+				e.U.Message(ui.Note{ID: "reconnect-error", Kind: ui.ErrorNote, Title: "Reconnecting failed", Lines: []string{err.Error()}})
 			}
 			e.mu.Lock()
 			e.playlists, e.plErr = nil, nil
 			e.mu.Unlock()
 		case c.kind == "type":
 			for {
-				v, ok := tui.Input(e.S, "Playlist link", []string{
+				v, ok := e.U.Input(ui.InputOpts{ID: "playlist-link", Title: "Playlist link", Intro: []string{
 					"In Spotify: open the playlist > Share > Copy link, then type it here,",
 					"or type its URI, e.g. spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
-				}, "Link:", cur)
+				}, Label: "Link", Initial: cur})
 				if !ok {
 					break
 				}
 				if uri, err := spotify.NormalizeURI(v); err == nil {
 					return uri, true
 				}
-				tui.Message(e.S, "Playlist link", []string{"That doesn't look like a Spotify playlist, album or artist link."})
+				e.U.Message(ui.Note{ID: "bad-link", Kind: ui.WarningNote, Title: "Playlist link", Lines: []string{"That doesn't look like a Spotify playlist, album or artist link."}})
 			}
 		case c.uri != "":
 			return c.uri, true
@@ -463,16 +496,16 @@ func (e *Editor) pickPlaylist(ctx context.Context, cur string) (string, bool) {
 }
 
 func (e *Editor) pickSpeaker(ctx context.Context, cur string) (string, bool) {
-	tui.Busy(e.S, "Speaker", "Asking Spotify which speakers are on…")
+	e.U.Info(ui.InfoView{ID: "loading-speakers", Title: "Speaker", Spinner: true, Lines: []string{"Asking Spotify which speakers are on…"}})
 	cctx, cancel := context.WithTimeout(ctx, 20e9)
 	devs, err := e.Src.SpotifyDevices(cctx)
 	cancel()
 	def := e.Src.DefaultSpeaker()
-	items := []tui.Item{{Label: "The default speaker", Detail: or(def, "not set: use whichever is playing")}}
+	items := []ui.Item{{Label: "The default speaker", Detail: or(def, "not set: use whichever is playing")}}
 	vals := []string{""}
 	sel := 0
 	if err != nil {
-		items = append(items, tui.Item{Label: "Couldn't list speakers", Detail: err.Error(), Header: true})
+		items = append(items, ui.Item{Label: "Couldn't list speakers", Detail: err.Error(), Header: true})
 		vals = append(vals, "")
 	}
 	seen := map[string]bool{}
@@ -484,56 +517,53 @@ func (e *Editor) pickSpeaker(ctx context.Context, cur string) (string, bool) {
 		if d == cur {
 			sel = len(items)
 		}
-		items = append(items, tui.Item{Label: d})
+		items = append(items, ui.Item{Label: d})
 		vals = append(vals, d)
 	}
-	items = append(items, tui.Item{Label: "Type a speaker name…", Detail: "for one that's off right now"})
+	items = append(items, ui.Item{Label: "Type a speaker name…", Detail: "for one that's off right now"})
 	vals = append(vals, "\x00type")
 	e.trace("screen pick-speaker")
-	r := tui.Menu(e.S, tui.MenuOpts{Title: "Play on which speaker?", Intro: []string{"  Speakers only show up while Spotify is open on them."}, Items: items, Selected: sel})
+	r := e.U.Menu(ui.MenuOpts{ID: "pick-speaker", Title: "Play on which speaker?", Intro: []string{"Speakers only show up while Spotify is open on them."}, Items: items, Selected: sel})
 	if !r.OK {
 		return "", false
 	}
 	if vals[r.Index] == "\x00type" {
-		return tui.Input(e.S, "Speaker", []string{"Exactly as it appears in Spotify's device list."}, "Speaker name:", cur)
+		return e.U.Input(ui.InputOpts{ID: "speaker", Title: "Speaker", Intro: []string{"Exactly as it appears in Spotify's device list."}, Label: "Speaker name", Initial: cur})
 	}
 	return vals[r.Index], true
 }
 
-func (e *Editor) pickPage(cur string) (string, bool) {
-	var items []tui.Item
+func (e *Editor) pickFolder(cur string) (string, bool) {
+	var items []ui.Item
 	names := e.pageNames()
 	sel := 0
 	for i, n := range names {
 		if n == cur {
 			sel = i
 		}
-		items = append(items, tui.Item{Label: n})
+		d := fmt.Sprintf("%d buttons", len(e.L.Pages[n]))
+		if n == e.L.StartPage {
+			d = "the main buttons"
+		}
+		items = append(items, ui.Item{Label: n, Detail: d, Icon: "folder"})
 	}
-	items = append(items, tui.Item{Label: "+ A new page…"})
-	r := tui.Menu(e.S, tui.MenuOpts{Title: "Go to which page?", Items: items, Selected: sel})
+	items = append(items, ui.Item{Label: "+ New folder…", Icon: "plus"})
+	if cur == "" {
+		sel = len(names)
+	}
+	e.trace("screen pick-folder")
+	r := e.U.Menu(ui.MenuOpts{ID: "pick-folder", Title: "Open which folder?", Items: items, Selected: sel})
 	if !r.OK {
 		return "", false
 	}
 	if r.Index < len(names) {
 		return names[r.Index], true
 	}
-	return e.newPage()
-}
-
-func (e *Editor) newPage() (string, bool) {
-	for {
-		n, ok := tui.Input(e.S, "New page", []string{"A page is another set of 15 buttons. Give it a short name."}, "Page name:", "")
-		if !ok || n == "" {
-			return "", false
-		}
-		if _, exists := e.L.Pages[n]; exists {
-			tui.Message(e.S, "New page", []string{"There's already a page called " + n + "."})
-			continue
-		}
-		e.L.Pages[n] = nil
-		return n, true
+	n, ok := e.newFolder(e.page)
+	if ok {
+		e.fresh = n
 	}
+	return n, ok
 }
 
 var palette = []struct{ name, hex string }{
@@ -557,16 +587,16 @@ func colorName(hex, def string) string {
 
 func (e *Editor) pickColor(title, cur, def string) (string, bool) {
 	cur = or(cur, def)
-	items := make([]tui.Item, 0, len(palette)+1)
+	items := make([]ui.Item, 0, len(palette)+1)
 	sel := 0
 	for i, p := range palette {
 		if strings.EqualFold(p.hex, cur) {
 			sel = i
 		}
-		items = append(items, tui.Item{Label: p.name, Swatch: colorEsc(p.hex, true)})
+		items = append(items, ui.Item{Label: p.name, Swatch: p.hex})
 	}
-	items = append(items, tui.Item{Label: "Other (type a #rrggbb code)…"})
-	r := tui.Menu(e.S, tui.MenuOpts{Title: title, Items: items, Selected: sel})
+	items = append(items, ui.Item{Label: "Other (type a #rrggbb code)…"})
+	r := e.U.Menu(ui.MenuOpts{ID: "color", Title: title, Items: items, Selected: sel})
 	if !r.OK {
 		return "", false
 	}
@@ -574,7 +604,7 @@ func (e *Editor) pickColor(title, cur, def string) (string, bool) {
 		return palette[r.Index].hex, true
 	}
 	for {
-		v, ok := tui.Input(e.S, title, []string{"A colour code like #ff8800."}, "Colour:", cur)
+		v, ok := e.U.Input(ui.InputOpts{ID: "color-code", Title: title, Intro: []string{"A colour code like #ff8800."}, Label: "Colour", Initial: cur})
 		if !ok {
 			return "", false
 		}
@@ -584,64 +614,60 @@ func (e *Editor) pickColor(title, cur, def string) (string, bool) {
 		if _, err := config.ParseColor(v); err == nil {
 			return strings.ToLower(v), true
 		}
-		tui.Message(e.S, title, []string{"That isn't a colour code. Use 6 hex digits, like #ff8800."})
+		e.U.Message(ui.Note{ID: "bad-color", Kind: ui.WarningNote, Title: title, Lines: []string{"That isn't a colour code. Use 6 hex digits, like #ff8800."}})
 	}
 }
 
-// ---- pages and deck settings ----
+// ---- folders and deck settings ----
 
-func (e *Editor) pagesMenu() {
+func (e *Editor) foldersMenu() {
 	for {
 		names := e.pageNames()
-		var items []tui.Item
+		var items []ui.Item
 		for _, n := range names {
 			d := fmt.Sprintf("%d buttons", len(e.L.Pages[n]))
 			if n == e.L.StartPage {
-				d += " · start page"
+				d += " · shown when the deck starts"
 			}
-			items = append(items, tui.Item{Label: n, Detail: d})
+			items = append(items, ui.Item{Label: n, Detail: d, Icon: "folder"})
 		}
-		items = append(items, tui.Item{Label: "+ Add a page"}, tui.Item{Label: "Start over (remove all buttons and pages)"})
-		e.trace("screen pages")
-		r := tui.Menu(e.S, tui.MenuOpts{Title: "Pages", Items: items, Intro: []string{"  A page is a set of 15 buttons. A \"Go to page\" action switches between them."}})
+		items = append(items, ui.Item{Label: "", Header: true},
+			ui.Item{Label: "Start over", Detail: "remove all buttons and folders", Icon: "trash", Danger: true})
+		e.trace("screen folders")
+		r := e.U.Menu(ui.MenuOpts{ID: "folders", Title: "Folders", Items: items,
+			Intro: []string{"A folder is a set of 15 buttons, opened by a key on the deck. To make one, pick an empty key and choose New folder."}})
 		if !r.OK {
 			return
 		}
 		if r.Index == len(names)+1 {
-			if tui.Confirm(e.S, "Start over", "Remove every button on every page?") {
+			if e.U.Confirm(ui.ConfirmOpts{ID: "start-over", Title: "Start over", Question: "Remove every button in every folder?", Yes: "Remove all", Danger: true}) {
 				e.L.Pages = map[string][]config.Button{"home": nil}
-				e.L.StartPage, e.page, e.sel = "home", "home", 0
+				e.L.StartPage = "home"
+				e.jump("home")
 				e.save()
 				e.trace("start-over")
 				return
 			}
 			continue
 		}
-		if r.Index == len(names) {
-			if n, ok := e.newPage(); ok {
-				e.page = n
-				e.save()
-				return
-			}
-			continue
-		}
 		name := names[r.Index]
-		r2 := tui.Menu(e.S, tui.MenuOpts{Title: "Page " + name,
-			Items: []tui.Item{{Label: "Edit this page"}, {Label: "Rename"}, {Label: "Make it the start page"}, {Label: "Delete"}, {Label: "Back"}}})
+		r2 := e.U.Menu(ui.MenuOpts{ID: "folder", Title: name, Items: []ui.Item{
+			{Label: "Open it", Icon: "folder"}, {Label: "Rename", Icon: "key"},
+			{Label: "Show it when the deck starts", Icon: "deck"}, {Label: "Delete", Icon: "trash", Danger: true}}})
 		if !r2.OK {
 			continue
 		}
 		switch r2.Index {
 		case 0:
-			e.page = name
+			e.jump(name)
 			return
 		case 1:
-			n, ok := tui.Input(e.S, "Rename page", nil, "New name:", name)
+			n, ok := e.U.Input(ui.InputOpts{ID: "folder-rename", Title: "Rename folder", Label: "New name", Initial: name})
 			if !ok || n == "" || n == name {
 				continue
 			}
 			if _, exists := e.L.Pages[n]; exists {
-				tui.Message(e.S, "Rename page", []string{"There's already a page called " + n + "."})
+				e.U.Message(ui.Note{ID: "folder-exists", Kind: ui.WarningNote, Title: "Rename folder", Lines: []string{"There's already a folder called " + n + "."}})
 				continue
 			}
 			e.L.Pages[n] = e.L.Pages[name]
@@ -651,8 +677,22 @@ func (e *Editor) pagesMenu() {
 					a.Page = n
 				}
 			})
+			// Keys still labelled with the old folder name follow the rename.
+			for p, list := range e.L.Pages {
+				for i := range list {
+					if list[i].Label == name && folderOf(list[i]) == n {
+						list[i].Label = n
+					}
+				}
+				e.L.Pages[p] = list
+			}
 			if e.L.StartPage == name {
 				e.L.StartPage = n
+			}
+			for i := range e.stack {
+				if e.stack[i] == name {
+					e.stack[i] = n
+				}
 			}
 			if e.page == name {
 				e.page = n
@@ -660,17 +700,18 @@ func (e *Editor) pagesMenu() {
 			e.save()
 		case 2:
 			e.L.StartPage = name
+			e.jump(name)
 			e.save()
 		case 3:
 			if len(e.L.Pages) == 1 {
-				tui.Message(e.S, "Delete page", []string{"You need at least one page."})
+				e.U.Message(ui.Note{ID: "last-folder", Kind: ui.WarningNote, Title: "Delete folder", Lines: []string{"You need at least one folder."}})
 				continue
 			}
-			if !tui.Confirm(e.S, "Delete page", fmt.Sprintf("Delete page %q and its %d buttons?", name, len(e.L.Pages[name]))) {
+			if !e.U.Confirm(ui.ConfirmOpts{ID: "delete-folder", Title: "Delete folder", Question: fmt.Sprintf("Delete %q and its %d buttons?", name, len(e.L.Pages[name])), Yes: "Delete", Danger: true}) {
 				continue
 			}
 			delete(e.L.Pages, name)
-			// Buttons that went to this page now do nothing there.
+			// Keys that opened this folder now do nothing there.
 			for p, list := range e.L.Pages {
 				for i := range list {
 					var keep []config.Action
@@ -686,8 +727,11 @@ func (e *Editor) pagesMenu() {
 			if e.L.StartPage == name {
 				e.L.StartPage = e.pageNames()[0]
 			}
-			if e.page == name {
-				e.page = e.L.StartPage
+			for _, p := range e.stack {
+				if p == name {
+					e.jump(e.L.StartPage)
+					break
+				}
 			}
 			e.save()
 		}
@@ -706,32 +750,33 @@ func (e *Editor) forEachAction(f func(*config.Action)) {
 }
 
 func (e *Editor) deckSettings() {
+	sel := 0
 	for {
 		dim := "never"
 		if e.L.IdleDimSeconds > 0 {
 			dim = fmt.Sprintf("after %d min", (e.L.IdleDimSeconds+59)/60)
 		}
 		e.trace("screen deck-settings")
-		r := tui.Menu(e.S, tui.MenuOpts{Title: "Stream Deck settings", Items: []tui.Item{
-			{Label: "Brightness", Detail: fmt.Sprintf("%d%%", e.L.Brightness)},
-			{Label: "Dim when idle", Detail: dim},
-			{Label: "Dimmed brightness", Detail: fmt.Sprintf("%d%%", e.L.IdleBrightness)},
-			{Label: "Back"},
+		r := e.U.Menu(ui.MenuOpts{ID: "deck-settings", Title: "Stream Deck", Selected: sel, Items: []ui.Item{
+			{Label: "Brightness", Value: fmt.Sprintf("%d%%", e.L.Brightness), Icon: "light"},
+			{Label: "Dim when idle", Value: dim, Icon: "wait"},
+			{Label: "Dimmed brightness", Value: fmt.Sprintf("%d%%", e.L.IdleBrightness), Icon: "light"},
 		}})
-		if !r.OK || r.Index == 3 {
+		if !r.OK {
 			return
 		}
+		sel = r.Index
 		switch r.Index {
 		case 0:
-			if v, ok := tui.Number(e.S, "Brightness", "Brightness:", e.L.Brightness, 0, 100, 5, "%"); ok {
+			if v, ok := e.U.Number(ui.NumberOpts{ID: "deck-brightness", Title: "Brightness", Label: "Key brightness", Value: e.L.Brightness, Min: 0, Max: 100, Step: 5, Unit: "%"}); ok {
 				e.L.Brightness = v
 			}
 		case 1:
-			if v, ok := tui.Number(e.S, "Dim when idle", "Minutes without a press before dimming (0 = never):", (e.L.IdleDimSeconds+59)/60, 0, 240, 5, " min"); ok {
+			if v, ok := e.U.Number(ui.NumberOpts{ID: "dim-after", Title: "Dim when idle", Label: "Minutes without a press before dimming (0 = never)", Value: (e.L.IdleDimSeconds + 59) / 60, Min: 0, Max: 240, Step: 5, Unit: " min"}); ok {
 				e.L.IdleDimSeconds = v * 60
 			}
 		case 2:
-			if v, ok := tui.Number(e.S, "Dimmed brightness", "Brightness while dimmed:", e.L.IdleBrightness, 0, 100, 5, "%"); ok {
+			if v, ok := e.U.Number(ui.NumberOpts{ID: "dim-brightness", Title: "Dimmed brightness", Label: "Brightness while dimmed", Value: e.L.IdleBrightness, Min: 0, Max: 100, Step: 5, Unit: "%"}); ok {
 				e.L.IdleBrightness = v
 			}
 		}

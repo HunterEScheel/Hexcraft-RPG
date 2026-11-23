@@ -15,10 +15,10 @@ import (
 	"streamdeckd/internal/wifi"
 )
 
-// SeedFileName is the setup file the installer looks for on USB sticks.
+// SeedFileName is the setup file looked for on USB sticks.
 const SeedFileName = "streamdeck-setup.txt"
 
-// Seed is the content of a setup file: answers the installer would otherwise ask for.
+// Seed is the content of a setup file: settings that would otherwise be typed.
 type Seed struct {
 	WifiName, WifiPassword, WifiCountry string
 	GoveeKey                            string
@@ -93,10 +93,10 @@ func ParseSeed(text string) (*Seed, error) {
 func (s *Seed) Format() string {
 	var b strings.Builder
 	b.WriteString("# StreamDeck OS setup file\n")
-	b.WriteString("# Put this file on a USB stick as " + SeedFileName + " and plug it in while\n")
-	b.WriteString("# installing: the installer fills these in instead of asking.\n")
+	b.WriteString("# Put this file on a USB stick as " + SeedFileName + " and plug it into\n")
+	b.WriteString("# StreamDeck OS: the home screen offers to use it, so nothing needs typing.\n")
 	b.WriteString("# It contains your keys and Spotify login in plain text: keep the stick safe.\n")
-	b.WriteString("# Leave a value empty (or delete the line) to be asked during install.\n\n")
+	b.WriteString("# Leave a value empty (or delete the line) to set it up on screen instead.\n\n")
 	line := func(k, v string) { fmt.Fprintf(&b, "%s = %s\n", k, v) }
 	line("wifi_name", s.WifiName)
 	line("wifi_password", s.WifiPassword)
@@ -106,7 +106,7 @@ func (s *Seed) Format() string {
 	b.WriteString("\n")
 	line("spotify_client_id", s.SpotifyID)
 	line("spotify_client_secret", s.SpotifySecret)
-	b.WriteString("# The Spotify login. Written by \"Save settings to a USB stick\"; with it\n# the installer skips the phone login.\n")
+	b.WriteString("# The Spotify login. Written by \"Save to a USB stick\"; with it the phone\n# login is skipped.\n")
 	line("spotify_refresh_token", s.SpotifyRefresh)
 	line("spotify_speaker", s.SpotifySpeaker)
 	return b.String()
@@ -310,61 +310,6 @@ func wifiPassword() string {
 		}
 	}
 	return ""
-}
-
-// ExportSeedStep asks which USB stick to write the setup file to.
-func (w *Wizard) ExportSeedStep() error {
-	seed := SeedFromCurrent(w.SecretsPath)
-	mediaDisk := ""
-	if b, err := os.ReadFile("/run/streamdeck-media"); err == nil {
-		dev, _, _ := strings.Cut(strings.TrimSpace(string(b)), ":")
-		mediaDisk = mediaDiskOf(dev)
-	}
-	var parts []usbPart
-	for _, p := range usbParts() {
-		switch {
-		case p.DevRO, p.Mounted != "" && p.ReadOnly:
-			continue // can't write there
-		case mediaDisk != "" && p.Disk == mediaDisk && p.Mounted == "":
-			continue // the installer stick's own (read-only) partitions
-		}
-		parts = append(parts, p)
-	}
-	w.say("\n--- Save settings to a USB stick ---\n")
-	w.say("Writes %s with your Wi-Fi, Govee key and Spotify app keys and login,\n", SeedFileName)
-	w.say("so a reinstall needs no typing. Keep that stick safe: the keys are in plain text.\n\n")
-	if len(parts) == 0 {
-		w.say("No USB stick found. Plug one in (FAT32 or exFAT) and try again.\n")
-		w.trace("export-no-stick")
-		return nil
-	}
-	for i, p := range parts {
-		w.say("  %d) %-10s %s\n", i+1, p.Dev, p.Desc)
-	}
-	ans, err := w.ask("export-stick", "Which one? (Enter = cancel): ")
-	if err != nil || ans == "" {
-		return err
-	}
-	n, err := strconv.Atoi(ans)
-	if err != nil || n < 1 || n > len(parts) {
-		w.say("Cancelled.\n")
-		return nil
-	}
-	err = withMount(parts[n-1], true, func(dir string) error {
-		target := filepath.Join(dir, SeedFileName)
-		if old := seedFileIn(dir); old != "" {
-			target = old
-		}
-		return os.WriteFile(target, []byte(seed.Format()), 0o600)
-	})
-	if err != nil {
-		w.trace("export-error %v", err)
-		w.say("Couldn't write to %s: %v\n", parts[n-1].Dev, err)
-		return nil
-	}
-	w.trace("exported %s", parts[n-1].Dev)
-	w.say("Saved %s to %s.\n", SeedFileName, parts[n-1].Dev)
-	return nil
 }
 
 // mediaDiskOf maps /dev/sdb or /dev/sdb1 to "sdb".

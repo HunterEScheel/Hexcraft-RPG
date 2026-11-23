@@ -1,6 +1,7 @@
-// Package editor is the on-screen button editor: a full-screen app on the
-// mini PC's monitor, driven by its keyboard, with the Stream Deck itself as a
-// live preview (and pressing a deck key selects it).
+// Package editor is the button editor: a full-screen app on the mini PC's
+// monitor, driven by keyboard and touchpad, with the Stream Deck itself as a
+// live preview (pressing a deck key selects it; pressing a folder key twice
+// opens the folder).
 package editor
 
 import (
@@ -8,15 +9,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"streamdeckd/internal/config"
 	"streamdeckd/internal/spotify"
-	"streamdeckd/internal/tui"
+	"streamdeckd/internal/ui"
 )
 
 const (
@@ -53,18 +54,20 @@ type Deck interface {
 
 // Editor holds the editing session.
 type Editor struct {
-	S          tui.Screen
+	U          ui.UI
 	Src        Sources
 	Deck       Deck
 	LayoutPath string
 	Secrets    func() *config.Secrets
 	Trace      io.Writer
 
-	L    config.Layout
-	page string
-	sel  int
-	clip *config.Button
-	err  string // last save problem (shown on the grid)
+	L     config.Layout
+	stack []string // folders opened, from the start page; the last is shown
+	page  string
+	sel   int
+	clip  *config.Button
+	err   string // last save problem (shown on the grid)
+	fresh string // folder created during the current key edit
 
 	mu        sync.Mutex
 	govee     []GoveeDevice
@@ -94,7 +97,9 @@ func (e *Editor) Run(ctx context.Context) error {
 	if _, ok := l.Pages[l.StartPage]; !ok {
 		l.Pages[l.StartPage] = nil
 	}
-	e.L, e.page, e.sel = l, l.StartPage, 0
+	e.L, e.sel = l, 0
+	e.stack = []string{l.StartPage}
+	e.page = l.StartPage
 
 	// Fetch account data in the background so lists open instantly later.
 	go e.loadGovee(ctx)
@@ -138,7 +143,7 @@ func (e *Editor) loadPlaylists(ctx context.Context) ([]spotify.Playlist, error) 
 	}
 	e.mu.Unlock()
 	if !e.Src.SpotifyReady() {
-		return nil, errors.New("Spotify isn't set up yet: log in to Spotify in Settings")
+		return nil, errors.New("Spotify isn't set up yet: connect Spotify in Settings")
 	}
 	cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -200,6 +205,16 @@ func (e *Editor) pageNames() []string {
 	return names
 }
 
+// folderOf returns the folder a key opens ("" if it isn't a folder key).
+func folderOf(b config.Button) string {
+	for _, a := range b.Actions {
+		if a.Type == config.Page {
+			return a.Page
+		}
+	}
+	return ""
+}
+
 // save validates and writes the layout; the daemon picks it up.
 func (e *Editor) save() bool {
 	var sec *config.Secrets
@@ -221,207 +236,310 @@ func (e *Editor) save() bool {
 	return true
 }
 
+// ---- folder navigation ----
+
+// open shows folder name. Opening a folder that's already on the path (e.g.
+// with a "Back" key) goes back up to it.
+func (e *Editor) open(name string) {
+	if _, ok := e.L.Pages[name]; !ok {
+		e.U.Message(ui.Note{ID: "no-folder", Kind: ui.WarningNote, Title: "Folder missing",
+			Lines: []string{fmt.Sprintf("There's no folder called %q any more. Edit this key to point it somewhere else.", name)}})
+		return
+	}
+	for i, p := range e.stack {
+		if p == name {
+			e.stack = e.stack[:i+1]
+			e.page, e.sel = name, 0
+			e.trace("folder-open %s", name)
+			return
+		}
+	}
+	e.stack = append(e.stack, name)
+	e.page, e.sel = name, 0
+	e.trace("folder-open %s", name)
+}
+
+// up goes to the parent folder; false at the top.
+func (e *Editor) up() bool {
+	if len(e.stack) <= 1 {
+		return false
+	}
+	from := e.page
+	e.stack = e.stack[:len(e.stack)-1]
+	e.page = e.stack[len(e.stack)-1]
+	e.sel = 0
+	// Land on the key that opened the folder.
+	for _, b := range e.L.Pages[e.page] {
+		if folderOf(b) == from {
+			e.sel = b.Key
+			break
+		}
+	}
+	e.trace("folder-up %s", e.page)
+	return true
+}
+
+// jump shows any folder (from the folders list).
+func (e *Editor) jump(name string) {
+	e.stack = []string{e.L.StartPage}
+	e.page, e.sel = e.L.StartPage, 0
+	if name != e.L.StartPage {
+		e.open(name)
+	}
+}
+
+// newFolder asks for a name and creates the folder with a Back key that
+// returns to parent.
+func (e *Editor) newFolder(parent string) (string, bool) {
+	for {
+		n, ok := e.U.Input(ui.InputOpts{ID: "folder-name", Title: "New folder",
+			Intro: []string{"A folder is another set of 15 buttons, opened by a key. Give it a short name, e.g. Lights or Music."},
+			Label: "Folder name", Placeholder: "e.g. Lights"})
+		if !ok || n == "" {
+			return "", false
+		}
+		if _, exists := e.L.Pages[n]; exists {
+			e.U.Message(ui.Note{ID: "folder-exists", Kind: ui.WarningNote, Title: "New folder", Lines: []string{"There's already a folder called " + n + "."}})
+			continue
+		}
+		e.L.Pages[n] = []config.Button{{Key: 0, Label: "‹ Back", Color: "#3a3f4b",
+			Actions: []config.Action{{Type: config.Page, Page: parent}}}}
+		e.trace("folder-new %s", n)
+		return n, true
+	}
+}
+
 // ---- grid ----
+
+func (e *Editor) leave() bool {
+	if e.err != "" && !e.U.Confirm(ui.ConfirmOpts{ID: "leave-unsaved", Title: "Leave the editor?",
+		Question: "The last change couldn't be saved (see the red message). Leave anyway?", Yes: "Leave", No: "Stay"}) {
+		return false
+	}
+	return true
+}
 
 func (e *Editor) grid(ctx context.Context) error {
 	var presses <-chan int
 	if e.Deck != nil {
 		presses = e.Deck.Presses()
 	}
+	redraw := true
+	lastPress, lastAt := -1, time.Time{}
 	for {
-		e.drawGrid()
-		var k tui.Key
+		if redraw {
+			e.drawGrid()
+		}
+		redraw = true
+		var ev ui.Event
 		select {
 		case key, ok := <-presses:
 			if !ok {
 				presses = nil
 				continue
 			}
-			if key >= 0 && key < keys {
+			if key < 0 || key >= keys {
+				continue
+			}
+			b, _ := e.button(e.page, key)
+			if key == lastPress && time.Since(lastAt) < 2*time.Second && folderOf(b) != "" {
+				// Folder key pressed twice: go in.
+				e.open(folderOf(b))
+				lastPress = -1
+			} else {
 				e.sel = key
-				e.preview()
+				lastPress, lastAt = key, time.Now()
 				e.trace("deck-select %d", key)
 			}
+			e.preview()
 			continue
-		case kk, ok := <-e.S.Keys():
+		case ev2, ok := <-e.U.Events():
 			if !ok {
 				return nil
 			}
-			k = kk
+			ev = ev2
 		}
-		switch {
-		case k.Name == "left":
-			e.sel = (e.sel + keys - 1) % keys
-		case k.Name == "right":
-			e.sel = (e.sel + 1) % keys
-		case k.Name == "up":
-			e.sel = (e.sel + keys - cols) % keys
-		case k.Name == "down":
-			e.sel = (e.sel + cols) % keys
-		case k.Name == "enter":
-			e.editKey(ctx)
-		case k.Name == "delete" || k.Name == "backspace":
-			if _, ok := e.button(e.page, e.sel); ok && tui.Confirm(e.S, "Clear key", fmt.Sprintf("Clear key %d?", e.sel+1)) {
-				e.setButton(e.page, config.Button{Key: e.sel})
-				e.save()
+		switch ev.Kind {
+		case ui.TickEvent, ui.WheelEvent:
+			redraw = false
+			continue
+		case ui.HoverEvent:
+			redraw = strings.HasPrefix(ev.Target, "cell:") || strings.HasPrefix(ev.Target, "btn:") || ev.Target == "" || ev.Target == "back"
+			continue
+		case ui.ClickEvent:
+			var n int
+			switch {
+			case ev.Target == "back":
+				if !e.up() && e.leave() {
+					return nil
+				}
+			case scan(ev.Target, "cell:%d", &n):
+				if n == e.sel {
+					e.activate(ctx)
+				} else {
+					e.sel = n
+				}
+			case strings.HasPrefix(ev.Target, "btn:"):
+				e.command(ctx, strings.TrimPrefix(ev.Target, "btn:"))
 			}
-		case k.R == 'c' || k.R == 'C':
-			if b, ok := e.button(e.page, e.sel); ok {
-				c := b
-				e.clip = &c
+		case ui.KeyEvent:
+			k := ev.Key
+			switch {
+			case k.Name == "left":
+				e.sel = (e.sel + keys - 1) % keys
+			case k.Name == "right":
+				e.sel = (e.sel + 1) % keys
+			case k.Name == "up":
+				e.sel = (e.sel + keys - cols) % keys
+			case k.Name == "down":
+				e.sel = (e.sel + cols) % keys
+			case k.Name == "enter":
+				e.editKey(ctx)
+			case k.R == ' ' || k.R == 'o' || k.R == 'O':
+				e.activate(ctx)
+			case k.Name == "delete" || k.Name == "backspace":
+				e.command(ctx, "clear key")
+			case k.R == 'c' || k.R == 'C':
+				if b, ok := e.button(e.page, e.sel); ok {
+					c := b
+					c.Actions = append([]config.Action(nil), b.Actions...)
+					e.clip = &c
+					e.trace("copy %d", e.sel)
+				}
+			case k.R == 'v' || k.R == 'V':
+				e.command(ctx, "paste")
+			case k.R == 'n' || k.R == 'N':
+				e.command(ctx, "new folder here")
+			case k.R == 'f' || k.R == 'F' || k.R == 'p' || k.R == 'P':
+				e.foldersMenu()
+			case k.R == 'd' || k.R == 'D':
+				e.deckSettings()
+			case k.R == 't' || k.R == 'T':
+				e.command(ctx, "try it")
+			case k.Name == "esc" || k.R == 'q' || k.R == 'Q':
+				if !e.up() && e.leave() {
+					return nil
+				}
 			}
-		case k.R == 'v' || k.R == 'V':
-			if e.clip != nil {
-				b := *e.clip
-				b.Key = e.sel
-				b.Actions = append([]config.Action(nil), e.clip.Actions...)
-				e.setButton(e.page, b)
-				e.save()
-			}
-		case k.Name == "pgup" || k.R == '[':
-			e.switchPage(-1)
-		case k.Name == "pgdn" || k.R == ']':
-			e.switchPage(1)
-		case k.R == 'p' || k.R == 'P':
-			e.pagesMenu()
-		case k.R == 'd' || k.R == 'D':
-			e.deckSettings()
-		case k.R == 't' || k.R == 'T':
-			if b, ok := e.button(e.page, e.sel); ok {
-				e.try(ctx, b)
-			}
-		case k.Name == "esc" || k.R == 'q' || k.R == 'Q':
-			if e.err != "" && !tui.Confirm(e.S, "Leave editor", "The last change couldn't be saved (see the red message). Leave anyway?") {
-				continue
-			}
-			return nil
 		}
 		e.preview()
 	}
 }
 
-func (e *Editor) switchPage(d int) {
-	names := e.pageNames()
-	for i, n := range names {
-		if n == e.page {
-			e.page = names[(i+d+len(names))%len(names)]
-			break
+func scan(s, format string, n *int) bool {
+	_, err := fmt.Sscanf(s, format, n)
+	return err == nil
+}
+
+// activate opens a folder key, or edits any other key.
+func (e *Editor) activate(ctx context.Context) {
+	b, _ := e.button(e.page, e.sel)
+	if f := folderOf(b); f != "" {
+		e.open(f)
+		return
+	}
+	e.editKey(ctx)
+}
+
+// command runs a side-panel button (also used by keyboard shortcuts).
+func (e *Editor) command(ctx context.Context, name string) {
+	b, exists := e.button(e.page, e.sel)
+	switch name {
+	case "edit key", "set up this key":
+		e.editKey(ctx)
+	case "open folder":
+		e.activate(ctx)
+	case "try it":
+		if exists {
+			e.try(ctx, b)
 		}
+	case "clear key":
+		if exists && e.U.Confirm(ui.ConfirmOpts{ID: "clear-key", Title: "Clear key", Question: fmt.Sprintf("Remove everything from key %d?", e.sel+1), Yes: "Clear", Danger: true}) {
+			e.setButton(e.page, config.Button{Key: e.sel})
+			e.save()
+		}
+	case "paste":
+		if e.clip != nil {
+			nb := *e.clip
+			nb.Key = e.sel
+			nb.Actions = append([]config.Action(nil), e.clip.Actions...)
+			e.setButton(e.page, nb)
+			e.save()
+		}
+	case "new folder here":
+		if exists {
+			return
+		}
+		n, ok := e.newFolder(e.page)
+		if !ok {
+			return
+		}
+		e.setButton(e.page, config.Button{Key: e.sel, Label: n, Color: "#1d5fa0",
+			Actions: []config.Action{{Type: config.Page, Page: n}}})
+		if e.save() {
+			e.open(n)
+		}
+	case "folders":
+		e.foldersMenu()
+	case "deck settings":
+		e.deckSettings()
 	}
 }
 
 func (e *Editor) drawGrid() {
-	w, h := e.S.Size()
-	cw := min(18, max(10, (w-1)/cols-1))
-	var lines []string
-	title := fmt.Sprintf(" Button editor   page: %s", e.page)
-	if e.page == e.L.StartPage {
-		title += " (start page)"
+	v := ui.GridView{
+		Page:      e.page,
+		StartPage: e.L.StartPage,
+		Pages:     e.pageNames(),
+		Dir:       filepath.Dir(e.LayoutPath),
+		Selected:  e.sel,
+		DeckLive:  e.Deck != nil,
+		Err:       e.err,
 	}
-	if n := len(e.L.Pages); n > 1 {
-		title += fmt.Sprintf("   [%d pages]", n)
+	if len(e.stack) > 1 {
+		v.Path = append([]string(nil), e.stack[1:]...)
 	}
-	deck := "Stream Deck: live preview"
-	if e.Deck == nil {
-		deck = "Stream Deck not connected"
-	}
-	lines = append(lines, tui.Reverse+tui.Bold+tui.Fit(title, w-tui.Width(deck)-1)+deck+" "+tui.Reset, "")
-
-	hline := func(l, m, r string) string {
-		return " " + l + strings.Repeat(strings.Repeat("─", cw)+m, cols-1) + strings.Repeat("─", cw) + r
-	}
-	lines = append(lines, hline("┌", "┬", "┐"))
-	for r := 0; r < rows; r++ {
-		cells := make([][3]string, cols)
-		for c := 0; c < cols; c++ {
-			k := r*cols + c
-			b, ok := e.button(e.page, k)
-			style := ""
-			if ok {
-				bg := "#202020"
-				if b.Color != "" {
-					bg = b.Color
-				}
-				fg := "#ffffff"
-				if b.TextColor != "" {
-					fg = b.TextColor
-				}
-				style = colorEsc(bg, true) + colorEsc(fg, false)
-			}
-			if k == e.sel {
-				style = "\x1b[47;30m" // black on white: the selected key
-			}
-			label := b.Label
-			if !ok {
-				label = ""
-			} else if label == "" {
-				label = "(no label)"
-			}
-			wrapped := tui.Wrap(label, cw-2)
-			num := strconv.Itoa(k + 1)
-			for i := 0; i < 3; i++ {
-				t := ""
-				switch {
-				case i == 0:
-					if k == e.sel {
-						num = "> " + num
-					}
-					t = tui.Fit(num, cw-2)
-					if !ok && k != e.sel {
-						t = tui.Dim + t + tui.Reset
-					}
-				case i-1 < len(wrapped):
-					t = wrapped[i-1]
-				}
-				cells[c][i] = style + " " + tui.Fit(t, cw-2) + " " + tui.Reset
+	for k := 0; k < keys; k++ {
+		b, ok := e.button(e.page, k)
+		c := ui.Cell{Button: b, Empty: !ok}
+		for _, a := range b.Actions {
+			if _, w := e.describe(a); w != "" {
+				c.Warn = true
 			}
 		}
-		for i := 0; i < 3; i++ {
-			line := " │"
-			for c := 0; c < cols; c++ {
-				line += cells[c][i] + "│"
-			}
-			lines = append(lines, line)
-		}
-		if r < rows-1 {
-			lines = append(lines, hline("├", "┼", "┤"))
-		}
+		v.Cells = append(v.Cells, c)
 	}
-	lines = append(lines, hline("└", "┴", "┘"))
-
-	// Details of the selected key.
 	b, ok := e.button(e.page, e.sel)
-	lines = append(lines, "")
 	if !ok {
-		lines = append(lines, fmt.Sprintf(" Key %d: empty. Press Enter to set it up.", e.sel+1))
+		v.KeyTitle = fmt.Sprintf("Key %d: empty", e.sel+1)
+		v.Details = []string{"Click it again or press Enter to set it up."}
+		v.Buttons = []string{"Set up this key", "New folder here"}
+		if e.clip != nil {
+			v.Buttons = append(v.Buttons, "Paste")
+		}
 	} else {
-		lines = append(lines, fmt.Sprintf(" Key %d: %s%s%s", e.sel+1, tui.Bold, orDash(b.Label), tui.Reset))
+		v.KeyTitle = fmt.Sprintf("Key %d: %s", e.sel+1, orDash(b.Label))
 		if len(b.Actions) == 0 {
-			lines = append(lines, tui.Dim+"   (does nothing yet)"+tui.Reset)
+			v.Details = append(v.Details, "Does nothing yet")
 		}
-		for i, a := range b.Actions {
+		for _, a := range b.Actions {
 			s, warn := e.describe(a)
+			v.Details = append(v.Details, s)
 			if warn != "" {
-				s += "  " + tui.Red + "! " + warn + tui.Reset
+				v.Warnings = append(v.Warnings, warn)
 			}
-			lines = append(lines, fmt.Sprintf("   %d. %s", i+1, s))
 		}
+		v.Buttons = []string{"Edit key"}
+		if folderOf(b) != "" {
+			v.Buttons = []string{"Open folder", "Edit key"}
+		}
+		if e.runnable(b) {
+			v.Buttons = append(v.Buttons, "Try it")
+		}
+		v.Buttons = append(v.Buttons, "Clear key")
 	}
-	if e.err != "" {
-		lines = append(lines, "", tui.Red+tui.Bold+" Not saved: "+tui.Reset+tui.Red+strings.ReplaceAll(e.err, "\n", "; ")+tui.Reset)
-	}
-	help := []string{
-		" Arrows: move  Enter: edit  or press a key on the Stream Deck to jump to it",
-		" T: try  Del: clear  C/V: copy/paste  [ ]: page  P: pages  D: deck  Esc: done",
-	}
-	for len(lines) < h-len(help) {
-		lines = append(lines, "")
-	}
-	lines = lines[:min(len(lines), h-len(help))]
-	for _, hl := range help {
-		lines = append(lines, tui.Dim+hl+tui.Reset)
-	}
-	e.S.Draw(lines)
+	v.Buttons = append(v.Buttons, "Folders", "Deck settings")
+	e.U.Grid(v)
 }
 
 func orDash(s string) string {
@@ -429,80 +547,6 @@ func orDash(s string) string {
 		return "(no label)"
 	}
 	return s
-}
-
-// colorEsc picks the closest of the console's 8 colours by hue (the Linux
-// console can't show arbitrary colours, and its own nearest-match turns
-// most dark colours black).
-func colorEsc(hex string, bg bool) string {
-	c, err := config.ParseColor(hex)
-	if err != nil {
-		return ""
-	}
-	n := consoleColor(float64(c.R)/255, float64(c.G)/255, float64(c.B)/255)
-	if bg {
-		return fmt.Sprintf("\x1b[%dm", 40+n)
-	}
-	if n == 0 {
-		return "\x1b[30m"
-	}
-	return fmt.Sprintf("\x1b[1;%dm", 30+n) // bright text
-}
-
-// consoleColor returns an ANSI colour number 0-7.
-func consoleColor(r, g, b float64) int {
-	hi, lo := max(r, g, b), min(r, g, b)
-	l := (hi + lo) / 2
-	sat := 0.0
-	if hi != lo {
-		sat = (hi - lo) / (1 - abs(2*l-1))
-	}
-	if sat < 0.25 || hi < 0.12 {
-		if l > 0.6 {
-			return 7 // white/grey
-		}
-		return 0 // black/charcoal
-	}
-	var h float64
-	switch hi {
-	case r:
-		h = 60 * mod((g-b)/(hi-lo), 6)
-	case g:
-		h = 60 * ((b-r)/(hi-lo) + 2)
-	default:
-		h = 60 * ((r-g)/(hi-lo) + 4)
-	}
-	switch {
-	case h < 20 || h >= 330:
-		return 1 // red
-	case h < 70:
-		return 3 // orange/yellow (brown on the console)
-	case h < 160:
-		return 2 // green
-	case h < 200:
-		return 6 // cyan/teal
-	case h < 255:
-		return 4 // blue
-	default:
-		return 5 // purple/pink
-	}
-}
-
-func abs(x float64) float64 {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
-func mod(a, b float64) float64 {
-	for a < 0 {
-		a += b
-	}
-	for a >= b {
-		a -= b
-	}
-	return a
 }
 
 // describe summarises an action; warn flags things that won't work.
@@ -519,7 +563,7 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 				return ""
 			}
 		}
-		return "light not on your Govee account"
+		return name + " isn't on your Govee account"
 	}
 	speaker := func(name string) string {
 		if name == "" {
@@ -534,7 +578,7 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 	case config.GoveeScene, config.GoveeDIYScene:
 		warn = lightOK(a.Device)
 		if warn == "" && govee != nil {
-			warn = "scene not found on this light"
+			warn = "scene " + a.Scene + " not found on " + a.Device
 			for _, d := range govee {
 				if strings.EqualFold(d.Name, a.Device) {
 					for _, sc := range append(append([]string{}, d.Scenes...), d.DIY...) {
@@ -545,17 +589,17 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 				}
 			}
 		}
-		return fmt.Sprintf("Lights: %s → scene %q", a.Device, a.Scene), warn
+		return fmt.Sprintf("%s: scene “%s”", a.Device, a.Scene), warn
 	case config.GoveePower:
 		st := "off"
 		if a.On != nil && *a.On {
 			st = "on"
 		}
-		return fmt.Sprintf("Lights: turn %s %s", a.Device, st), lightOK(a.Device)
+		return fmt.Sprintf("%s: turn %s", a.Device, st), lightOK(a.Device)
 	case config.GoveeBrightness:
-		return fmt.Sprintf("Lights: %s brightness %d%%", a.Device, a.Brightness), lightOK(a.Device)
+		return fmt.Sprintf("%s: brightness %d%%", a.Device, a.Brightness), lightOK(a.Device)
 	case config.GoveeColor:
-		return fmt.Sprintf("Lights: %s colour %s  %s  %s", a.Device, colorEsc(a.Color, true), tui.Reset, a.Color), lightOK(a.Device)
+		return fmt.Sprintf("%s: colour %s", a.Device, colorName(a.Color, "#ffffff")), lightOK(a.Device)
 	case config.SpotifyPlaylist:
 		name := a.Playlist
 		if uri, err := spotify.NormalizeURI(a.Playlist); err == nil {
@@ -566,7 +610,7 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 				}
 			}
 		}
-		s = fmt.Sprintf("Music: play %s on %s", name, speaker(a.SpotifyDevice))
+		s = fmt.Sprintf("Play %s on %s", name, speaker(a.SpotifyDevice))
 		if a.Shuffle {
 			s += ", shuffled"
 		}
@@ -575,24 +619,50 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 		}
 		return s, ""
 	case config.SpotifyPause:
-		return "Music: pause on " + speaker(a.SpotifyDevice), ""
+		return "Pause music on " + speaker(a.SpotifyDevice), ""
 	case config.SpotifyNext:
-		return "Music: next song on " + speaker(a.SpotifyDevice), ""
+		return "Next song on " + speaker(a.SpotifyDevice), ""
 	case config.SpotifyVolume:
 		v := 0
 		if a.Volume != nil {
 			v = *a.Volume
 		}
-		return fmt.Sprintf("Music: volume %d%% on %s", v, speaker(a.SpotifyDevice)), ""
+		return fmt.Sprintf("Volume %d%% on %s", v, speaker(a.SpotifyDevice)), ""
 	case config.Page:
 		if _, ok := e.L.Pages[a.Page]; !ok {
-			warn = "page doesn't exist"
+			warn = "folder " + a.Page + " doesn't exist"
 		}
-		return "Go to page " + a.Page, warn
+		if len(e.stack) > 1 && a.Page == e.stack[len(e.stack)-2] {
+			return "Back to " + a.Page, warn
+		}
+		return "Opens folder " + a.Page, warn
 	case config.Delay:
 		return fmt.Sprintf("Wait %.1f s", float64(a.Ms)/1000), ""
 	}
-	return a.Type, "unknown action"
+	return a.Type, "unknown action " + a.Type
+}
+
+func actionIcon(t string) string {
+	switch t {
+	case config.GoveeScene, config.GoveeDIYScene, config.GoveePower, config.GoveeBrightness, config.GoveeColor:
+		return "light"
+	case config.SpotifyPlaylist, config.SpotifyPause, config.SpotifyNext, config.SpotifyVolume:
+		return "music"
+	case config.Page:
+		return "folder"
+	case config.Delay:
+		return "wait"
+	}
+	return "info"
+}
+
+func (e *Editor) runnable(b config.Button) bool {
+	for _, a := range b.Actions {
+		if a.Type != config.Page {
+			return true
+		}
+	}
+	return false
 }
 
 func (e *Editor) try(ctx context.Context, b config.Button) {
@@ -603,17 +673,17 @@ func (e *Editor) try(ctx context.Context, b config.Button) {
 		}
 	}
 	if len(run) == 0 {
-		tui.Message(e.S, "Try it", []string{"This key has nothing to run."})
+		e.U.Message(ui.Note{ID: "try-nothing", Title: "Try it", Lines: []string{"This key has nothing to run."}})
 		return
 	}
-	tui.Busy(e.S, "Try it", fmt.Sprintf("Running key %d (%s)…", b.Key+1, orDash(b.Label)))
+	e.U.Info(ui.InfoView{ID: "try", Title: "Try it", Spinner: true, Lines: []string{fmt.Sprintf("Running key %d (%s)…", b.Key+1, orDash(b.Label))}})
 	cctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 	if err := e.Src.Run(cctx, run); err != nil {
 		e.trace("try-error %v", err)
-		tui.Message(e.S, "Try it", append([]string{tui.Red + "Something didn't work:" + tui.Reset, ""}, strings.Split(err.Error(), "\n")...))
+		e.U.Message(ui.Note{ID: "try-error", Kind: ui.ErrorNote, Title: "Something didn't work", Lines: strings.Split(err.Error(), "\n")})
 		return
 	}
 	e.trace("try-ok %d", b.Key)
-	tui.Message(e.S, "Try it", []string{tui.Green + "Done." + tui.Reset})
+	e.U.Message(ui.Note{ID: "try-ok", Kind: ui.SuccessNote, Title: "Done", Lines: []string{"The key ran without problems."}})
 }

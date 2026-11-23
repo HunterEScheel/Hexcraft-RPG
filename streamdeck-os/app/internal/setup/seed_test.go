@@ -1,7 +1,6 @@
 package setup
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"net/http"
@@ -36,7 +35,7 @@ func TestParseSeed(t *testing.T) {
 	}
 }
 
-func TestWizardUsesSeed(t *testing.T) {
+func TestImportSeed(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/govee/user/devices":
@@ -45,8 +44,6 @@ func TestWizardUsesSeed(t *testing.T) {
 				return
 			}
 			io.WriteString(w, `{"code":200,"data":[{"sku":"H1","device":"AA","deviceName":"Lamp"}]}`)
-		case "/govee/device/scenes", "/govee/device/diy-scenes":
-			io.WriteString(w, `{"code":200,"payload":{"capabilities":[]}}`)
 		case "/token":
 			r.ParseForm()
 			if r.Form.Get("refresh_token") == "seed-refresh" {
@@ -62,33 +59,23 @@ func TestWizardUsesSeed(t *testing.T) {
 	defer srv.Close()
 	t.Setenv("STREAMDECKD_GOVEE_URL", srv.URL+"/govee")
 	spotify.DefaultTokenURL, spotify.DefaultAPIURL = srv.URL+"/token", srv.URL+"/api"
-	if LocalIPv4() == "" {
-		t.Skip("needs a network interface")
-	}
 
-	dir := t.TempDir()
-	var out, trace bytes.Buffer
-	// Only answers: Enter (use the setup file) and "n" (no extra Wi-Fi).
-	w := New(strings.NewReader("\nn\n"), &out)
-	w.Trace = &trace
-	w.SecretsPath, w.LayoutDir = dir+"/secrets.json", dir
-	w.SeedFinder = func() (*Seed, string, error) {
-		return &Seed{GoveeKey: "seed-key", SpotifyID: "cid", SpotifySecret: "csec", SpotifyRefresh: "seed-refresh", SpotifySpeaker: "Den"}, "/dev/sdb1: streamdeck-setup.txt", nil
-	}
-	if err := w.Run(context.Background()); err != nil {
-		t.Fatalf("%v\n%s", err, out.String())
-	}
-	s, _ := config.LoadSecrets(w.SecretsPath)
+	a, scr, tr := testApp(t)
+	sd := &Seed{GoveeKey: "seed-key", SpotifyID: "cid", SpotifySecret: "csec", SpotifyRefresh: "seed-refresh", SpotifySpeaker: "Den"}
+	done := make(chan struct{})
+	go func() { a.ImportSeed(context.Background(), sd, "/dev/sdb1"); close(done) }()
+	waitTrace(t, tr, "menu seed-import")
+	scr.Press("down", "enter") // Set up
+	waitTrace(t, tr, "message seed-done")
+	scr.Press("enter")
+	<-done
+	s, _ := config.LoadSecrets(a.SecretsPath)
 	if s.Govee.APIKey != "seed-key" || s.Spotify.RefreshToken != "seed-refresh" || s.Spotify.ClientSecret != "csec" || s.Spotify.DefaultDevice != "Den" {
 		t.Fatalf("saved %+v", s)
 	}
-	tr := trace.String()
-	for _, never := range []string{"prompt govee-key", "prompt spotify-id", "prompt spotify-secret", "spotify-wait", "prompt spotify-device"} {
-		if strings.Contains(tr, never) {
-			t.Fatalf("asked %q despite the setup file:\n%s", never, tr)
+	for _, want := range []string{"govee-ok 1", "spotify-ok seeded", "seed-applied"} {
+		if !strings.Contains(tr.String(), want) {
+			t.Fatalf("no %q in trace:\n%s", want, tr.String())
 		}
-	}
-	if !strings.Contains(tr, "seed-used") || !strings.Contains(tr, "spotify-ok seeded") {
-		t.Fatalf("trace:\n%s", tr)
 	}
 }

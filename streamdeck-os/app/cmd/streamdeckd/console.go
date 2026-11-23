@@ -2,202 +2,98 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
-	"streamdeckd/internal/config"
 	"streamdeckd/internal/deck"
+	"streamdeckd/internal/fb"
 	"streamdeckd/internal/install"
 	"streamdeckd/internal/setup"
+	"streamdeckd/internal/tui"
+	"streamdeckd/internal/ui"
+	"streamdeckd/internal/ui/gfx"
+	"streamdeckd/internal/ui/text"
 )
 
-func configured(secretsPath string) bool {
-	s, err := config.LoadSecrets(secretsPath)
-	return err == nil && (s.Govee.APIKey != "" || s.Spotify.RefreshToken != "")
-}
-
-// runConsole owns the HDMI console (tty1): installer on first boot (or when
-// forced), then a status screen from which the installer can be re-run.
-func runConsole(cfgPath, secretsPath string, forceSetup bool) error {
-	w := setup.New(os.Stdin, os.Stdout)
-	w.SecretsPath = secretsPath
-	w.LayoutDir = filepath.Dir(cfgPath)
-	var traceFile *os.File
+// runConsole owns the monitor, keyboard and touchpad (tty1). From the USB
+// stick it is the installer; on the installed system it is the home screen
+// with the settings and the button editor.
+func runConsole(cfgPath, secretsPath string) error {
+	var trace io.Writer
 	if p := os.Getenv("STREAMDECKD_TRACE"); p != "" {
 		if f, err := os.OpenFile(p, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o644); err == nil {
-			w.Trace = f
-			traceFile = f
+			trace = f
 		}
 	}
-	live := isLive()
-	if live {
-		w.Live = true
-		w.PayloadDir = "/media/live/streamdeck/boot"
-		if dev, err := os.ReadFile("/run/streamdeck-media"); err == nil {
-			w.BootDisk = install.MediaDisk("/sys/block", string(dev))
+	// One reader owns the console input; the terminal parses it into keys
+	// (the console's keymap, Dvorak, applies).
+	in := make(chan []byte, 64)
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			n, err := os.Stdin.Read(buf)
+			if n > 0 {
+				in <- append([]byte(nil), buf[:n]...)
+			}
+			if err != nil {
+				close(in)
+				return
+			}
 		}
-		w.Reboot = func() error {
+	}()
+	term, err := tui.Open(int(os.Stdin.Fd()), os.Stdout, in)
+	if err != nil {
+		return err
+	}
+	defer term.Close()
+
+	tracer := ui.Tracer{W: trace}
+	var u ui.UI
+	if dev, err := fb.Open("/dev/fb0"); err == nil && os.Getenv("STREAMDECKD_TEXT_UI") == "" {
+		restore, _ := fb.GraphicsMode(os.Stdin.Fd())
+		defer restore()
+		mice, err := fb.Mice("/dev/input/mice")
+		if err != nil {
+			mice = nil
+		}
+		u = gfx.New(dev, term.Keys(), mice, tracer)
+		tracer.Printf("renderer gfx %dx%d", dev.W, dev.H)
+	} else {
+		u = text.New(term, tracer)
+		tracer.Printf("renderer text")
+	}
+
+	app := &setup.App{
+		U: u, Trace: trace,
+		SecretsPath: secretsPath, LayoutPath: cfgPath, LayoutDir: filepath.Dir(cfgPath),
+		WebAddr: ":8080", Version: version,
+		Reboot: func() error {
 			syscall.Sync()
 			return exec.Command("reboot").Run()
-		}
+		},
+		PowerOff: func() error {
+			syscall.Sync()
+			return exec.Command("poweroff").Run()
+		},
+		DeckName:      deck.Present,
+		SeedFinder:    setup.FindSeedOnUSB,
+		FindInstalled: install.FindInstalled,
 	}
 	ctx := context.Background()
-
-	runSetup := func() {
-		for {
-			err := w.Run(ctx)
-			if err == nil {
-				return
-			}
-			fmt.Printf("\nInstaller stopped: %v\nPress Enter to start over.\n", err)
-			if _, ok := <-w.Lines(); !ok {
-				return
-			}
-		}
+	if isLive() {
+		app.Live = true
+		app.PayloadDir = "/media/live/streamdeck/boot"
+		return app.Installer(ctx)
 	}
-	if forceSetup {
-		runSetup()
-		return nil
-	}
-	if live {
-		offerUpdate(w)
-	}
-	if !configured(secretsPath) {
-		runSetup()
-	}
-
-	lines := w.Lines()
-	for {
-		printStatus(cfgPath, secretsPath, live)
-		select {
-		case line, ok := <-lines:
-			if !ok {
-				return nil
-			}
-			switch strings.ToLower(line) {
-			case "1", "edit", "buttons":
-				runEditor(ctx, w, cfgPath, secretsPath, traceFile)
-			case "2", "settings":
-				if err := w.Settings(ctx); err != nil {
-					fmt.Printf("settings: %v\n", err)
-				}
-			case "3", "setup":
-				runSetup()
-			case "4", "install":
-				if live {
-					if err := w.InstallStep(); err != nil {
-						fmt.Printf("install: %v\n", err)
-					}
-				}
-			}
-		case <-time.After(15 * time.Second):
-		}
-	}
+	app.EditButtons = func(ctx context.Context) { runEditor(ctx, u, app, cfgPath, secretsPath, trace) }
+	return app.Home(ctx)
 }
 
 func isLive() bool {
 	b, _ := os.ReadFile("/proc/cmdline")
 	return strings.Contains(string(b), "streamdeck.live")
-}
-
-func printStatus(cfgPath, secretsPath string, live bool) {
-	fmt.Print("\033[H\033[2J")
-	fmt.Println("StreamDeck OS")
-	fmt.Println("=============")
-	ip := setup.LocalIPv4()
-	if ip == "" {
-		ip = "not connected"
-	}
-	dk := deck.Present()
-	if dk == "" {
-		dk = "not connected (plug in a Stream Deck MK.2)"
-	}
-	if live {
-		fmt.Println("Running from the USB stick (not installed).")
-	}
-	fmt.Printf("Network:     %s\n", ip)
-	fmt.Printf("Wi-Fi:       %s\n", setup.WifiStatus())
-	fmt.Printf("Stream Deck: %s\n", dk)
-
-	s, _ := config.LoadSecrets(secretsPath)
-	if s == nil {
-		s = &config.Secrets{}
-	}
-	yes := func(b bool) string {
-		if b {
-			return "set up"
-		}
-		return "not set up"
-	}
-	fmt.Printf("Govee:       %s\n", yes(s.Govee.APIKey != ""))
-	sp := yes(s.Spotify.RefreshToken != "")
-	if s.Spotify.DefaultDevice != "" {
-		sp += ", plays on " + s.Spotify.DefaultDevice
-	}
-	fmt.Printf("Spotify:     %s\n", sp)
-	if _, err := config.LoadAll(cfgPath, secretsPath); err != nil {
-		fmt.Printf("\nLayout problem in %s:\n%v\n", cfgPath, err)
-	} else {
-		fmt.Printf("Layout:      %s OK\n", cfgPath)
-	}
-	fmt.Printf("\n%s\n", time.Now().Format("Mon Jan 2 15:04"))
-	fmt.Printf("Buttons:     %s\n", buttonSummary(cfgPath))
-	fmt.Print("\n  1) Edit buttons\n")
-	fmt.Print("  2) Settings (Govee/Spotify keys, speaker, Wi-Fi)\n")
-	fmt.Print("  3) Run the full installer again\n")
-	if live {
-		fmt.Print("  4) Install to this computer's disk\n")
-	}
-	fmt.Print("\nChoose and press Enter: ")
-}
-
-// offerUpdate: booted from the USB stick on a PC that already has StreamDeck
-// OS installed -> offer to update it in place, keeping settings and buttons.
-func offerUpdate(w *setup.Wizard) {
-	part := install.FindInstalled()
-	if part == "" || install.CheckPayload(w.PayloadDir) != nil {
-		return
-	}
-	trace := func(m string) {
-		if w.Trace != nil {
-			fmt.Fprintln(w.Trace, "SETUP: "+m)
-		}
-	}
-	lines := w.Lines()
-	for {
-		fmt.Print("\033[H\033[2J")
-		fmt.Println("StreamDeck OS is already installed on this computer (" + part + ").")
-		fmt.Println()
-		fmt.Println("  1) Update it to this version (keeps your keys, Wi-Fi and buttons)")
-		fmt.Println("  2) Set up from scratch instead")
-		fmt.Print("\nChoose and press Enter: ")
-		trace("prompt update")
-		line, ok := <-lines
-		if !ok {
-			return
-		}
-		switch strings.TrimSpace(line) {
-		case "1":
-			err := install.Update(part, w.PayloadDir, func(f string, a ...any) { fmt.Printf("  "+f+"\n", a...) })
-			if err != nil {
-				fmt.Printf("\nUpdate failed: %v\nPress Enter to continue.\n", err)
-				trace("update-error " + err.Error())
-				<-lines
-				return
-			}
-			trace("updated")
-			fmt.Println("\nUpdated! Remove the USB stick, then press Enter to restart.")
-			<-lines
-			syscall.Sync()
-			_ = exec.Command("reboot").Run()
-			return
-		case "2":
-			return
-		}
-	}
 }

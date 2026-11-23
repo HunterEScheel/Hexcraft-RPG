@@ -2,8 +2,7 @@
 // key presses to Govee lighting scenes and Spotify playback.
 //
 //	streamdeckd [run]          run the appliance daemon (default)
-//	streamdeckd console        tty1: installer on first boot, then status screen
-//	streamdeckd setup          run the installer (Govee key, Spotify login, Wi-Fi)
+//	streamdeckd console        tty1: the installer (USB stick) or the home screen
 //	streamdeckd check          validate config and credentials
 //	streamdeckd govee-list     list Govee devices and their scene names
 //	streamdeckd spotify-devices list Spotify Connect devices
@@ -62,7 +61,7 @@ func main() {
 		cfg := fs.String("config", defaultConfig, "button layout file")
 		sec := secretsFlag(fs)
 		fs.Parse(args)
-		err = runConsole(*cfg, *sec, cmd == "setup")
+		err = runConsole(*cfg, *sec)
 	case "check":
 		fs := flag.NewFlagSet("check", flag.ExitOnError)
 		cfg := fs.String("config", defaultConfig, "config file")

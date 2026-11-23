@@ -3,6 +3,9 @@
 golang.org/x/image/draw
 golang.org/x/image/font
 golang.org/x/image/font/gofont/gobold
+golang.org/x/image/font/gofont/gomedium
+golang.org/x/image/font/gofont/gomonobold
+golang.org/x/image/font/gofont/goregular
 golang.org/x/image/font/opentype
 golang.org/x/image/font/sfnt
 golang.org/x/image/math/f64
