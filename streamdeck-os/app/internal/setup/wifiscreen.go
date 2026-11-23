@@ -211,15 +211,15 @@ func (a *App) pickNetwork(ctl wifi.Ctl, ad *wifi.Adapter) bool {
 			a.U.Message(ui.Note{ID: "wifi-save-error", Kind: ui.ErrorNote, Title: "Couldn't save Wi-Fi settings", Lines: []string{err.Error()}})
 			continue
 		}
-		if a.connectWifi(ctl, ssid) {
+		if a.connectWifi(ctl, ssid, false) {
 			return true
 		}
 	}
 }
 
 // connectWifi applies the saved config and reports what happened in plain
-// words; true when connected.
-func (a *App) connectWifi(ctl wifi.Ctl, ssid string) bool {
+// words (unless quiet); true when connected.
+func (a *App) connectWifi(ctl wifi.Ctl, ssid string, quiet bool) bool {
 	show := func(step string) {
 		a.U.Info(ui.InfoView{ID: "wifi-connecting", Title: "Connecting to " + ssid, Spinner: true, Lines: []string{step}})
 	}
@@ -268,6 +268,9 @@ func (a *App) connectWifi(ctl wifi.Ctl, ssid string) bool {
 		_ = ctl.Disconnect() // don't keep hammering the router with a bad password
 	}
 	a.trace("wifi-result %s %s", result, detail)
+	if quiet {
+		return result == "connected"
+	}
 	switch result {
 	case "connected":
 		a.U.Message(ui.Note{ID: "wifi-connected", Kind: ui.SuccessNote, Title: "Connected", Lines: []string{fmt.Sprintf("Connected to %s (%s).", ssid, detail)}})
@@ -303,7 +306,7 @@ func (a *App) seedWifi(sd *Seed) string {
 	if err := wifi.WriteConfig(sd.WifiName, sd.WifiPassword, sd.WifiCountry, true); err != nil {
 		return "Wi-Fi: " + err.Error()
 	}
-	if a.connectWifi(ctl, sd.WifiName) {
+	if a.connectWifi(ctl, sd.WifiName, true) {
 		return "Wi-Fi: connected to " + sd.WifiName
 	}
 	return "Wi-Fi: couldn't connect to " + sd.WifiName

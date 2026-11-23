@@ -53,17 +53,17 @@ class Shell:
         except socket.timeout:
             pass
         self.s.sendall(f"{cmd}; echo {marker}\n".encode())
-        rx = re.compile(rf"^{marker}\r?$", re.M)
-        buf, end = "", time.time() + timeout
+        rx = re.compile(rf"^{marker}\r?$".encode(), re.M)
+        buf, end = b"", time.time() + timeout
         while time.time() < end:
             try:
-                buf += self.s.recv(65536).decode(errors="replace")
+                buf += self.s.recv(65536)
             except socket.timeout:
                 pass
             m = rx.search(buf)
             if m:
-                return buf[:m.start()].replace("\r", "")
-        return buf.replace("\r", "")
+                return buf[:m.start()].decode(errors="replace").replace("\r", "")
+        return buf.decode(errors="replace").replace("\r", "")
 
 
 GOVEE_KEY = "tEsT-gOvEe-42xq"          # must match testtools/mockapi
@@ -89,6 +89,7 @@ for c in "abcdefghijklmnopqrstuvwxyz0123456789":
 
 failures = []
 LOG = None
+LAST_CLICK = 0
 
 
 def finish():
@@ -242,6 +243,7 @@ def qemu(phase, usb_stick, nic=True, shell=None, extra=()):
         "-drive", f"if=pflash,format=raw,file={VARS}",
         "-device", "qemu-xhci,id=xhci",
         "-device", "usb-kbd,bus=xhci.0",
+        "-device", "usb-mouse,bus=xhci.0",   # the keyboard's trackpad
         "-drive", f"if=none,id=disk,file={DISK},format=raw",
         "-device", "nvme,drive=disk,serial=MINIPC0001",
         "-display", "none", "-vga", "std",
@@ -264,3 +266,122 @@ def qemu(phase, usb_stick, nic=True, shell=None, extra=()):
     return subprocess.Popen(args)
 
 
+
+
+# ---- driving the on-screen app (it traces "UI: ..." lines to ttyS1) ----
+
+def mark():
+    """Position in the log; pass as `after` to only look at what follows."""
+    return len(log_text())
+
+
+def _last(pattern, after, timeout, settle=0.4):
+    wait_log(pattern, timeout, after)
+    time.sleep(settle)  # let the screen finish (later traces win)
+    ms = list(re.finditer(pattern, log_text()[after:]))
+    return ms[-1]
+
+
+def menu(mid, after=0, timeout=60):
+    """(sel, items) of the menu with this ID as last drawn."""
+    m = _last(rf"UI: menu {re.escape(mid)} sel=(\d+) items=(.*)", after, timeout)
+    return int(m.group(1)), m.group(2).rstrip("\r").split("|")
+
+
+def choose(mon, mid, label, after=0, timeout=60):
+    """Pick the row whose label starts with `label` using the arrow keys."""
+    sel, items = menu(mid, after, timeout)
+    idx = [i for i, it in enumerate(items) if not it.startswith("#") and it.startswith(label)]
+    if not idx:
+        raise SystemExit(f"menu {mid}: no {label!r} in {items}")
+    t = idx[0]
+    lo, hi = sorted((sel, t))
+    n = sum(1 for i in range(lo + 1, hi + 1) if not items[i].startswith("#"))
+    if sel != t:
+        mon.key(*(["down" if t > sel else "up"] * n))
+    m = mark()
+    mon.key("ret")
+    return m
+
+
+def enter_text(mon, iid, text, after=0, timeout=60, layout=DVORAK):
+    """Type into text field `iid` and press Enter; returns the mark before Enter."""
+    _last(rf"UI: input {re.escape(iid)}\b", after, timeout)
+    mon.type(text, layout, enter=False)
+    m = mark()
+    mon.key("ret")
+    return m
+
+
+def dismiss(mon, nid, after=0, timeout=60):
+    """Wait for message `nid` and press Enter on it."""
+    _last(rf"UI: message {re.escape(nid)}\b", after, timeout)
+    m = mark()
+    mon.key("ret")
+    return m
+
+
+def home_open(mon, tile, after=0, timeout=60):
+    """Open a home-screen tile with the arrow keys."""
+    m = _last(r"UI: home sel=(\d+) tiles=(\S+)", after, timeout)
+    tiles = m.group(2).split(",")
+    n = (tiles.index(tile) - int(m.group(1))) % len(tiles)
+    mon.key(*(["right"] * n))
+    m = mark()
+    mon.key("ret")
+    return m
+
+
+def targets(want=None, timeout=30):
+    """Clickable things on the current screen: name -> centre (x, y)."""
+    end = time.time() + timeout
+    while True:
+        time.sleep(0.6)
+        ms = re.findall(r"UI: targets (.*)", log_text())
+        out = {}
+        if ms:
+            for part in ms[-1].rstrip("\r").split(";"):
+                name, _, xy = part.rpartition("=")
+                if name:
+                    x, y = xy.split(",")
+                    out[name] = (int(x), int(y))
+        if want is None or want in out or time.time() > end:
+            return out
+
+
+def click(mon, target, after=0, timeout=30):
+    """Move the (virtual) trackpad pointer onto `target` and click it.
+
+    The pointer is first pushed into the top-left corner, then moved in small
+    steps (no pointer acceleration), like a finger on a touchpad."""
+    t = targets(target, timeout)
+    if target not in t:
+        raise SystemExit(f"no {target!r} on screen: {sorted(t)}")
+    x, y = t[target]
+    m0 = mark()
+    for _ in range(14):
+        mon.cmd("mouse_move -120 -120")
+    cx = cy = 0
+    while cx < x or cy < y:
+        dx, dy = min(4, x - cx), min(4, y - cy)
+        mon.cmd(f"mouse_move {dx} {dy}")
+        cx, cy = cx + dx, cy + dy
+    time.sleep(0.3)
+    global LAST_CLICK
+    LAST_CLICK = mark()
+    mon.cmd("mouse_button 1")
+    time.sleep(0.1)
+    mon.cmd("mouse_button 0")
+    m = wait_log(r"UI: click (.*?) at \d+,\d+", 10, m0)
+    return m.group(1)
+
+
+def install(mon, after=0, label="Install StreamDeck OS"):
+    """Live USB stick: install to the first disk; returns the APP: result."""
+    m = choose(mon, "installer", label, after, 180)
+    m = choose(mon, "install-disk", "", m)
+    m = choose(mon, "install-confirm", "Erase and install", m)
+    r = wait_log(r"APP: (installed \w+|install-error .*)", 180, m)
+    if r.group(1).startswith("installed"):
+        dismiss(mon, "install-done", m)
+    return r.group(1)

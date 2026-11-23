@@ -2,11 +2,12 @@
 #
 # Fill this in, rename it to streamdeck-setup.txt and put it on a USB stick
 # (the installer stick if it was made with Rufus "ISO mode" or Ventoy, or any
-# other FAT32/exFAT stick). Plug it in while installing: the installer uses
-# these instead of asking. Leave a value empty to be asked as usual.
+# other FAT32/exFAT stick). Plug it into the installed mini PC: the home
+# screen offers "Use it", which sets these up with nothing to type. Leave a
+# value empty to set it up on screen instead.
 #
 # It holds your keys in plain text: keep the stick safe.
-# Tip: on a set-up mini PC, Settings > "Save these settings to a USB stick"
+# Tip: on a set-up mini PC, Setup file > "Save settings to a USB stick"
 # writes this file for you, including your Spotify login.
 
 wifi_name =

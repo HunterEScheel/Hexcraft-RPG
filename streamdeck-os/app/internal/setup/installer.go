@@ -25,7 +25,7 @@ func (a *App) Installer(ctx context.Context) error {
 		}
 		if err := install.CheckPayload(a.PayloadDir); err != nil {
 			a.trace("install-no-media")
-			r := a.U.Menu(ui.MenuOpts{ID: "no-media", Title: "Install StreamDeck OS",
+			r := a.U.Menu(ui.MenuOpts{ID: "no-media", Title: "Install StreamDeck OS", Root: true,
 				Subtitle: "Can't find StreamDeck OS's files on the USB stick.",
 				Intro: []string{"Nothing on this computer's disks was changed.",
 					"Re-write the stick with balenaEtcher (or Rufus in \"DD Image\" mode) and start from it again."},
@@ -53,7 +53,7 @@ func (a *App) Installer(ctx context.Context) error {
 		}
 		add(ui.Item{Label: "", Header: true}, "")
 		add(ui.Item{Label: "Restart", Icon: "back"}, "restart")
-		r := a.U.Menu(ui.MenuOpts{ID: "installer", Title: "Install StreamDeck OS",
+		r := a.U.Menu(ui.MenuOpts{ID: "installer", Title: "Install StreamDeck OS", Root: true,
 			Subtitle: "Welcome! This USB stick installs StreamDeck OS onto this computer.",
 			Intro: []string{"Wi-Fi, your Govee key, Spotify and the buttons are set up after the install, " +
 				"on the installed system, with this keyboard and touchpad."},
@@ -85,7 +85,9 @@ func (a *App) progress(id, title string, f func(say install.Progress) error) err
 	var log []string
 	say := func(format string, args ...any) {
 		mu.Lock()
-		log = append(log, fmt.Sprintf(format, args...))
+		line := fmt.Sprintf(format, args...)
+		a.trace("progress %s", line)
+		log = append(log, line)
 		if len(log) > 6 {
 			log = log[len(log)-6:]
 		}

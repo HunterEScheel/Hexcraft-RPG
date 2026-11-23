@@ -1,6 +1,6 @@
 # StreamDeck OS
 ::sysinit:/etc/init.d/rcS
-# HDMI console: installer on first boot, then status + settings menu.
+# Monitor, keyboard and touchpad: installer (USB stick) or home screen.
 tty1::respawn:/usr/sbin/streamdeck-console
 # Network: Ethernet, Wi-Fi, USB dongles plugged in at any time.
 ::respawn:/usr/sbin/netwatch

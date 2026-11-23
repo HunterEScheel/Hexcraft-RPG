@@ -20,6 +20,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 import vmlib
@@ -57,23 +58,15 @@ def run_case(name, stick, kernel, initrd, expect_media):
         out = shell.run("cat /run/streamdeck-media 2>&1; ls /media/live/streamdeck/boot 2>&1")
         if expect_media:
             check(expect_media in out and "initrd.img" in out, f"{name}: installer files found ({out.split()[0] if out.split() else '?'})")
-        # Skip Wi-Fi, Govee and Spotify; go straight to the install step.
-        wait_log(r"SETUP: prompt wifi-optional", 120)
-        mon.type("n")
-        wait_log(r"SETUP: prompt govee-key")
-        mon.type("")
-        wait_log(r"SETUP: prompt spotify-id")
-        mon.type("")
-        m = wait_log(r"SETUP: (prompt install-disk|install-no-media)", 90)
+        m = wait_log(r"UI: menu (installer|no-media) ", 120)
         if expect_media:
-            check(m.group(1) == "prompt install-disk", f"{name}: installer offers the disk")
-            mon.type("1")
-            wait_log(r"SETUP: prompt install-confirm")
-            mon.type("ERASE")
-            m = wait_log(r"SETUP: (installed \w+|install-error .*)", 180)
-            check(m.group(1) == "installed nvme0n1", f"{name}: installed to NVMe ({m.group(1)})")
+            check(m.group(1) == "installer", f"{name}: installer offers to install")
+            r = vmlib.install(mon)
+            check(r == "installed nvme0n1", f"{name}: installed to NVMe ({r})")
         else:
-            check(m.group(1) == "install-no-media", f"{name}: installer refuses when its files can't be found")
+            check(m.group(1) == "no-media" and "APP: install-no-media" in vmlib.log_text(),
+                  f"{name}: installer refuses when its files can't be found")
+            time.sleep(1)
             mon.screenshot(f"media-{name}")
     finally:
         vm.kill()

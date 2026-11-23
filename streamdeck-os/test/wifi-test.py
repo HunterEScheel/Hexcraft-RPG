@@ -5,101 +5,37 @@ The dongle and the home router are virtual radios from the kernel's
 mac80211_hwsim (see test/rootfs/usr/sbin/test-wifi-ap): the router runs
 hostapd with WPA2 network "StreamDeckTest" / "correct horse" plus DHCP.
 
-Phase 1 (live USB, no network at all):
-  - the installer finds no Wi-Fi adapter and explains why
-  - the dongle is "plugged in" mid-install; the installer finds it, scans,
-    and lists the network
+Phase 1 (USB stick, no network at all): install; no network is needed.
+Phase 2 (installed, no network yet), on the home screen's Wi-Fi tile:
+  - no adapter: the screen explains why and offers to look again
+  - the dongle is "plugged in"; Look again finds it, scans, lists the network
   - a wrong password is called out as a wrong password
   - the right password connects and DHCP gives an address
-  - the rest of the install runs over Wi-Fi (Spotify code typed on the console)
-Phase 2 (installed, rebooted, still no Ethernet):
+  - Govee and Spotify are set up over Wi-Fi (the Spotify code typed on screen)
+Phase 3 (rebooted, still no Ethernet):
   - the dongle appears 5 s after boot; netwatch must reconnect on its own
-  - the status screen shows the Wi-Fi connection; a deck key press works
+  - the home screen shows the connection; a deck key press works
 
 Usage: test/wifi-test.py <workdir containing streamdeck-os-test.iso>
 """
 import os
-import re
 import sys
 import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 import vmlib
-from vmlib import CLIENT_ID, CLIENT_SECRET, GOVEE_KEY, Monitor, Shell, check, finish, setup, wait_log
-
-SHELL = None
+from vmlib import (CLIENT_ID, CLIENT_SECRET, GOVEE_KEY, Monitor, Shell, check, choose, dismiss, enter_text, finish,
+                   home_open, mark, setup, wait_log)
 
 
 def phase1():
-    sock = os.path.join(vmlib.WORK, "ttyS0.sock")
-    vm = vmlib.qemu("w1-live-wifi", usb_stick=True, nic=False, shell=sock)
+    vm = vmlib.qemu("w1-install", usb_stick=True, nic=False)
     try:
         mon = Monitor(vmlib.MON)
-        sh = Shell(sock)
         m = wait_log(r"TEST: boot complete mode=(\w+)", 300)
         check(m.group(1) == "live", "boots the ISO with no Ethernet")
-
-        # No adapter yet: the installer must say so instead of failing silently.
-        wait_log(r"SETUP: wifi-no-adapter", 120)
-        wait_log(r"SETUP: prompt wifi-retry")
-        check(True, "no Wi-Fi adapter: installer explains and offers to look again")
-        mon.screenshot("w1-01-no-adapter")
-
-        sh.run("/usr/sbin/test-wifi-ap")
-        wait_log(r"TEST: wifi dongle plugged in", 30)
-        mark = len(vmlib.log_text())
-        mon.type("")  # Enter = look again
-        m = wait_log(r"SETUP: wifi-adapter (\S+) (\S+)", 60, mark)
-        check(m.group(1) == "wlan0" and m.group(2) == "mac80211_hwsim", f"dongle plugged in mid-install is found ({m.group(1)}, {m.group(2)})")
-        m = wait_log(r"SETUP: wifi-scan (\d+)", 60, mark)
-        check(int(m.group(1)) >= 1, "scan lists the network")
-        wait_log(r"SETUP: prompt wifi-ssid", 30, mark)
-        mon.screenshot("w1-02-scan")
-
-        # Wrong password first.
-        mon.type("1")
-        wait_log(r"SETUP: prompt wifi-pass", 30, mark)
-        mon.type("wrong password")
-        wait_log(r"SETUP: prompt wifi-country", 30, mark)
-        mon.type("")
-        m = wait_log(r"SETUP: wifi-result (\S+)", 90, mark)
-        check(m.group(1) == "wrong-password", f"wrong password is reported as a wrong password ({m.group(1)})")
-        mon.screenshot("w1-03-wrong-password")
-
-        # Then the right one (typed on Dvorak like everything else).
-        mark = len(vmlib.log_text())
-        wait_log(r"SETUP: prompt wifi-ssid", 60, mark)
-        mon.type("1")
-        wait_log(r"SETUP: prompt wifi-pass", 30, mark)
-        mon.type("correct horse")
-        wait_log(r"SETUP: prompt wifi-country", 30, mark)
-        mon.type("")
-        m = wait_log(r"SETUP: wifi-result (\S+) ?(\S*)", 90, mark)
-        check(m.group(1) == "connected" and m.group(2).startswith("192.168.77."),
-              f"right password connects and gets an address ({m.group(1)} {m.group(2)})")
-
-        # Rest of the installer.
-        wait_log(r"SETUP: prompt govee-key", 60, mark)
-        mon.type(GOVEE_KEY)
-        wait_log(r"SETUP: govee-ok", 60, mark)
-        wait_log(r"SETUP: prompt spotify-id", 30, mark)
-        mon.type(CLIENT_ID)
-        wait_log(r"SETUP: prompt spotify-secret", 30, mark)
-        mon.type(CLIENT_SECRET)
-        wait_log(r"SETUP: spotify-wait", 30, mark)
-        mon.type("MOCKCODE")  # the code can also be typed on the console
-        wait_log(r"SETUP: spotify-ok", 30, mark)
-        wait_log(r"SETUP: prompt spotify-device", 30, mark)
-        mon.type("1")
-        wait_log(r"SETUP: saved", 30, mark)
-        wait_log(r"SETUP: prompt install-disk", 30, mark)
-        mon.type("1")
-        wait_log(r"SETUP: prompt install-confirm", 30, mark)
-        mon.type("ERASE")
-        m = wait_log(r"SETUP: (installed \w+|install-error .*)", 180, mark)
-        check(m.group(1) == "installed nvme0n1", "installed over Wi-Fi setup")
-        wait_log(r"SETUP: prompt reboot", 30, mark)
-        mon.type("")
+        r = vmlib.install(mon)
+        check(r == "installed nvme0n1", f"installs without any network ({r})")
         vm.wait(timeout=120)
     finally:
         if vm.poll() is None:
@@ -107,27 +43,93 @@ def phase1():
             vm.wait()
 
 
+def join(mon, password, after):
+    a = choose(mon, "wifi-networks", "StreamDeckTest", after, 90)
+    a = enter_text(mon, "wifi-pass", password, a)
+    return wait_log(r"APP: wifi-result (\S+) ?(\S*)", 90, a), a
+
+
 def phase2():
     sock = os.path.join(vmlib.WORK, "ttyS0.sock")
-    vm = vmlib.qemu("w2-installed-wifi", usb_stick=False, nic=False, shell=sock)
+    vm = vmlib.qemu("w2-installed-setup", usb_stick=False, nic=False, shell=sock)
     try:
         mon = Monitor(vmlib.MON)
         sh = Shell(sock)
         m = wait_log(r"TEST: boot complete mode=(\w+)", 300)
         check(m.group(1) == "installed", "installed system boots (no Ethernet)")
+        a = home_open(mon, "wifi", mark(), 120)
+        wait_log(r"APP: wifi-no-adapter", 60, a)
+        vmlib.menu("wifi-no-adapter", a)
+        check(True, "no Wi-Fi adapter: the Wi-Fi screen explains and offers to look again")
+        time.sleep(1)
+        mon.screenshot("w2-01-no-adapter")
+
+        sh.run("/usr/sbin/test-wifi-ap")
+        wait_log(r"TEST: wifi dongle plugged in", 30)
+        a = choose(mon, "wifi-no-adapter", "Look again", a)
+        m = wait_log(r"APP: wifi-adapter (\S+) (\S+)", 60, a)
+        check(m.group(1) == "wlan0" and m.group(2) == "mac80211_hwsim", f"dongle plugged in later is found ({m.group(1)}, {m.group(2)})")
+        m = wait_log(r"APP: wifi-scan (\d+)", 60, a)
+        check(int(m.group(1)) >= 1, "scan lists the network")
+        vmlib.menu("wifi-networks", a)
+        time.sleep(1)
+        mon.screenshot("w2-02-networks")
+
+        m, a = join(mon, "wrong password", a)
+        check(m.group(1) == "wrong-password", f"wrong password is reported as a wrong password ({m.group(1)})")
+        time.sleep(1)
+        mon.screenshot("w2-03-wrong-password")
+        a = dismiss(mon, "wifi-wrong-password", a)
+
+        m, a = join(mon, "correct horse", a)  # typed on Dvorak like everything else
+        check(m.group(1) == "connected" and m.group(2).startswith("192.168.77."),
+              f"right password connects and gets an address ({m.group(1)} {m.group(2)})")
+        a = dismiss(mon, "wifi-connected", a)
+        wait_log(r"UI: home sel=", 30, a)
+
+        # Keys over Wi-Fi; the Spotify code is typed on screen this time.
+        a = home_open(mon, "govee", mark())
+        a = enter_text(mon, "govee-key", GOVEE_KEY, a)
+        wait_log(r"APP: govee-ok", 60, a)
+        a = dismiss(mon, "govee-ok", a)
+        a = home_open(mon, "spotify", a)
+        a = enter_text(mon, "spotify-id", CLIENT_ID, a)
+        a = enter_text(mon, "spotify-secret", CLIENT_SECRET, a)
+        wait_log(r"UI: info spotify-phone", 30, a)
+        mon.type("t", enter=False)
+        a = enter_text(mon, "spotify-code", "MOCKCODE", a)
+        wait_log(r"APP: spotify-ok", 30, a)
+        a = choose(mon, "spotify-speaker", "Living Room", a)
+        vmlib.menu("spotify", a)
+        mon.key("esc")
+        check(True, "Govee and Spotify set up over Wi-Fi (Spotify code typed on screen)")
+        time.sleep(3)
+        sh.run("sync")
+    finally:
+        vm.kill()
+        vm.wait()
+
+
+def phase3():
+    sock = os.path.join(vmlib.WORK, "ttyS0.sock")
+    vm = vmlib.qemu("w3-reboot-wifi", usb_stick=False, nic=False, shell=sock)
+    try:
+        mon = Monitor(vmlib.MON)
+        sh = Shell(sock)
+        wait_log(r"TEST: boot complete mode=installed", 300)
         wait_log(r"TEST: wifi dongle plugged in", 60)
         m = wait_log(r"TEST: wifi connected ip=(\S+) after (\d+)s", 90)
         check(m.group(1).startswith("192.168.77."),
               f"dongle that appears late is picked up and reconnects by itself ({m.group(2)} s after it appeared)")
         out = sh.run("cat /var/log/messages | grep netwatch | tail -3")
         check("starting Wi-Fi on wlan0" in out, "netwatch started Wi-Fi on the late adapter")
-        time.sleep(16)  # status screen refreshes every 15 s
-        mon.screenshot("w2-01-status")
+        time.sleep(5)  # home screen refreshes every few seconds
+        mon.screenshot("w3-01-home")
 
         wait_log(r"config loaded: 2 page", 60)
-        mark = len(vmlib.log_text())
-        out = sh.run("echo 'press 1' | nc 127.0.0.1 7000")
-        wait_log(r'key 1 "Party" done', 60, mark)
+        a = mark()
+        sh.run("echo 'press 1' | nc 127.0.0.1 7000")
+        wait_log(r'key 1 "Party" done', 60, a)
         check(True, "deck works on the Wi-Fi-only install")
     finally:
         vm.kill()
@@ -138,6 +140,7 @@ def main():
     setup(sys.argv[1], results="results-wifi")
     phase1()
     phase2()
+    phase3()
     finish()
 
 

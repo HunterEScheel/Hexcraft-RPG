@@ -14,3 +14,8 @@ mmc_block
 sdhci-pci
 nls_cp437
 nls_iso8859_1
+psmouse
+hid-multitouch
+hid-logitech-dj
+hid-logitech-hidpp
+i2c-hid-acpi

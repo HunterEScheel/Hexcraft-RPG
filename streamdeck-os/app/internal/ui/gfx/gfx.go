@@ -47,8 +47,9 @@ type GUI struct {
 	spin     float64
 	held     int
 
-	events   chan ui.Event
-	keyCache map[string]*image.RGBA
+	events      chan ui.Event
+	keyCache    map[string]*image.RGBA
+	lastTargets string
 }
 
 // New starts the renderer. keys come from the console in raw mode; mice may be nil.
@@ -141,6 +142,9 @@ func (g *GUI) mouse(m fb.MouseEvent) {
 		g.emit(ui.Event{Kind: ui.HoverEvent, Target: target}, false)
 	}
 	if m.Buttons&1 != 0 && (prev&1 == 0 || (moved && strings.HasPrefix(target, "slider"))) {
+		if prev&1 == 0 {
+			g.T.Printf("click %s at %d,%d", target, int(g.cx), int(g.cy))
+		}
 		g.emit(ui.Event{Kind: ui.ClickEvent, Target: target, Delta: int(g.cx)}, true)
 	}
 	if m.Wheel != 0 {
@@ -214,6 +218,21 @@ func (g *GUI) frame(title string, back bool, hints string, content func(top, bot
 		g.dev.Flush(g.img, g.img.Bounds())
 		if g.cursorOn {
 			g.drawCursor()
+		}
+		// Where each clickable thing is (for the VM tests' pointer).
+		if g.T.W != nil {
+			var b strings.Builder
+			for i, h := range g.hits {
+				if i > 0 {
+					b.WriteByte(';')
+				}
+				c := h.r.Min.Add(h.r.Max).Div(2)
+				fmt.Fprintf(&b, "%s=%d,%d", h.target, c.X, c.Y)
+			}
+			if t := b.String(); t != g.lastTargets {
+				g.lastTargets = t
+				g.T.Printf("targets %s", t)
+			}
 		}
 		// Hover may have changed under a still pointer.
 		g.hover = g.hitAt(int(g.cx), int(g.cy))
@@ -325,7 +344,7 @@ func (g *GUI) Menu(o ui.MenuOpts) ui.MenuResult {
 		}
 		hdrH := g.px(44)
 		var room int
-		g.frame(o.Title, true, "↑↓ choose · Enter select · Esc back"+map[bool]string{true: " · type to search", false: ""}[o.Filter], func(top0, bottom int) {
+		g.frame(o.Title, !o.Root, map[bool]string{false: "↑↓ choose · Enter select · Esc back", true: "↑↓ choose · Enter select · or click"}[o.Root]+map[bool]string{true: " · type to search", false: ""}[o.Filter], func(top0, bottom int) {
 			x0, w := g.column()
 			y := top0 + g.px(28)
 			if o.Subtitle != "" {

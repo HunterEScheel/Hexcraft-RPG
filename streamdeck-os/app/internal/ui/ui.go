@@ -55,6 +55,7 @@ type MenuOpts struct {
 	Items    []Item
 	Selected int
 	Filter   bool // typing narrows the list
+	Root     bool // top-level screen: no Back button
 	// Keys handles extra keys; returning true ends the menu with that key.
 	Keys func(k Key, index int) bool
 }

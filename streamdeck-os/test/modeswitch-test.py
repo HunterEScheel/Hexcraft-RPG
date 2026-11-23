@@ -38,7 +38,7 @@ def main():
         mon = Monitor(vmlib.MON)
         sh = Shell(sock)
         wait_log(r"TEST: boot complete", 300)
-        wait_log(r"SETUP: prompt", 60)  # system settled
+        wait_log(r"UI: menu installer ", 120)  # system settled
         check("tray open" not in mon.query("info block fakecd"), "fake dongle CD starts closed")
 
         mon.query("device_add usb-storage,bus=xhci.0,drive=fakecd,id=dongle")
@@ -64,7 +64,7 @@ def main():
         # A USB device that is present but whose driver isn't loaded (what the
         # dongle looks like after it re-appears in Wi-Fi mode): unload the
         # keyboard driver; netwatch must load it again and rebind.
-        out = sh.run("rmmod usbhid; sleep 0.5; ls /sys/bus/usb/devices/1-1:1.0/driver 2>&1 | head -1")
+        out = sh.run("rmmod hid_logitech_dj hid_logitech_hidpp 2>/dev/null; rmmod usbhid; sleep 0.5; ls /sys/bus/usb/devices/1-1:1.0/driver 2>&1 | head -1")
         check("No such file" in out, "keyboard driver unloaded (device left without a driver)")
         out = sh.run("for i in $(seq 1 20); do [ -e /sys/bus/usb/devices/1-1:1.0/driver ] && break; sleep 1; done; "
                      "echo after=$i; basename $(readlink /sys/bus/usb/devices/1-1:1.0/driver)", timeout=40)

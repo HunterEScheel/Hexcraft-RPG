@@ -1,25 +1,28 @@
 #!/usr/bin/env python3
-"""Setup-file test: install without typing any keys.
+"""Setup-file test: set up the installed system without typing any keys.
 
-A second USB stick holds the setup file, saved the way Windows often does it
-(CRLF line endings, "streamdeck-setup.txt.txt" because extensions are hidden).
-The PC has no Ethernet; the Wi-Fi "dongle" and router are virtual radios.
+Case 1 (one USB port): a Ventoy stick holds both the ISO and the setup file.
+Install from it; after the restart, with the same stick still plugged in,
+the home screen offers the setup file. Using it sets up Govee and Spotify.
 
-Checks: the installer finds the file, asks only "Use it?", connects to Wi-Fi,
-uses the Govee key and the Spotify login from the file, and never asks for a
-key, a Wi-Fi password or the phone login. Then Settings > "Save these
-settings to a USB stick" rewrites the file from the running system.
+Case 2 (no Ethernet): the setup file is on a stick saved the way Windows
+often does it (CRLF line endings, "streamdeck-setup.txt.txt" because
+extensions are hidden). The home screen offers it; clicking "Use it" with
+the trackpad joins Wi-Fi with the file's password and sets up Govee and
+Spotify; nothing is typed. Then Setup file > Save rewrites the file.
 
 Usage: test/seed-test.py <workdir containing streamdeck-os-test.iso>
 """
 import os
+import re
 import subprocess
 import sys
 import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 import vmlib
-from vmlib import CLIENT_ID, CLIENT_SECRET, GOVEE_KEY, Monitor, Shell, check, finish, setup, wait_log
+from vmlib import (CLIENT_ID, CLIENT_SECRET, GOVEE_KEY, Monitor, Shell, check, choose, click, dismiss, finish,
+                   home_open, mark, setup, wait_log)
 
 SEED = "\r\n".join([
     "wifi_name = StreamDeckTest",
@@ -42,39 +45,34 @@ def fat_stick(path, label, files, size="512M"):
         subprocess.run(["mcopy", "-s", "-i", img, f, "::/"], check=True)
 
 
-def one_stick_case(name, stick, kernel, initrd, expect_where):
-    """Only one USB stick: installer and setup file on the same stick."""
-    subprocess.run(["truncate", "-s", "0", vmlib.DISK], check=True)   # blank internal disk
+def blank_disk():
+    subprocess.run(["truncate", "-s", "0", vmlib.DISK], check=True)
     subprocess.run(["truncate", "-s", "16G", vmlib.DISK], check=True)
-    vm = vmlib.qemu(f"seed-{name}", usb_stick=False, extra=[
-        "-kernel", kernel, "-initrd", initrd, "-append", "streamdeck.live quiet loglevel=3",
-        "-drive", f"if=none,id=onestick,format=raw,file={stick}",
-        "-device", "usb-storage,bus=xhci.0,drive=onestick,removable=on",
-    ])
-    try:
-        mon = Monitor(vmlib.MON)
-        wait_log(r"TEST: boot complete", 300)
-        wait_log(r"SETUP: prompt use-seed", 90)
-        check(True, f"{name}: setup file found on the installer stick itself")
-        mon.type("")
-        wait_log(r"SETUP: prompt wifi-optional", 60)  # VM has a cable; file has no Wi-Fi
-        mon.type("n")
-        wait_log(r"SETUP: spotify-ok seeded", 90)
-        wait_log(r"SETUP: prompt install-disk", 60)
-        log = vmlib.log_text()
-        asked = [p for p in ("prompt govee-key", "prompt spotify-id", "spotify-wait", "prompt spotify-device", "prompt wifi-ssid") if p in log]
-        check(not asked, f"{name}: nothing typed except 'Use it?' (asked: {asked or 'nothing'})")
-        mon.type("1")
-        wait_log(r"SETUP: prompt install-confirm", 30)
-        mon.type("ERASE")
-        m = wait_log(r"SETUP: (installed \w+|install-error .*)", 180)
-        check(m.group(1) == "installed nvme0n1", f"{name}: installed from the same stick ({m.group(1)})")
-    finally:
-        vm.kill()
-        vm.wait()
 
 
-def one_stick_cases():
+def apply_seed(mon, name, after, use_click):
+    m = wait_log(r"APP: seed-found (.*)", 60, after)
+    check(True, f"{name}: home screen found the setup file ({m.group(1).strip()})")
+    vmlib.targets("banner", 30)
+    time.sleep(1)
+    mon.screenshot(f"{name}-1-banner")
+    if use_click:
+        hit = click(mon, "banner")
+        a = vmlib.LAST_CLICK
+        check(hit == "banner", f"{name}: trackpad click on Use it ({hit})")
+    else:
+        a = mark()
+        mon.type("u", enter=False)
+    a = choose(mon, "seed-import", "Set up", a)
+    wait_log(r"APP: seed-applied", 180, a)
+    time.sleep(1)
+    mon.screenshot(f"{name}-2-done")
+    a = dismiss(mon, "seed-done", a)
+    return a
+
+
+def one_port_case():
+    """Install from a Ventoy stick that also holds the setup file, then use it."""
     W = vmlib.WORK
     iso_dir = os.path.join(W, "seed-iso-contents")
     subprocess.run(["rm", "-rf", iso_dir], check=True)
@@ -89,76 +87,88 @@ def one_stick_cases():
     seedfile = os.path.join(W, "streamdeck-setup.txt")
     no_wifi = "\r\n".join(l for l in SEED.split("\r\n") if not l.startswith("wifi_")) + "\r\n"
     open(seedfile, "w", newline="").write(no_wifi)
-
-    rufus = os.path.join(W, "stick-rufus-seed.img")
-    fat_stick(rufus, "RUFUS_USB", [os.path.join(iso_dir, d) for d in ("streamdeck", "boot", "efi")] + [seedfile])
     ventoy = os.path.join(W, "stick-ventoy-seed.img")
     fat_stick(ventoy, "VENTOY", [vmlib.ISO, seedfile])
-    kernel = os.path.join(boot, "vmlinuz")
-    one_stick_case("rufus-iso-mode", rufus, kernel, initrd, "/dev/sda1")
-    one_stick_case("ventoy", ventoy, kernel, initrd, "/dev/sda1")
+    stick = ["-drive", f"if=none,id=onestick,format=raw,file={ventoy}",
+             "-device", "usb-storage,bus=xhci.0,drive=onestick,removable=on"]
+
+    blank_disk()
+    vm = vmlib.qemu("seed-ventoy-install", usb_stick=False, extra=[
+        "-kernel", os.path.join(boot, "vmlinuz"), "-initrd", initrd, "-append", "streamdeck.live quiet loglevel=3"] + stick)
+    try:
+        mon = Monitor(vmlib.MON)
+        wait_log(r"TEST: boot complete", 300)
+        r = vmlib.install(mon)
+        check(r == "installed nvme0n1", f"one port: installed from the Ventoy stick ({r})")
+        check("APP: seed" not in vmlib.log_text(), "one port: the installer doesn't ask about the setup file")
+    finally:
+        vm.kill()
+        vm.wait()
+
+    vm = vmlib.qemu("seed-ventoy-installed", usb_stick=False, extra=stick)
+    try:
+        mon = Monitor(vmlib.MON)
+        wait_log(r"TEST: boot complete mode=installed", 300)
+        a = apply_seed(mon, "one-port", 0, use_click=False)
+        log = vmlib.log_text()
+        check("APP: govee-ok 2" in log and "APP: spotify-ok seeded" in log, "one port: Govee key and Spotify login from the file work")
+        asked = re.findall(r"UI: input (\S+)", log)
+        check(not asked, f"one port: nothing typed ({asked or 'no text fields'})")
+        wait_log(r"config (loaded|reloaded)", 60, 0)
+        a = mark()
+        vmlib.deck("press 1")
+        wait_log(r'key 1 "Party" done', 60, a)
+        check("play?device_id=dev-kitchen" in vmlib.log_text()[a:], "one port: deck works, music on the file's speaker")
+    finally:
+        vm.kill()
+        vm.wait()
 
 
-def main():
-    setup(sys.argv[1], results="results-seed")
-    one_stick_cases()
+def wifi_case():
     stick = os.path.join(vmlib.WORK, "stick-seed.img")
-    subprocess.run(["truncate", "-s", "0", stick], check=True)
-    subprocess.run(["truncate", "-s", "64M", stick], check=True)
-    subprocess.run(["sfdisk", "-q", stick], input="label: dos\nstart=2048, type=c\n", text=True, check=True)
-    img = f"{stick}@@1M"
-    subprocess.run(["mformat", "-i", img, "-F", "-v", "KEYS", "::"], check=True)
     seedfile = os.path.join(vmlib.WORK, "streamdeck-setup.txt.txt")
     open(seedfile, "w", newline="").write(SEED)
-    subprocess.run(["mcopy", "-i", img, seedfile, "::/"], check=True)
+    fat_stick(stick, "KEYS", [seedfile], size="64M")
+    img = f"{stick}@@1M"
 
-    subprocess.run(["truncate", "-s", "0", vmlib.DISK], check=True)   # blank internal disk
-    subprocess.run(["truncate", "-s", "16G", vmlib.DISK], check=True)
+    blank_disk()
+    vm = vmlib.qemu("seed-install", usb_stick=True, nic=False)
+    try:
+        mon = Monitor(vmlib.MON)
+        wait_log(r"TEST: boot complete", 300)
+        check(vmlib.install(mon) == "installed nvme0n1", "Wi-Fi case: installed")
+        vm.wait(timeout=120)
+    finally:
+        if vm.poll() is None:
+            vm.kill()
+            vm.wait()
+
     sock = os.path.join(vmlib.WORK, "ttyS0.sock")
-    vm = vmlib.qemu("seed", usb_stick=True, nic=False, shell=sock, extra=[
+    vm = vmlib.qemu("seed-wifi", usb_stick=False, nic=False, shell=sock, extra=[
         "-drive", f"if=none,id=seedstick,format=raw,file={stick}",
         "-device", "usb-storage,bus=xhci.0,drive=seedstick,removable=on",
     ])
     try:
         mon = Monitor(vmlib.MON)
         sh = Shell(sock)
-        wait_log(r"TEST: boot complete", 300)
-        wait_log(r"SETUP: prompt use-seed", 90)
-        time.sleep(1)
-        mon.screenshot("s1-found-setup-file")
-        check(True, "installer found streamdeck-setup.txt(.txt) on the second USB stick")
-        mon.type("")  # Use it? -> yes
-        # Not online yet: then "plug in" the dongle (and the virtual router;
-        # in this VM the router lives on the same machine, so it must appear
-        # after the installer's "already online?" check).
-        m = wait_log(r"SETUP: network-ip (\S*)", 60)
-        check(m.group(1) == "", "no network before Wi-Fi")
-        sh.run("/usr/sbin/test-wifi-ap")
-        m = wait_log(r"SETUP: wifi-result (\S+)", 120)
-        check(m.group(1) == "connected", f"Wi-Fi joined with the file's name and password ({m.group(1)})")
-        wait_log(r"SETUP: govee-ok", 60)
-        check(True, "Govee key from the file accepted")
-        wait_log(r"SETUP: spotify-ok seeded", 60)
-        check(True, "Spotify login from the file accepted (no phone step)")
-        m = wait_log(r'SETUP: spotify-device "([^"]+)"', 30)
-        check(m.group(1) == "Kitchen Echo", "default speaker from the file")
-        wait_log(r"SETUP: prompt install-disk", 60)
+        wait_log(r"TEST: boot complete mode=installed", 300)
+        sh.run("/usr/sbin/test-wifi-ap")  # the dongle (and the virtual router)
+        wait_log(r"TEST: wifi dongle plugged in", 30)
+        apply_seed(mon, "wifi", 0, use_click=True)
         log = vmlib.log_text()
-        asked = [p for p in ("prompt govee-key", "prompt spotify-id", "prompt spotify-secret", "spotify-wait",
-                             "prompt wifi-ssid", "prompt wifi-pass", "prompt spotify-device") if p in log]
-        check(not asked, f"nothing had to be typed except 'Use it?' (asked: {asked or 'nothing'})")
-        mon.screenshot("s2-install-step")
+        m = re.search(r"APP: wifi-result (\S+)", log)
+        check(m and m.group(1) == "connected", f"Wi-Fi joined with the file's name and password ({m.group(1) if m else '?'})")
+        check("APP: govee-ok" in log, "Govee key from the file accepted")
+        check("APP: spotify-ok seeded" in log, "Spotify login from the file accepted (no phone step)")
+        asked = re.findall(r"UI: input (\S+)", log)
+        check(not asked, f"nothing had to be typed ({asked or 'no text fields'})")
 
-        mon.type("")       # don't install; keep running from USB
-        time.sleep(3)
-        mon.type("2")      # Settings
-        wait_log(r"SETUP: prompt settings", 30)
-        mon.type("6")      # Save these settings to a USB stick
-        wait_log(r"SETUP: prompt export-stick", 30)
-        mon.screenshot("s3-export")
-        mon.type("1")
-        m = wait_log(r"SETUP: (exported \S+|export-error .*)", 30)
-        check(m.group(1).startswith("exported /dev/sd"), f"settings saved to the USB stick ({m.group(1)})")
+        a = home_open(mon, "backup", mark())
+        a = choose(mon, "backup", "Save settings", a)
+        a = choose(mon, "export-stick", "/dev/sd", a)
+        m = wait_log(r"APP: (exported \S+|export-error .*)", 30, a)
+        check(m.group(1).startswith("exported /dev/sd"), f"Setup file > Save wrote the file to the USB stick ({m.group(1)})")
+        dismiss(mon, "exported", a)
         sh.run("sync")
     finally:
         vm.kill()
@@ -168,7 +178,13 @@ def main():
     check("# StreamDeck OS setup file" in out and "spotify_refresh_token = MOCKREFRESH" in out
           and "wifi_password = correct horse" in out and f"govee_api_key = {GOVEE_KEY}" in out
           and "spotify_speaker = Kitchen Echo" in out,
-          "exported file has Wi-Fi, Govee, Spotify app keys, login and speaker")
+          "saved file has Wi-Fi, Govee, Spotify app keys, login and speaker")
+
+
+def main():
+    setup(sys.argv[1], results="results-seed")
+    one_port_case()
+    wifi_case()
     finish()
 
 
