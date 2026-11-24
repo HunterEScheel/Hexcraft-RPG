@@ -31,6 +31,10 @@ type GoveeDevice struct {
 	Name   string
 	Scenes []string
 	DIY    []string
+	// Group is a group of lights from the Govee app: not offered in the
+	// pickers (the lights are listed one by one), but buttons that already
+	// use it still work.
+	Group bool
 }
 
 // Sources is where the editor gets lists and runs "Try it".

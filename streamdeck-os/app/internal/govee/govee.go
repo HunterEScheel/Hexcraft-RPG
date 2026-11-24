@@ -51,6 +51,23 @@ type Device struct {
 	Capabilities []Capability `json:"capabilities"`
 }
 
+// IsGroup reports whether this is a group of lights made in the Govee app
+// (e.g. SKU "SameModeGroup") rather than a single light.
+func (d Device) IsGroup() bool {
+	return d.Type == "devices.types.group" || strings.HasSuffix(strings.ToLower(d.SKU), "group")
+}
+
+// Lights returns only the individual lights (no groups).
+func Lights(devs []Device) []Device {
+	out := make([]Device, 0, len(devs))
+	for _, d := range devs {
+		if !d.IsGroup() {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
 type Capability struct {
 	Type       string     `json:"type"`
 	Instance   string     `json:"instance"`

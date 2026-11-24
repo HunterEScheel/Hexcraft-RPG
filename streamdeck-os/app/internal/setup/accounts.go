@@ -59,6 +59,7 @@ func (a *App) checkGovee(ctx context.Context, key string) ([]govee.Device, error
 	cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	devs, err := govee.New(key).Devices(cctx)
 	cancel()
+	devs = govee.Lights(devs)
 	if err != nil {
 		a.trace("govee-error %v", err)
 		a.U.Message(ui.Note{ID: "govee-error", Kind: ui.ErrorNote, Title: "That key didn't work", Lines: []string{err.Error(), "Check it and try again."}})

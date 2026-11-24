@@ -57,7 +57,11 @@ func (r *realSources) GoveeDevices(ctx context.Context) ([]editor.GoveeDevice, e
 	}
 	out := make([]editor.GoveeDevice, 0, len(devs))
 	for _, d := range devs {
-		gd := editor.GoveeDevice{Name: d.Name}
+		gd := editor.GoveeDevice{Name: d.Name, Group: d.IsGroup()}
+		if gd.Group {
+			out = append(out, gd) // known, but not offered; no scene lookups
+			continue
+		}
 		if opts, err := g.Scenes(ctx, d, false); err == nil {
 			for _, o := range opts {
 				gd.Scenes = append(gd.Scenes, o.Name)

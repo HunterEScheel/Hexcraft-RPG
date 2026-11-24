@@ -127,6 +127,7 @@ func (a *App) ImportSeed(ctx context.Context, sd *Seed, where string) {
 		cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		devs, err := govee.New(sd.GoveeKey).Devices(cctx)
 		cancel()
+		devs = govee.Lights(devs)
 		if err == nil {
 			s.Govee.APIKey = sd.GoveeKey
 			a.trace("govee-ok %d", len(devs))

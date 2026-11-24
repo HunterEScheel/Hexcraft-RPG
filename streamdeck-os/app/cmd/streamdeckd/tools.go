@@ -129,7 +129,7 @@ func runGoveeList(ctx context.Context, secrets, key string) error {
 	if err != nil {
 		return err
 	}
-	for _, d := range devs {
+	for _, d := range govee.Lights(devs) {
 		fmt.Printf("%q  sku=%s  id=%s\n", d.Name, d.SKU, d.ID)
 		for _, diy := range []bool{false, true} {
 			opts, err := g.Scenes(ctx, d, diy)

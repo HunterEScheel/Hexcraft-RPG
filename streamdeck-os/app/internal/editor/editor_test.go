@@ -31,6 +31,7 @@ func (f *fakeSrc) GoveeDevices(context.Context) ([]GoveeDevice, error) {
 	return []GoveeDevice{
 		{Name: "TV Backlight", Scenes: []string{"Movie", "Party", "Sunset"}},
 		{Name: "Floor Lamp", Scenes: []string{"Rainbow", "Party Time", "Reading"}, DIY: []string{"My Glow"}},
+		{Name: "Living Room Lights", Group: true},
 	}, nil
 }
 func (f *fakeSrc) SpotifyDevices(context.Context) ([]string, error) {
@@ -157,6 +158,9 @@ func TestBuildKeyWithSceneAndPlaylist(t *testing.T) {
 	if a1.Type != config.SpotifyPlaylist || a1.Playlist != "spotify:playlist:BBB" || a1.SpotifyDevice != "Living Room" ||
 		!a1.Shuffle || a1.Volume == nil || *a1.Volume != 60 {
 		t.Fatalf("playlist action: %+v (vol %v)", a1, a1.Volume)
+	}
+	if strings.Contains(tr.String(), "Living Room Lights") {
+		t.Fatalf("Govee group offered in the light picker:\n%s", tr.String())
 	}
 	if deck.previews < 3 {
 		t.Fatalf("deck preview not updated live (%d)", deck.previews)

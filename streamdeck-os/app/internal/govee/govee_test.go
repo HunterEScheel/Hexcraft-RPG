@@ -69,3 +69,16 @@ func TestErrorCode(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+func TestLightsLeavesOutGroups(t *testing.T) {
+	devs := []Device{
+		{SKU: "H6199", Name: "TV Backlight", Type: "devices.types.light"},
+		{SKU: "SameModeGroup", Name: "Living Room Lights", Type: "devices.types.group"},
+		{SKU: "BaseGroup", Name: "All"},
+		{SKU: "H6076", Name: "Floor Lamp", Type: "devices.types.light"},
+	}
+	got := Lights(devs)
+	if len(got) != 2 || got[0].Name != "TV Backlight" || got[1].Name != "Floor Lamp" {
+		t.Fatalf("got %+v", got)
+	}
+}

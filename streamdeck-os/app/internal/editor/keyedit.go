@@ -371,6 +371,13 @@ func (e *Editor) pickLight(ctx context.Context, cur string) (string, bool) {
 		e.U.Message(ui.Note{ID: "lights-error", Kind: ui.ErrorNote, Title: "Couldn't get your lights", Lines: []string{err.Error()}})
 		return "", false
 	}
+	var lights []GoveeDevice
+	for _, d := range devs {
+		if !d.Group {
+			lights = append(lights, d)
+		}
+	}
+	devs = lights
 	if len(devs) == 0 {
 		e.U.Message(ui.Note{ID: "no-lights", Kind: ui.WarningNote, Title: "No lights", Lines: []string{"Your Govee account has no lights that work with the Govee API."}})
 		return "", false

@@ -72,7 +72,8 @@ func govee(w http.ResponseWriter, r *http.Request, p string) {
 	case "/user/devices":
 		io.WriteString(w, `{"code":200,"message":"success","data":[`+
 			`{"sku":"H6199","device":"AA:AA:AA:AA:AA:AA:AA:01","deviceName":"TV Backlight","type":"devices.types.light"},`+
-			`{"sku":"H6076","device":"AA:AA:AA:AA:AA:AA:AA:02","deviceName":"Floor Lamp","type":"devices.types.light"}]}`)
+			`{"sku":"H6076","device":"AA:AA:AA:AA:AA:AA:AA:02","deviceName":"Floor Lamp","type":"devices.types.light"},`+
+			`{"sku":"SameModeGroup","device":"11223344","deviceName":"Living Room Lights","type":"devices.types.group"}]}`)
 	case "/device/scenes":
 		io.WriteString(w, scenes)
 	case "/device/diy-scenes":
