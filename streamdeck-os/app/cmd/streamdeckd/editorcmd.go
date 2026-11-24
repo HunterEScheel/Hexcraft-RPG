@@ -26,6 +26,7 @@ func (d deckAdapter) Presses() <-chan int { return d.c.Presses }
 // Settings apply without restarting the editor.
 type realSources struct {
 	secretsPath string
+	cfgPath     string
 	app         *setup.App
 }
 
@@ -96,6 +97,9 @@ func (r *realSources) Playlists(ctx context.Context) ([]spotify.Playlist, error)
 func (r *realSources) Run(ctx context.Context, actions []config.Action) error {
 	cfg := &config.Config{}
 	cfg.ApplySecrets(r.secrets())
+	if l, err := config.ReadLayout(r.cfgPath); err == nil {
+		cfg.LANLights = l.LANLights
+	}
 	return runner.New(cfg).Run(ctx, actions).Err
 }
 
@@ -105,7 +109,7 @@ func (r *realSources) ReconnectSpotify(ctx context.Context) error {
 
 // runEditor runs the button editor; the Stream Deck shows the layout live.
 func runEditor(ctx context.Context, u ui.UI, app *setup.App, cfgPath, secretsPath string, trace io.Writer) {
-	src := &realSources{secretsPath: secretsPath, app: app}
+	src := &realSources{secretsPath: secretsPath, cfgPath: cfgPath, app: app}
 	e := &editor.Editor{U: u, Src: src, LayoutPath: cfgPath, Secrets: src.secrets, Trace: trace}
 	if c, err := deckipc.Dial(); err == nil {
 		defer c.Close()

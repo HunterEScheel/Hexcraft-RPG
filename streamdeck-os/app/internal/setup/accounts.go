@@ -21,34 +21,224 @@ import (
 
 // ---- Govee ----
 
-// GoveeScreen sets, checks or removes the Govee API key.
+// GoveeScreen: the Govee cloud API key (needed for scenes, and for lights
+// without LAN control) and the lights controlled on the local network.
 func (a *App) GoveeScreen(ctx context.Context) {
+	sel := 0
 	for {
 		s := a.secrets()
-		if s.Govee.APIKey == "" {
-			a.enterGoveeKey(ctx)
-			return
+		lans := a.lanLights()
+		var items []ui.Item
+		var acts []string
+		add := func(it ui.Item, act string) { items, acts = append(items, it), append(acts, act) }
+		add(ui.Item{Label: "Lights on your network (LAN)", Header: true}, "")
+		for _, l := range lans {
+			add(ui.Item{Label: l.Name, Detail: l.SKU + " · " + l.Device, Icon: "wifi"}, "lan:"+l.Name)
 		}
-		r := a.U.Menu(ui.MenuOpts{ID: "govee", Title: "Lights (Govee)", Subtitle: "API key: " + mask(s.Govee.APIKey), Items: []ui.Item{
-			{Label: "Show my lights", Detail: "checks that the key works", Icon: "light"},
-			{Label: "Change the API key", Icon: "key"},
-			{Label: "Remove the API key", Icon: "trash", Danger: true},
-		}})
+		add(ui.Item{Label: "Find lights on my network…", Detail: "for lights with LAN Control on in the Govee Home app", Icon: "plus"}, "scan")
+		add(ui.Item{Label: "Govee cloud", Header: true}, "")
+		add(ui.Item{Label: "Govee API key", Value: mask(s.Govee.APIKey), Detail: "needed for scenes, and for lights without LAN control", Icon: "key"}, "key")
+		if s.Govee.APIKey != "" {
+			add(ui.Item{Label: "Show my cloud lights", Detail: "checks that the key works", Icon: "light"}, "check")
+			add(ui.Item{Label: "Remove the API key", Icon: "trash", Danger: true}, "remove")
+		}
+		r := a.U.Menu(ui.MenuOpts{ID: "govee", Title: "Lights (Govee)", Items: items, Selected: sel})
 		if !r.OK {
 			return
 		}
-		switch r.Index {
-		case 0:
-			a.checkGovee(ctx, s.Govee.APIKey)
-		case 1:
+		sel = r.Index
+		switch act := acts[r.Index]; {
+		case act == "key":
 			a.enterGoveeKey(ctx)
-		case 2:
-			if a.U.Confirm(ui.ConfirmOpts{ID: "govee-remove", Title: "Remove the Govee key?", Question: "Light buttons stop working until a key is added again.", Yes: "Remove", Danger: true}) {
+		case act == "check":
+			a.checkGovee(ctx, s.Govee.APIKey)
+		case act == "remove":
+			if a.U.Confirm(ui.ConfirmOpts{ID: "govee-remove", Title: "Remove the Govee key?", Question: "Scenes, and lights without LAN control, stop working until a key is added again.", Yes: "Remove", Danger: true}) {
 				s.Govee.APIKey = ""
 				a.saveSecrets(s)
 			}
+		case act == "scan":
+			a.findLANLights(ctx)
+		case strings.HasPrefix(act, "lan:"):
+			a.lanLightMenu(ctx, strings.TrimPrefix(act, "lan:"))
 		}
 	}
+}
+
+func (a *App) lanLights() []config.LANLight {
+	l, err := config.ReadLayout(a.LayoutPath)
+	if err != nil {
+		return nil
+	}
+	return l.LANLights
+}
+
+// saveLANLights rewrites the layout file's LAN lights (the daemon reloads it).
+func (a *App) saveLANLights(f func(ls []config.LANLight) []config.LANLight) bool {
+	l, err := config.ReadLayout(a.LayoutPath)
+	if err != nil {
+		l = config.Layout{Brightness: 70, IdleDimSeconds: 600, IdleBrightness: 10, StartPage: "home",
+			Pages: map[string][]config.Button{"home": nil}}
+	}
+	l.LANLights = f(l.LANLights)
+	if err := config.SaveLayout(a.LayoutPath, l); err != nil {
+		a.U.Message(ui.Note{ID: "save-error", Kind: ui.ErrorNote, Title: "Couldn't save", Lines: []string{err.Error()}})
+		return false
+	}
+	a.trace("lan-saved %d", len(l.LANLights))
+	return true
+}
+
+// findLANLights scans the network and lets the user name new lights.
+func (a *App) findLANLights(ctx context.Context) {
+	for {
+		a.U.Info(ui.InfoView{ID: "lan-scanning", Title: "Lights on your network", Spinner: true,
+			Lines: []string{"Looking for Govee lights with LAN Control switched on…"}})
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		devs, err := govee.LANDiscover(cctx, 3*time.Second)
+		cancel()
+		a.trace("lan-found %d", len(devs))
+		have := a.lanLights()
+		var items []ui.Item
+		var fresh []govee.LANDevice
+		for _, d := range devs {
+			name := ""
+			for _, l := range have {
+				if govee.SameDevice(l.Device, d.Device) {
+					name = l.Name
+				}
+			}
+			if name != "" {
+				continue
+			}
+			fresh = append(fresh, d)
+			items = append(items, ui.Item{Label: d.SKU + " light", Detail: d.Device + " · " + d.IP, Value: "new", Icon: "light"})
+		}
+		intro := []string{fmt.Sprintf("Found %d light(s); %d already added.", len(devs), len(devs)-len(fresh))}
+		if err != nil {
+			intro = []string{"Couldn't look: " + err.Error()}
+		}
+		if len(devs) == 0 && err == nil {
+			intro = []string{"No lights answered.",
+				"In the Govee Home app, open each light, tap the gear (settings) and switch on LAN Control. The light must be on the same Wi-Fi as this mini PC."}
+		}
+		items = append(items, ui.Item{Label: "", Header: true}, ui.Item{Label: "Look again", Icon: "wait"})
+		r := a.U.Menu(ui.MenuOpts{ID: "lan-found", Title: "Lights on your network", Intro: intro, Items: items})
+		if !r.OK {
+			return
+		}
+		if r.Index >= len(fresh) {
+			continue // Look again
+		}
+		d := fresh[r.Index]
+		a.U.Info(ui.InfoView{ID: "lan-blink", Title: "Which light is it?", Spinner: true, Lines: []string{"The light is blinking so you can see which one it is…"}})
+		_ = govee.LANIdentify(d.IP)
+		name := a.askLANName(d.SKU+" light", "")
+		if name == "" {
+			continue
+		}
+		if a.saveLANLights(func(ls []config.LANLight) []config.LANLight {
+			return append(ls, config.LANLight{Name: name, Device: d.Device, SKU: d.SKU, IP: d.IP})
+		}) {
+			a.trace("lan-added %s", name)
+		}
+	}
+}
+
+// askLANName asks for a unique light name ("" = cancelled).
+func (a *App) askLANName(title, cur string) string {
+	for {
+		n, ok := a.U.Input(ui.InputOpts{ID: "lan-name", Title: title, Label: "Name for this light", Initial: cur,
+			Intro: []string{"The name buttons use for it, e.g. Spotlight Left or Flood Lights."}})
+		if !ok || n == "" {
+			return ""
+		}
+		if n == cur {
+			return n
+		}
+		if _, dup := config.FindLANLight(a.lanLights(), n); dup {
+			a.U.Message(ui.Note{ID: "lan-name-taken", Kind: ui.WarningNote, Title: "Name taken", Lines: []string{"There's already a light called " + n + "."}})
+			continue
+		}
+		return n
+	}
+}
+
+func (a *App) lanLightMenu(ctx context.Context, name string) {
+	l, ok := config.FindLANLight(a.lanLights(), name)
+	if !ok {
+		return
+	}
+	r := a.U.Menu(ui.MenuOpts{ID: "lan-light", Title: l.Name, Subtitle: l.SKU + " · " + l.Device, Items: []ui.Item{
+		{Label: "Blink it", Detail: "to see which light this is", Icon: "light"},
+		{Label: "Rename", Icon: "key"},
+		{Label: "Remove", Detail: "buttons using it stop working", Icon: "trash", Danger: true},
+	}})
+	if !r.OK {
+		return
+	}
+	switch r.Index {
+	case 0:
+		a.U.Info(ui.InfoView{ID: "lan-blink", Title: l.Name, Spinner: true, Lines: []string{"Blinking…"}})
+		cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		ip := l.IP
+		if devs, err := govee.LANDiscover(cctx, 1500*time.Millisecond); err == nil {
+			for _, d := range devs {
+				if govee.SameDevice(d.Device, l.Device) {
+					ip = d.IP
+				}
+			}
+		}
+		cancel()
+		if err := govee.LANIdentify(ip); err != nil {
+			a.U.Message(ui.Note{ID: "lan-error", Kind: ui.ErrorNote, Title: l.Name, Lines: []string{err.Error()}})
+		}
+	case 1:
+		n := a.askLANName("Rename "+l.Name, l.Name)
+		if n == "" || n == l.Name {
+			return
+		}
+		a.saveLANLights(func(ls []config.LANLight) []config.LANLight {
+			for i := range ls {
+				if ls[i].Name == l.Name {
+					ls[i].Name = n
+				}
+			}
+			return ls
+		})
+		a.renameLightInButtons(l.Name, n)
+	case 2:
+		if a.U.Confirm(ui.ConfirmOpts{ID: "lan-remove", Title: "Remove " + l.Name + "?", Question: "Buttons that use it will show a warning until you change them.", Yes: "Remove", Danger: true}) {
+			a.saveLANLights(func(ls []config.LANLight) []config.LANLight {
+				var out []config.LANLight
+				for _, x := range ls {
+					if x.Name != l.Name {
+						out = append(out, x)
+					}
+				}
+				return out
+			})
+		}
+	}
+}
+
+// renameLightInButtons keeps buttons pointing at a renamed light.
+func (a *App) renameLightInButtons(old, new string) {
+	l, err := config.ReadLayout(a.LayoutPath)
+	if err != nil {
+		return
+	}
+	for p, list := range l.Pages {
+		for i := range list {
+			for j := range list[i].Actions {
+				if strings.EqualFold(list[i].Actions[j].Device, old) {
+					list[i].Actions[j].Device = new
+				}
+			}
+		}
+		l.Pages[p] = list
+	}
+	_ = config.SaveLayout(a.LayoutPath, l)
 }
 
 func (a *App) checkGovee(ctx context.Context, key string) ([]govee.Device, error) {

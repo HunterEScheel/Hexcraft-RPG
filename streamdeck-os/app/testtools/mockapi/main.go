@@ -33,6 +33,7 @@ func main() {
 	flag.Parse()
 	log.SetFlags(0)
 	log.SetPrefix("MOCKAPI: ")
+	startLAN()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)

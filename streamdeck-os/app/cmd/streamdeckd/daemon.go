@@ -226,6 +226,16 @@ func (d *daemon) reload() {
 	}
 	d.cfg = cfg
 	d.run = runner.New(cfg)
+	if len(cfg.LANLights) > 0 {
+		// Find the LAN lights' addresses now so the first press is quick.
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := runner.RefreshLAN(ctx); err != nil {
+				log.Printf("LAN lights: %v", err)
+			}
+		}()
+	}
 	if _, ok := cfg.Pages[d.page]; !ok {
 		d.page = cfg.StartPage
 	}

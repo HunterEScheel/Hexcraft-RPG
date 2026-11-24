@@ -89,9 +89,13 @@ def phase2():
 
         # Keys over Wi-Fi; the Spotify code is typed on screen this time.
         a = home_open(mon, "govee", mark())
+        a = choose(mon, "govee", "Govee API key", a)
         a = enter_text(mon, "govee-key", GOVEE_KEY, a)
         wait_log(r"APP: govee-ok", 60, a)
         a = dismiss(mon, "govee-ok", a)
+        vmlib.menu("govee", a)
+        a = mark()
+        mon.key("esc")
         a = home_open(mon, "spotify", a)
         a = enter_text(mon, "spotify-id", CLIENT_ID, a)
         a = enter_text(mon, "spotify-secret", CLIENT_SECRET, a)

@@ -17,12 +17,13 @@ type Layout struct {
 	IdleBrightness int                 `json:"idle_brightness"`
 	StartPage      string              `json:"start_page"`
 	Pages          map[string][]Button `json:"pages"`
+	LANLights      []LANLight          `json:"lan_lights,omitempty"`
 }
 
 // LayoutOf extracts the layout from a config.
 func LayoutOf(c *Config) Layout {
 	return Layout{Brightness: c.Brightness, IdleDimSeconds: c.IdleDimSeconds, IdleBrightness: c.IdleBrightness,
-		StartPage: c.StartPage, Pages: c.Pages}
+		StartPage: c.StartPage, Pages: c.Pages, LANLights: c.LANLights}
 }
 
 // ReadLayout reads the layout file without validating it (so the editor
@@ -47,7 +48,7 @@ func ReadLayout(path string) (Layout, error) {
 // same way the daemon will when it loads it.
 func CheckLayout(l Layout, secrets *Secrets) error {
 	c := &Config{Brightness: l.Brightness, IdleDimSeconds: l.IdleDimSeconds, IdleBrightness: l.IdleBrightness,
-		StartPage: l.StartPage, Pages: l.Pages}
+		StartPage: l.StartPage, Pages: l.Pages, LANLights: l.LANLights}
 	if c.StartPage == "" {
 		c.StartPage = "home"
 	}

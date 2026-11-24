@@ -124,6 +124,7 @@ def phase2():
 
         # Govee key, with the keyboard.
         a = home_open(mon, "govee", mark())
+        a = choose(mon, "govee", "Govee API key", a)
         a = enter_text(mon, "govee-key", GOVEE_KEY, a, layout=QWERTY)
         a = dismiss(mon, "govee-error", a)
         check(True, "a key typed at QWERTY positions is rejected (the layout is Dvorak)")
@@ -131,9 +132,35 @@ def phase2():
         wait_log(r"APP: govee-ok 2", 60, a)
         time.sleep(1)
         mon.screenshot("p2-02-govee-ok")
-        dismiss(mon, "govee-ok", a)
+        a = dismiss(mon, "govee-ok", a)
         wait_log(r"APP: settings-saved", 30, a)
         check(True, "Govee key typed on the Dvorak keyboard is checked and saved")
+
+        # Lights on the network (Govee LAN API): find, blink, name.
+        a = choose(mon, "govee", "Find lights on my network", a)
+        m = wait_log(r"APP: lan-found (\d+)", 30, a)
+        check(m.group(1) == "2", f"LAN scan finds the H7065 spotlights and H7061 flood lights ({m.group(1)})")
+        time.sleep(1)
+        mon.screenshot("p2-02b-lan-found")
+        a = choose(mon, "lan-found", "H7065", a)
+        wait_log(r'LAN D7:65:AA:BB:CC:DD:00:01 \{"msg":\{"cmd":"turn"', 30, a)
+        a = enter_text(mon, "lan-name", "Spotlights", a)
+        wait_log(r"APP: lan-added Spotlights", 30, a)
+        check(True, "the chosen light blinks (LAN turn commands) and is named")
+        a = choose(mon, "lan-found", "H7061", a)
+        a = enter_text(mon, "lan-name", "Flood Lights", a)
+        wait_log(r"APP: lan-added Flood Lights", 30, a)
+        sel, items = vmlib.menu("lan-found", a)
+        check(not any(i.startswith("H70") for i in items), f"named lights leave the list ({items})")
+        a = mark()
+        mon.key("esc")
+        sel, items = vmlib.menu("govee", a)
+        check("Spotlights" in items and "Flood Lights" in items, "Lights screen lists both LAN lights")
+        time.sleep(1)
+        mon.screenshot("p2-02c-lights")
+        a = mark()
+        mon.key("esc")
+        wait_log(r"UI: home sel=", 30, a)
 
         # Spotify, opened with the trackpad.
         hit = click(mon, "tile:spotify")
@@ -223,6 +250,33 @@ def editor(mon, sh):
     wait_log(r"EDITOR: saved", 30, c)
     check(True, "key inside the folder built from the account's lights and scenes and saved")
 
+    # Key 3 in the folder: Flood Lights (LAN) to orange, picked on the colour wheel.
+    c = mark()
+    mon.key("right", "ret")
+    c = choose(mon, "key", "Label", c)
+    c = enter_text(mon, "label", "Flood", c)
+    c = choose(mon, "key", "+ Add an action", c)
+    c = choose(mon, "add-action", "Set a colour", c)
+    sel, items = vmlib.menu("pick-light", c)
+    check("Flood Lights" in items and "Spotlights" in items, f"light picker offers the LAN lights ({items})")
+    c = choose(mon, "pick-light", "Flood Lights", c)
+    wait_log(r"UI: color color value=", 30, c)
+    mon.key(*(["up"] * 20))
+    mon.key(*(["right"] * 6))
+    wait_log(r"UI: color color value=#ff8000", 30, c)
+    time.sleep(1)
+    mon.screenshot("p2-08b-color-wheel")
+    c = mark()
+    mon.key("ret")
+    wait_log(r"EDITOR: action govee_color", 30, c)
+    c = mark()
+    mon.key("esc")
+    wait_log(r"EDITOR: saved", 30, c)
+    check(True, "colour wheel sets #ff8000 for Flood Lights; key saved")
+    c = mark()
+    mon.key("left")
+    wait_log(r"UI: grid page=Lights sel=1", 30, c)
+
     c = mark()
     mon.type("t", enter=False)  # Try it
     wait_log(r"EDITOR: try-(ok|error)", 60, c)
@@ -264,6 +318,12 @@ def editor(mon, sh):
     calls = log_text()[c:]
     check('"value":{"paramId":104,"id":4}' in calls and "AA:AA:AA:AA:AA:AA:AA:02" in calls,
           "on the deck: folder key opens the folder, Lamp On sets Floor Lamp → Rainbow")
+    c2 = mark()
+    deck("press 2")
+    wait_log(r'key 2 "Flood" done', 60, c2)
+    check(re.search(r'LAN D7:61:AA:BB:CC:DD:00:02 \{"msg":\{"cmd":"colorwc","data":\{"color":\{"b":0,"g":128,"r":255\}', log_text()[c2:]) is not None
+          and "/govee/device/control" not in log_text()[c2:],
+          "Flood key sends the colour to the H7061 over the LAN (no cloud call)")
     save_deck("p2-09-deck-folder")
     deck("press 0")
     wait_log(r'key 0 on "Lights": "‹ Back"', 60, c)
@@ -347,7 +407,9 @@ def phase4_after_update():
         time.sleep(1)
         deck("press 1")
         wait_log(r'key 1 "Lamp On" done', 60, a)
-        check(True, "buttons survived the update (folder and Lamp On)")
+        deck("press 2")
+        wait_log(r'key 2 "Flood" done', 60, a)
+        check("LAN D7:61:AA:BB:CC:DD:00:02" in log_text()[a:], "buttons and LAN lights survived the update")
     finally:
         vm.kill()
         vm.wait()

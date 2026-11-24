@@ -294,3 +294,38 @@ func TestFolderActionCreatesAndOpens(t *testing.T) {
 		t.Fatalf("Music: %+v", b)
 	}
 }
+
+func TestLANLightColourFromWheel(t *testing.T) {
+	// No Govee API key at all: a light on the network still works.
+	layout := `{"pages":{"home":[]},"lan_lights":[{"name":"Flood Lights","device":"AA:BB:CC:DD:EE:FF:00:61","sku":"H7061","ip":"192.168.1.50"}]}`
+	src := &fakeSrc{govee: false, spotify: false}
+	e, scr, _, tr, done := setup(t, layout, src)
+	scr.Press("enter", "enter", "Flood", "enter", "enter") // key 1: label, + Add an action
+	waitFor(t, tr, "screen add-action")
+	scr.Press("down", "down", "down", "enter") // Set a colour
+	waitFor(t, tr, "menu pick-light")
+	if !strings.Contains(tr.String(), "items=Flood Lights") {
+		t.Fatalf("LAN light not offered:\n%s", tr.String())
+	}
+	scr.Press("enter")
+	waitFor(t, tr, "color color value=#ffffff")
+	scr.Press("up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up") // full strength
+	scr.Press("right", "right", "right", "right", "right", "right")                                                                   // hue 30° (orange)
+	waitFor(t, tr, "value=#ff8000")
+	scr.Press("enter", "esc")
+	waitFor(t, tr, "saved")
+	scr.Press("esc")
+	finish(t, done)
+	l, _ := config.ReadLayout(e.LayoutPath)
+	a := l.Pages["home"][0].Actions[0]
+	if a.Type != config.GoveeColor || a.Device != "Flood Lights" || a.Color != "#ff8000" {
+		t.Fatalf("got %+v", a)
+	}
+	// Scenes leave LAN lights out (Govee's LAN control has none).
+	e2, scr2, _, tr2, done2 := setup(t, layout, src)
+	_ = e2
+	scr2.Press("enter", "enter", "X", "enter", "enter", "enter") // Set a scene
+	waitFor(t, tr2, "message no-scene-lights")
+	scr2.Press("enter", "esc", "esc")
+	finish(t, done2)
+}

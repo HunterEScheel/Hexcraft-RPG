@@ -42,7 +42,9 @@ Music) and a **Getting started** checklist. Use the arrow keys and Enter, or cli
 the trackpad:
 
 1. **Wi-Fi**: pick your network from the list and type the password (**Show** reveals what you typed, handy with Dvorak).
-2. **Lights**: type your Govee API key. It's checked on the spot and your lights are listed.
+2. **Lights**: add your lights. Two ways, and you can mix them (see [Govee lights: LAN and cloud](#govee-lights-lan-and-cloud)):
+   - **Find lights on my network…** for lights with *LAN Control* on: each one blinks so you can tell them apart, and you give it a name.
+   - **Govee API key** for everything else, and for scenes. It's checked on the spot and your lights are listed.
 3. **Music**: type the Spotify Client ID and Secret. The screen then shows an address like `http://192.168.1.42:8080`; open it on your phone (same Wi-Fi), tap *Log in with Spotify*, then *Agree*. You land on a `127.0.0.1` page that won't load. That's expected: Spotify only allows `http` redirects to the local machine. Copy that page's address and paste it into the phone page (or choose **Type the code** on the mini PC). Then pick the **default speaker**; Spotify must be open on it to appear.
 4. **Buttons**: set up your Stream Deck (see [Editing your buttons](#editing-your-buttons)).
 
@@ -80,6 +82,23 @@ button: it joins Wi-Fi, checks the Govee key and Spotify login, and saves them.
 - **Windows quirks are fine:** a name like `streamdeck-setup.txt.txt` (Windows hiding the extension) and Windows line endings both work.
 
 The file holds your keys in plain text, so keep that stick somewhere safe, or delete the file after using it.
+
+## Govee lights: LAN and cloud
+
+Govee lights can be controlled two ways, and StreamDeck OS uses both:
+
+| | On your network (LAN) | Govee cloud (API key) |
+|---|---|---|
+| Needs | *LAN Control* switched on for the light in the Govee Home app | a Govee API key |
+| Can do | on/off, brightness, colour | on/off, brightness, colour, **scenes** |
+| Speed | instant, works without internet | goes through Govee's servers |
+| Examples | H7061 flood lights, H7065 spotlights | H601A downlights, and any light without LAN control |
+
+- **Switch on LAN Control:** in the Govee Home app open the light, tap the ⚙ gear, and turn on **LAN Control**. The light must be on the same Wi-Fi as the mini PC. Not every model has the switch; the ones that don't can only be used through the cloud.
+- **Add them:** Home → **Lights** → **Find lights on my network…**. Pick a light; it blinks twice; type a name (e.g. *Flood Lights*). Buttons then use that name. Renaming a light updates the buttons that use it.
+- **Scenes** aren't part of Govee's LAN control, so the scene picker only lists cloud lights. On/off, brightness and colour actions for a LAN light never touch the cloud.
+- **Groups** you made in the Govee Home app aren't listed; their lights are listed one by one.
+- The LAN protocol is UDP: the mini PC sends a scan to `239.255.255.250:4001`, lights answer on port 4002, and commands go to each light's port 4003. Addresses are looked up again every few minutes, so a light that gets a new address from your router keeps working.
 
 ## Wi-Fi
 
@@ -133,6 +152,7 @@ images, and the Stream Deck itself shows your changes live.
   - what it does, in order. **Lights** actions (scene, on/off, brightness, colour) let you pick a light and scene from your Govee account. **Music** actions (play a playlist, pause, next, volume) let you pick a playlist and speaker from your Spotify account. **Folders** opens another set of 15 keys. **Wait a moment** pauses between actions.
 
   Long lists filter as you type.
+- **Colours** (key colour, text colour, light colour) use a **colour wheel**: click or drag on the wheel to pick the colour and its strength, and on the bar beside it for brightness. Or pick one of 25 presets (warm white, cool white, amber, coral, sky…), or **Type a code** like `#ff8800`. Keyboard: ←→ turn the colour, ↑↓ strength, PgUp/PgDn brightness, Tab steps through the presets.
 - **Folders:** select an empty key and click **New folder here** (or press **N**). The folder gets a **‹ Back** key automatically and opens right away so you can fill it. To go into a folder while editing, **double-click** it, **press it twice** on the Stream Deck, click **Open folder**, or press **O**. **Esc** or **Back** goes up one level; the title shows where you are (*Buttons › Lights*). **Folders** lists them all (open, rename, delete, choose which one the deck starts on).
 - **Saving:** leaving a key saves it, after checking it. If something can't work, for example a Govee action with no Govee key, the editor says why and offers to undo.
 - **Shortcuts:** **T** tries the selected key right now, **Del** clears it, **C** / **V** copy and paste a key, **D** sets deck brightness and dimming, **Esc** goes up a folder or leaves the editor.

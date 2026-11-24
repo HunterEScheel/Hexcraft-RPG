@@ -29,9 +29,35 @@ type Config struct {
 	Govee   GoveeConfig         `json:"govee,omitzero"`
 	Spotify SpotifyConfig       `json:"spotify,omitzero"`
 	Pages   map[string][]Button `json:"pages"`
+	// LANLights are Govee lights controlled on the local network (no cloud).
+	LANLights []LANLight `json:"lan_lights,omitempty"`
 
 	// Dir is the directory the config was loaded from; icon paths are relative to it.
 	Dir string `json:"-"`
+}
+
+// LANLight is a Govee light controlled over the LAN API, named by the user
+// (the LAN API doesn't know names). Actions refer to it by Name.
+type LANLight struct {
+	Name   string `json:"name"`
+	Device string `json:"device"` // id from the LAN scan (MAC-like)
+	SKU    string `json:"sku"`
+	IP     string `json:"ip"` // last known address; refreshed by scans
+}
+
+// LANLight finds a LAN light by name (case-insensitive).
+func (c *Config) LANLight(name string) (LANLight, bool) {
+	return FindLANLight(c.LANLights, name)
+}
+
+// FindLANLight finds a LAN light by name (case-insensitive).
+func FindLANLight(ls []LANLight, name string) (LANLight, bool) {
+	for _, l := range ls {
+		if strings.EqualFold(l.Name, name) {
+			return l, true
+		}
+	}
+	return LANLight{}, false
 }
 
 type GoveeConfig struct {
@@ -258,24 +284,28 @@ func (c *Config) Validate() error {
 			}
 			for j, a := range b.Actions {
 				aw := fmt.Sprintf("%s.actions[%d] (%s)", where, j, a.Type)
+				_, lan := c.LANLight(a.Device)
 				switch a.Type {
 				case GoveeScene, GoveeDIYScene:
 					usesGovee = true
 					if a.Device == "" || a.Scene == "" {
 						add("%s: needs device and scene", aw)
 					}
+					if lan {
+						add("%s: %s is controlled on your network, and Govee's LAN control has no scenes", aw, a.Device)
+					}
 				case GoveePower:
-					usesGovee = true
+					usesGovee = usesGovee || !lan
 					if a.Device == "" || a.On == nil {
 						add("%s: needs device and on (true/false)", aw)
 					}
 				case GoveeBrightness:
-					usesGovee = true
+					usesGovee = usesGovee || !lan
 					if a.Device == "" || a.Brightness < 1 || a.Brightness > 100 {
 						add("%s: needs device and brightness 1-100", aw)
 					}
 				case GoveeColor:
-					usesGovee = true
+					usesGovee = usesGovee || !lan
 					if a.Device == "" {
 						add("%s: needs device", aw)
 					}
@@ -310,6 +340,16 @@ func (c *Config) Validate() error {
 				}
 			}
 		}
+	}
+	seenLAN := map[string]bool{}
+	for i, l := range c.LANLights {
+		if l.Name == "" || l.Device == "" {
+			add("lan_lights[%d]: needs name and device", i)
+		}
+		if seenLAN[strings.ToLower(l.Name)] {
+			add("lan_lights[%d]: two lights are called %q", i, l.Name)
+		}
+		seenLAN[strings.ToLower(l.Name)] = true
 	}
 	if usesGovee && c.Govee.APIKey == "" {
 		add("Govee API key missing (run the installer: streamdeckd setup)")

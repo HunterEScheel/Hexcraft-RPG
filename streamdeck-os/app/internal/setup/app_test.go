@@ -3,7 +3,9 @@ package setup
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"streamdeckd/internal/config"
+	"streamdeckd/internal/govee"
 	"streamdeckd/internal/spotify"
 	"streamdeckd/internal/tui"
 	"streamdeckd/internal/ui"
@@ -86,6 +89,8 @@ func TestGoveeKeyRetriesThenSaves(t *testing.T) {
 	a, scr, tr := testApp(t)
 	done := make(chan struct{})
 	go func() { a.GoveeScreen(context.Background()); close(done) }()
+	waitTrace(t, tr, "menu govee")
+	scr.Press("down", "enter") // Govee API key
 	waitTrace(t, tr, "input govee-key")
 	scr.Press("bad-key", "enter")
 	waitTrace(t, tr, "message govee-error")
@@ -94,7 +99,7 @@ func TestGoveeKeyRetriesThenSaves(t *testing.T) {
 	if !strings.Contains(scr.Text(), "TV Backlight") {
 		t.Fatalf("lights not listed:\n%s", scr.Text())
 	}
-	scr.Press("enter")
+	scr.Press("enter", "esc")
 	<-done
 	s, _ := config.LoadSecrets(a.SecretsPath)
 	if s.Govee.APIKey != "good-key" {
@@ -147,4 +152,56 @@ func TestSpotifyPhoneLoginAndSpeaker(t *testing.T) {
 	if s.Spotify.ClientID != "cid" || s.Spotify.ClientSecret != "csecret" || s.Spotify.RefreshToken != "RT" || s.Spotify.DefaultDevice != "Living Room" {
 		t.Fatalf("saved %+v", s)
 	}
+}
+
+func TestFindAndNameLANLight(t *testing.T) {
+	a, scr, tr := testApp(t)
+	// A fake LAN light on loopback.
+	scanPort, replyPort := freeUDP(t), freeUDP(t)
+	oldScan, oldListen := govee.LANScanAddrs, govee.LANListenPort
+	defer func() { govee.LANScanAddrs, govee.LANListenPort = oldScan, oldListen }()
+	govee.LANScanAddrs = []string{fmt.Sprintf("127.0.0.1:%d", scanPort)}
+	govee.LANListenPort = replyPort
+	light, err := net.ListenPacket("udp4", fmt.Sprintf("127.0.0.1:%d", scanPort))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer light.Close()
+	go func() {
+		buf := make([]byte, 1024)
+		for {
+			_, from, err := light.ReadFrom(buf)
+			if err != nil {
+				return
+			}
+			light.WriteTo([]byte(`{"msg":{"cmd":"scan","data":{"ip":"127.0.0.1","device":"11:22:33:44:55:66:77:88","sku":"H7065"}}}`),
+				&net.UDPAddr{IP: from.(*net.UDPAddr).IP, Port: replyPort})
+		}
+	}()
+	done := make(chan struct{})
+	go func() { a.GoveeScreen(context.Background()); close(done) }()
+	waitTrace(t, tr, "menu govee sel=1")
+	scr.Press("enter") // Find lights on my network
+	waitTrace(t, tr, "menu lan-found")
+	scr.Press("enter") // the H7065
+	waitTrace(t, tr, "input lan-name")
+	scr.Press("Spotlights", "enter")
+	waitTrace(t, tr, "lan-added Spotlights")
+	scr.Press("esc")
+	waitTrace(t, tr, "items=#Lights on your network (LAN)|Spotlights|")
+	scr.Press("esc")
+	<-done
+	l, _ := config.ReadLayout(a.LayoutPath)
+	if len(l.LANLights) != 1 || l.LANLights[0].Name != "Spotlights" || l.LANLights[0].SKU != "H7065" || l.LANLights[0].IP != "127.0.0.1" {
+		t.Fatalf("saved %+v", l.LANLights)
+	}
+}
+
+func freeUDP(t *testing.T) int {
+	c, err := net.ListenPacket("udp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	return c.LocalAddr().(*net.UDPAddr).Port
 }

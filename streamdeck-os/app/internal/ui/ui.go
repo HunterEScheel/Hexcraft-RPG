@@ -34,6 +34,7 @@ type Event struct {
 	Key    Key
 	Target string
 	Delta  int
+	X, Y   int // pointer position (clicks and drags)
 }
 
 // Item is a row in a menu.
@@ -191,6 +192,9 @@ type UI interface {
 	Menu(MenuOpts) MenuResult
 	Input(InputOpts) (string, bool)
 	Number(NumberOpts) (int, bool)
+	// Color is a colour wheel with a brightness slider and preset swatches;
+	// returns #rrggbb.
+	Color(ColorOpts) (string, bool)
 	Message(Note)
 	Confirm(ConfirmOpts) bool
 	Info(InfoView)

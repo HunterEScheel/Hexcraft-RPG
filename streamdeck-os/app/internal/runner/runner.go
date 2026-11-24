@@ -32,11 +32,12 @@ type Runner struct {
 	Cfg     *config.Config
 	Govee   Govee
 	Spotify Spotify
+	LAN     LAN
 }
 
 // New builds a runner with real API clients for whatever is configured.
 func New(cfg *config.Config) *Runner {
-	r := &Runner{Cfg: cfg}
+	r := &Runner{Cfg: cfg, LAN: lanClient{}}
 	if cfg.Govee.APIKey != "" {
 		r.Govee = govee.New(cfg.Govee.APIKey)
 	}
@@ -90,7 +91,14 @@ func (r *Runner) one(ctx context.Context, a config.Action) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		}
-	case config.GoveeScene, config.GoveeDIYScene, config.GoveePower, config.GoveeBrightness, config.GoveeColor:
+	case config.GoveePower, config.GoveeBrightness, config.GoveeColor:
+		if l, ok := r.Cfg.LANLight(a.Device); ok && r.LAN != nil {
+			return r.lan(ctx, l, a)
+		}
+		if r.Govee == nil {
+			return errors.New("govee not configured")
+		}
+	case config.GoveeScene, config.GoveeDIYScene:
 		if r.Govee == nil {
 			return errors.New("govee not configured")
 		}
@@ -126,4 +134,19 @@ func (r *Runner) one(ctx context.Context, a config.Action) error {
 		return r.Spotify.Volume(ctx, r.spotifyDevice(a), *a.Volume)
 	}
 	return fmt.Errorf("unknown action %q", a.Type)
+}
+
+func (r *Runner) lan(ctx context.Context, l config.LANLight, a config.Action) error {
+	switch a.Type {
+	case config.GoveePower:
+		return r.LAN.Power(ctx, l, *a.On)
+	case config.GoveeBrightness:
+		return r.LAN.Brightness(ctx, l, a.Brightness)
+	default:
+		c, err := config.ParseColor(a.Color)
+		if err != nil {
+			return err
+		}
+		return r.LAN.Color(ctx, l, c.R, c.G, c.B)
+	}
 }

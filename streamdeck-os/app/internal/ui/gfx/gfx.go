@@ -141,11 +141,11 @@ func (g *GUI) mouse(m fb.MouseEvent) {
 	if changed {
 		g.emit(ui.Event{Kind: ui.HoverEvent, Target: target}, false)
 	}
-	if m.Buttons&1 != 0 && (prev&1 == 0 || (moved && strings.HasPrefix(target, "slider"))) {
+	if m.Buttons&1 != 0 && (prev&1 == 0 || (moved && (strings.HasPrefix(target, "slider") || target == "wheel" || target == "value"))) {
 		if prev&1 == 0 {
 			g.T.Printf("click %s at %d,%d", target, int(g.cx), int(g.cy))
 		}
-		g.emit(ui.Event{Kind: ui.ClickEvent, Target: target, Delta: int(g.cx)}, true)
+		g.emit(ui.Event{Kind: ui.ClickEvent, Target: target, Delta: int(g.cx), X: int(g.cx), Y: int(g.cy)}, true)
 	}
 	if m.Wheel != 0 {
 		g.emit(ui.Event{Kind: ui.WheelEvent, Delta: m.Wheel, Target: target}, false)

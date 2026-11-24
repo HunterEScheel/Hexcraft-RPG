@@ -115,6 +115,7 @@ type status struct {
 	wifi           string
 	deck           string
 	govee, spotify bool
+	lan            int // lights on the network
 	speaker        string
 	buttons        int
 	layoutErr      string
@@ -134,6 +135,7 @@ func (a *App) status() status {
 		for _, b := range l.Pages {
 			st.buttons += len(b)
 		}
+		st.lan = len(l.LANLights)
 	} else if !os.IsNotExist(err) {
 		st.layoutErr = err.Error()
 	}
@@ -172,8 +174,13 @@ func (a *App) homeView(st status, sel int) ui.HomeView {
 		deck = "Not plugged in"
 	}
 	gv := "Not set up"
-	if st.govee {
+	switch {
+	case st.govee && st.lan > 0:
+		gv = fmt.Sprintf("Cloud + %d on network", st.lan)
+	case st.govee:
 		gv = "Ready"
+	case st.lan > 0:
+		gv = fmt.Sprintf("%d on network", st.lan)
 	}
 	sp := "Not connected"
 	if st.spotify {
@@ -188,13 +195,13 @@ func (a *App) homeView(st status, sel int) ui.HomeView {
 		Cards: []ui.StatusCard{
 			card("wifi", "Wi-Fi", st.wifi, st.wifiOK, true),
 			card("deck", "Stream Deck", deck, st.deck != "", true),
-			card("light", "Lights", gv, st.govee, false),
+			card("light", "Lights", gv, st.govee || st.lan > 0, false),
 			card("music", "Music", sp, st.spotify, false),
 		},
 		Tiles: []ui.Tile{
 			{ID: "buttons", Label: "Buttons", Detail: buttonsDetail(st), Icon: "deck"},
 			{ID: "wifi", Label: "Wi-Fi", Detail: "Connect to your network", Icon: "wifi"},
-			{ID: "govee", Label: "Lights", Detail: "Your Govee API key", Icon: "light"},
+			{ID: "govee", Label: "Lights", Detail: "Govee lights on your network, and the API key", Icon: "light"},
 			{ID: "spotify", Label: "Music", Detail: "Spotify account and speaker", Icon: "music"},
 			{ID: "backup", Label: "Setup file", Detail: "Save or load settings on a USB stick", Icon: "usb"},
 			{ID: "system", Label: "System", Detail: "Restart, power off, version", Icon: "gear"},
@@ -203,7 +210,7 @@ func (a *App) homeView(st status, sel int) ui.HomeView {
 	}
 	steps := []ui.Step{
 		{Label: "Connect Wi-Fi", Done: st.wifiOK},
-		{Label: "Add your Govee key", Done: st.govee},
+		{Label: "Set up your lights", Done: st.govee || st.lan > 0},
 		{Label: "Connect Spotify", Done: st.spotify},
 		{Label: "Set up buttons", Done: st.buttons > 0},
 	}

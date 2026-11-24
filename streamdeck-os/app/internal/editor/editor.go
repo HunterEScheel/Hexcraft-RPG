@@ -559,6 +559,9 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 	govee, playlists := e.govee, e.playlists
 	e.mu.Unlock()
 	lightOK := func(name string) string {
+		if _, lan := config.FindLANLight(e.L.LANLights, name); lan {
+			return ""
+		}
 		if govee == nil {
 			return ""
 		}
@@ -580,6 +583,9 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 	}
 	switch a.Type {
 	case config.GoveeScene, config.GoveeDIYScene:
+		if _, lan := config.FindLANLight(e.L.LANLights, a.Device); lan {
+			return fmt.Sprintf("%s: scene “%s”", a.Device, a.Scene), a.Device + " is on your network (LAN), which has no scenes"
+		}
 		warn = lightOK(a.Device)
 		if warn == "" && govee != nil {
 			warn = "scene " + a.Scene + " not found on " + a.Device

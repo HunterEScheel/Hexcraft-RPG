@@ -233,7 +233,7 @@ func (e *Editor) buildAction(ctx context.Context, typ string, cur *config.Action
 	}
 	switch typ {
 	case config.GoveeScene, config.GoveeDIYScene:
-		dev, ok := e.pickLight(ctx, a.Device)
+		dev, ok := e.pickLight(ctx, a.Device, true)
 		if !ok {
 			return a, false
 		}
@@ -246,7 +246,7 @@ func (e *Editor) buildAction(ctx context.Context, typ string, cur *config.Action
 			a.Type = config.GoveeDIYScene
 		}
 	case config.GoveePower:
-		dev, ok := e.pickLight(ctx, a.Device)
+		dev, ok := e.pickLight(ctx, a.Device, false)
 		if !ok {
 			return a, false
 		}
@@ -257,7 +257,7 @@ func (e *Editor) buildAction(ctx context.Context, typ string, cur *config.Action
 		on := r.Index == 0
 		a.Device, a.On = dev, &on
 	case config.GoveeBrightness:
-		dev, ok := e.pickLight(ctx, a.Device)
+		dev, ok := e.pickLight(ctx, a.Device, false)
 		if !ok {
 			return a, false
 		}
@@ -267,7 +267,7 @@ func (e *Editor) buildAction(ctx context.Context, typ string, cur *config.Action
 		}
 		a.Device, a.Brightness = dev, v
 	case config.GoveeColor:
-		dev, ok := e.pickLight(ctx, a.Device)
+		dev, ok := e.pickLight(ctx, a.Device, false)
 		if !ok {
 			return a, false
 		}
@@ -364,38 +364,66 @@ func b2i(b bool) int {
 
 // ---- pickers ----
 
-func (e *Editor) pickLight(ctx context.Context, cur string) (string, bool) {
-	e.U.Info(ui.InfoView{ID: "loading-lights", Title: "Lights", Spinner: true, Lines: []string{"Getting your lights from Govee…"}})
-	devs, err := e.loadGovee(ctx)
-	if err != nil {
-		e.U.Message(ui.Note{ID: "lights-error", Kind: ui.ErrorNote, Title: "Couldn't get your lights", Lines: []string{err.Error()}})
-		return "", false
-	}
-	var lights []GoveeDevice
-	for _, d := range devs {
-		if !d.Group {
-			lights = append(lights, d)
+// pickLight lists the Govee cloud lights and the lights on the network
+// (LAN). Scenes only exist in the cloud, so forScene leaves LAN lights out.
+func (e *Editor) pickLight(ctx context.Context, cur string, forScene bool) (string, bool) {
+	var names []string
+	var items []ui.Item
+	var cloudErr error
+	if e.Src.GoveeReady() || len(e.L.LANLights) == 0 {
+		e.U.Info(ui.InfoView{ID: "loading-lights", Title: "Lights", Spinner: true, Lines: []string{"Getting your lights from Govee…"}})
+		devs, err := e.loadGovee(ctx)
+		cloudErr = err
+		for _, d := range devs {
+			if d.Group {
+				continue
+			}
+			if _, lan := config.FindLANLight(e.L.LANLights, d.Name); lan {
+				continue // listed below, as a LAN light
+			}
+			names = append(names, d.Name)
+			items = append(items, ui.Item{Label: d.Name, Detail: fmt.Sprintf("Govee cloud · %d scenes", len(d.Scenes)+len(d.DIY)), Icon: "light"})
 		}
 	}
-	devs = lights
-	if len(devs) == 0 {
-		e.U.Message(ui.Note{ID: "no-lights", Kind: ui.WarningNote, Title: "No lights", Lines: []string{"Your Govee account has no lights that work with the Govee API."}})
+	lanLeftOut := 0
+	for _, l := range e.L.LANLights {
+		if forScene {
+			lanLeftOut++
+			continue
+		}
+		names = append(names, l.Name)
+		items = append(items, ui.Item{Label: l.Name, Detail: "on your network (LAN) · " + l.SKU, Icon: "wifi"})
+	}
+	if len(items) == 0 {
+		switch {
+		case lanLeftOut > 0:
+			e.U.Message(ui.Note{ID: "no-scene-lights", Kind: ui.WarningNote, Title: "No lights with scenes",
+				Lines: []string{"Your lights on the network (LAN) can be turned on and off, dimmed and coloured, but Govee's LAN control has no scenes.",
+					"Scenes need a light from the Govee cloud (Home > Lights > API key)."}})
+		case cloudErr != nil:
+			e.U.Message(ui.Note{ID: "lights-error", Kind: ui.ErrorNote, Title: "Couldn't get your lights", Lines: []string{cloudErr.Error()}})
+		default:
+			e.U.Message(ui.Note{ID: "no-lights", Kind: ui.WarningNote, Title: "No lights",
+				Lines: []string{"No lights found. Add your Govee API key, or add lights on your network, under Home > Lights."}})
+		}
 		return "", false
 	}
-	items := make([]ui.Item, len(devs))
 	sel := 0
-	for i, d := range devs {
-		items[i] = ui.Item{Label: d.Name, Detail: fmt.Sprintf("%d scenes", len(d.Scenes)+len(d.DIY))}
-		if strings.EqualFold(d.Name, cur) {
+	for i, n := range names {
+		if strings.EqualFold(n, cur) {
 			sel = i
 		}
 	}
+	intro := []string(nil)
+	if forScene && lanLeftOut > 0 {
+		intro = []string{"Lights on your network (LAN) aren't listed: Govee's LAN control has no scenes."}
+	}
 	e.trace("screen pick-light")
-	r := e.U.Menu(ui.MenuOpts{ID: "pick-light", Title: "Which light?", Items: items, Selected: sel, Filter: len(items) > 8})
+	r := e.U.Menu(ui.MenuOpts{ID: "pick-light", Title: "Which light?", Intro: intro, Items: items, Selected: sel, Filter: len(items) > 8})
 	if !r.OK {
 		return "", false
 	}
-	return devs[r.Index].Name, true
+	return names[r.Index], true
 }
 
 func (e *Editor) pickScene(ctx context.Context, light, cur string) (string, bool, bool) {
@@ -574,10 +602,11 @@ func (e *Editor) pickFolder(cur string) (string, bool) {
 }
 
 var palette = []struct{ name, hex string }{
-	{"Charcoal", "#202020"}, {"Black", "#000000"}, {"White", "#ffffff"}, {"Grey", "#6b6b6b"},
-	{"Red", "#c0262d"}, {"Orange", "#e0701b"}, {"Yellow", "#e8c020"}, {"Green", "#2f9e44"},
-	{"Spotify green", "#1db954"}, {"Teal", "#108a8a"}, {"Blue", "#1d5fa0"}, {"Navy", "#1b2a6b"},
-	{"Purple", "#6a2fb0"}, {"Pink", "#c2185b"}, {"Brown", "#7a4a24"},
+	{"White", "#ffffff"}, {"Warm white", "#ffd6a0"}, {"Cool white", "#dbe8ff"}, {"Grey", "#6b6b6b"}, {"Charcoal", "#202020"},
+	{"Red", "#c0262d"}, {"Coral", "#ff6f5e"}, {"Orange", "#e0701b"}, {"Amber", "#ffb000"}, {"Yellow", "#e8c020"},
+	{"Lime", "#8bd400"}, {"Green", "#2f9e44"}, {"Spotify green", "#1db954"}, {"Teal", "#108a8a"}, {"Cyan", "#00c8d6"},
+	{"Sky", "#4fa3ff"}, {"Blue", "#1d5fa0"}, {"Navy", "#1b2a6b"}, {"Lavender", "#b49cff"}, {"Purple", "#6a2fb0"},
+	{"Magenta", "#d000a0"}, {"Hot pink", "#ff4fa0"}, {"Pink", "#c2185b"}, {"Brown", "#7a4a24"}, {"Black", "#000000"},
 }
 
 func colorName(hex, def string) string {
@@ -593,36 +622,12 @@ func colorName(hex, def string) string {
 }
 
 func (e *Editor) pickColor(title, cur, def string) (string, bool) {
-	cur = or(cur, def)
-	items := make([]ui.Item, 0, len(palette)+1)
-	sel := 0
+	presets := make([]ui.Swatch, len(palette))
 	for i, p := range palette {
-		if strings.EqualFold(p.hex, cur) {
-			sel = i
-		}
-		items = append(items, ui.Item{Label: p.name, Swatch: p.hex})
+		presets[i] = ui.Swatch{Name: p.name, Hex: p.hex}
 	}
-	items = append(items, ui.Item{Label: "Other (type a #rrggbb code)…"})
-	r := e.U.Menu(ui.MenuOpts{ID: "color", Title: title, Items: items, Selected: sel})
-	if !r.OK {
-		return "", false
-	}
-	if r.Index < len(palette) {
-		return palette[r.Index].hex, true
-	}
-	for {
-		v, ok := e.U.Input(ui.InputOpts{ID: "color-code", Title: title, Intro: []string{"A colour code like #ff8800."}, Label: "Colour", Initial: cur})
-		if !ok {
-			return "", false
-		}
-		if !strings.HasPrefix(v, "#") {
-			v = "#" + v
-		}
-		if _, err := config.ParseColor(v); err == nil {
-			return strings.ToLower(v), true
-		}
-		e.U.Message(ui.Note{ID: "bad-color", Kind: ui.WarningNote, Title: title, Lines: []string{"That isn't a colour code. Use 6 hex digits, like #ff8800."}})
-	}
+	e.trace("screen color")
+	return e.U.Color(ui.ColorOpts{ID: "color", Title: title, Value: or(cur, def), Presets: presets})
 }
 
 // ---- folders and deck settings ----
