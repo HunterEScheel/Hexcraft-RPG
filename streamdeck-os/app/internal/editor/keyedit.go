@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
 	"streamdeckd/internal/config"
@@ -196,6 +197,7 @@ var actionTypes = []struct {
 	{"Lights (Govee)", "Turn on or off", config.GoveePower},
 	{"Lights (Govee)", "Set brightness", config.GoveeBrightness},
 	{"Lights (Govee)", "Set a colour", config.GoveeColor},
+	{"Lights (Govee)", "Set white temperature (brightest)", config.GoveeColorTemp},
 	{"Music (Spotify)", "Play a playlist", config.SpotifyPlaylist},
 	{"Music (Spotify)", "Pause", config.SpotifyPause},
 	{"Music (Spotify)", "Next song", config.SpotifyNext},
@@ -233,49 +235,64 @@ func (e *Editor) buildAction(ctx context.Context, typ string, cur *config.Action
 	}
 	switch typ {
 	case config.GoveeScene, config.GoveeDIYScene:
-		dev, ok := e.pickLight(ctx, a.Device, true)
+		lights, ok := e.pickLights(ctx, a.Lights(), true)
 		if !ok {
 			return a, false
 		}
-		scene, diy, ok := e.pickScene(ctx, dev, a.Scene)
+		scene, diy, ok := e.pickScene(ctx, lights, a.Scene)
 		if !ok {
 			return a, false
 		}
-		a.Device, a.Scene, a.Type = dev, scene, config.GoveeScene
+		a.SetLights(lights)
+		a.Scene, a.Type = scene, config.GoveeScene
 		if diy {
 			a.Type = config.GoveeDIYScene
 		}
 	case config.GoveePower:
-		dev, ok := e.pickLight(ctx, a.Device, false)
+		lights, ok := e.pickLights(ctx, a.Lights(), false)
 		if !ok {
 			return a, false
 		}
-		r := e.U.Menu(ui.MenuOpts{ID: "power", Title: dev, Items: []ui.Item{{Label: "Turn on", Icon: "check"}, {Label: "Turn off", Icon: "pause"}}})
+		r := e.U.Menu(ui.MenuOpts{ID: "power", Title: e.lightsLabel(lights), Items: []ui.Item{{Label: "Turn on", Icon: "check"}, {Label: "Turn off", Icon: "pause"}}})
 		if !r.OK {
 			return a, false
 		}
 		on := r.Index == 0
-		a.Device, a.On = dev, &on
+		a.SetLights(lights)
+		a.On = &on
 	case config.GoveeBrightness:
-		dev, ok := e.pickLight(ctx, a.Device, false)
+		lights, ok := e.pickLights(ctx, a.Lights(), false)
 		if !ok {
 			return a, false
 		}
-		v, ok := e.U.Number(ui.NumberOpts{ID: "brightness", Title: dev, Label: "Brightness", Value: or0(a.Brightness, 50), Min: 1, Max: 100, Step: 5, Unit: "%"})
+		v, ok := e.U.Number(ui.NumberOpts{ID: "brightness", Title: e.lightsLabel(lights), Label: "Brightness", Value: or0(a.Brightness, 50), Min: 1, Max: 100, Step: 5, Unit: "%"})
 		if !ok {
 			return a, false
 		}
-		a.Device, a.Brightness = dev, v
+		a.SetLights(lights)
+		a.Brightness = v
 	case config.GoveeColor:
-		dev, ok := e.pickLight(ctx, a.Device, false)
+		lights, ok := e.pickLights(ctx, a.Lights(), false)
 		if !ok {
 			return a, false
 		}
-		c, ok := e.pickColor("Light colour", a.Color, "#ffffff")
+		c, ok := e.pickColor("Colour for "+e.lightsLabel(lights), a.Color, "#ffffff")
 		if !ok {
 			return a, false
 		}
-		a.Device, a.Color = dev, c
+		a.SetLights(lights)
+		a.Color = c
+	case config.GoveeColorTemp:
+		lights, ok := e.pickLights(ctx, a.Lights(), false)
+		if !ok {
+			return a, false
+		}
+		k, ok := e.pickKelvin(e.lightsLabel(lights), a.Kelvin)
+		if !ok {
+			return a, false
+		}
+		a.SetLights(lights)
+		a.Kelvin = k
 	case config.SpotifyPlaylist:
 		uri, ok := e.pickPlaylist(ctx, a.Playlist)
 		if !ok {
@@ -364,16 +381,22 @@ func b2i(b bool) int {
 
 // ---- pickers ----
 
-// pickLight lists the Govee cloud lights and the lights on the network
-// (LAN). Scenes only exist in the cloud, so forScene leaves LAN lights out.
-func (e *Editor) pickLight(ctx context.Context, cur string, forScene bool) (string, bool) {
-	var names []string
-	var items []ui.Item
+// lightChoice is a light in the picker.
+type lightChoice struct {
+	ref, label, detail, icon string
+}
+
+// pickLights lists the Govee cloud lights and the lights on the network
+// (LAN) as a checklist: one action can set several lights at once (e.g.
+// four can lights). Scenes only exist in the cloud, so forScene leaves LAN
+// lights out.
+func (e *Editor) pickLights(ctx context.Context, cur []string, forScene bool) ([]string, bool) {
+	var all []lightChoice
 	var cloudErr error
+	var devs []GoveeDevice
 	if e.Src.GoveeReady() || len(e.L.LANLights) == 0 {
 		e.U.Info(ui.InfoView{ID: "loading-lights", Title: "Lights", Spinner: true, Lines: []string{"Getting your lights from Govee…"}})
-		devs, err := e.loadGovee(ctx)
-		cloudErr = err
+		devs, cloudErr = e.loadGovee(ctx)
 		for _, d := range devs {
 			if d.Group {
 				continue
@@ -381,8 +404,8 @@ func (e *Editor) pickLight(ctx context.Context, cur string, forScene bool) (stri
 			if _, lan := config.FindLANLight(e.L.LANLights, d.Name); lan {
 				continue // listed below, as a LAN light
 			}
-			names = append(names, lightRef(d, devs))
-			items = append(items, ui.Item{Label: lightLabel(d, devs), Detail: fmt.Sprintf("Govee cloud · %d scenes", len(d.Scenes)+len(d.DIY)), Icon: "light"})
+			all = append(all, lightChoice{ref: lightRef(d, devs), label: lightLabel(d, devs), icon: "light",
+				detail: fmt.Sprintf("Govee cloud · %d scenes", len(d.Scenes)+len(d.DIY))})
 		}
 	}
 	lanLeftOut := 0
@@ -391,10 +414,9 @@ func (e *Editor) pickLight(ctx context.Context, cur string, forScene bool) (stri
 			lanLeftOut++
 			continue
 		}
-		names = append(names, l.Name)
-		items = append(items, ui.Item{Label: l.Name, Detail: "on your network (LAN) · " + l.SKU, Icon: "wifi"})
+		all = append(all, lightChoice{ref: l.Name, label: l.Name, icon: "wifi", detail: "on your network (LAN) · " + l.SKU})
 	}
-	if len(items) == 0 {
+	if len(all) == 0 {
 		switch {
 		case lanLeftOut > 0:
 			e.U.Message(ui.Note{ID: "no-scene-lights", Kind: ui.WarningNote, Title: "No lights with scenes",
@@ -406,34 +428,112 @@ func (e *Editor) pickLight(ctx context.Context, cur string, forScene bool) (stri
 			e.U.Message(ui.Note{ID: "no-lights", Kind: ui.WarningNote, Title: "No lights",
 				Lines: []string{"No lights found. Add your Govee API key, or add lights on your network, under Home > Lights."}})
 		}
-		return "", false
+		return nil, false
 	}
-	sel := 0
-	for i, n := range names {
-		if strings.EqualFold(n, cur) {
-			sel = i
+	chosen := map[string]bool{}
+	for _, c := range cur {
+		for _, l := range all {
+			if strings.EqualFold(l.ref, c) || e.sameRef(devs, l.ref, c) {
+				chosen[l.ref] = true
+			}
 		}
 	}
-	intro := []string(nil)
-	if forScene && lanLeftOut > 0 {
-		intro = []string{"Lights on your network (LAN) aren't listed: Govee's LAN control has no scenes."}
+	sel := -1
+	for {
+		var items []ui.Item
+		var acts []string
+		add := func(it ui.Item, act string) { items, acts = append(items, it), append(acts, act) }
+		n := 0
+		for _, l := range all {
+			if chosen[l.ref] {
+				n++
+			}
+		}
+		for _, l := range all {
+			it := ui.Item{Label: l.label, Detail: l.detail, Icon: l.icon}
+			if chosen[l.ref] {
+				it.Icon, it.Value = "check", "Selected"
+			}
+			add(it, "light:"+l.ref)
+		}
+		add(ui.Item{Label: "", Header: true}, "")
+		done := ui.Item{Label: "Done", Detail: fmt.Sprintf("%d selected", n), Icon: "check"}
+		if n == 0 {
+			done.Detail = "select one or more lights first"
+		}
+		add(done, "done")
+		if sel < 0 {
+			sel = len(items) - 1
+			if n == 0 {
+				for i, a := range acts {
+					if strings.HasPrefix(a, "light:") {
+						sel = i
+						break
+					}
+				}
+			}
+		}
+		intro := []string{"Select one or more lights: they all get the same setting. Enter or click selects and unselects."}
+		if forScene && lanLeftOut > 0 {
+			intro = append(intro, "Lights on your network (LAN) aren't listed: Govee's LAN control has no scenes.")
+		}
+		e.trace("screen pick-light")
+		r := e.U.Menu(ui.MenuOpts{ID: "pick-light", Title: "Which lights?", Intro: intro, Items: items, Selected: sel, Filter: len(all) > 8})
+		if !r.OK {
+			return nil, false
+		}
+		sel = r.Index
+		switch act := acts[r.Index]; {
+		case act == "done":
+			if n == 0 {
+				continue
+			}
+			var out []string
+			for _, l := range all {
+				if chosen[l.ref] {
+					out = append(out, l.ref)
+				}
+			}
+			e.trace("lights %s", strings.Join(out, "|"))
+			return out, true
+		case strings.HasPrefix(act, "light:"):
+			ref := strings.TrimPrefix(act, "light:")
+			chosen[ref] = !chosen[ref]
+		}
 	}
-	e.trace("screen pick-light")
-	r := e.U.Menu(ui.MenuOpts{ID: "pick-light", Title: "Which light?", Intro: intro, Items: items, Selected: sel, Filter: len(items) > 8})
-	if !r.OK {
-		return "", false
-	}
-	return names[r.Index], true
 }
 
-func (e *Editor) pickScene(ctx context.Context, light, cur string) (string, bool, bool) {
+// pickScene offers the scenes every chosen light has.
+func (e *Editor) pickScene(ctx context.Context, lights []string, cur string) (string, bool, bool) {
 	devs, _ := e.loadGovee(ctx)
-	var d GoveeDevice
-	for _, x := range devs {
-		if sameLight(x, light) {
-			d = x
+	common := func(get func(GoveeDevice) []string) []string {
+		var out []string
+		for i, ref := range lights {
+			var have []string
+			for _, x := range devs {
+				if sameLight(x, ref) {
+					have = get(x)
+				}
+			}
+			if i == 0 {
+				out = append(out, have...)
+				continue
+			}
+			var keep []string
+			for _, n := range out {
+				for _, h := range have {
+					if strings.EqualFold(n, h) {
+						keep = append(keep, n)
+						break
+					}
+				}
+			}
+			out = keep
 		}
+		return out
 	}
+	scenes := common(func(d GoveeDevice) []string { return d.Scenes })
+	diys := common(func(d GoveeDevice) []string { return d.DIY })
 	var items []ui.Item
 	var names []string
 	var diy []bool
@@ -454,14 +554,23 @@ func (e *Editor) pickScene(ctx context.Context, light, cur string) (string, bool
 			diy = append(diy, isDIY)
 		}
 	}
-	add("Scenes", d.Scenes, false)
-	add("Your DIY scenes", d.DIY, true)
+	add("Scenes", scenes, false)
+	add("Your DIY scenes", diys, true)
+	title := e.lightsLabel(lights)
 	if len(names) == 0 {
-		e.U.Message(ui.Note{ID: "no-scenes", Kind: ui.WarningNote, Title: light, Lines: []string{"This light has no scenes."}})
+		msg := "This light has no scenes."
+		if len(lights) > 1 {
+			msg = "These lights have no scene in common. Pick lights of the same kind, or give each its own action."
+		}
+		e.U.Message(ui.Note{ID: "no-scenes", Kind: ui.WarningNote, Title: title, Lines: []string{msg}})
 		return "", false, false
 	}
+	intro := []string(nil)
+	if len(lights) > 1 {
+		intro = []string{"Scenes all the selected lights have."}
+	}
 	e.trace("screen pick-scene")
-	r := e.U.Menu(ui.MenuOpts{ID: "pick-scene", Title: "Scene for " + e.showLight(devs, light), Items: items, Selected: sel, Filter: true})
+	r := e.U.Menu(ui.MenuOpts{ID: "pick-scene", Title: "Scene for " + title, Intro: intro, Items: items, Selected: sel, Filter: true})
 	if !r.OK {
 		return "", false, false
 	}
@@ -794,4 +903,74 @@ func (e *Editor) deckSettings() {
 		}
 		e.save()
 	}
+}
+
+// whites are common white colour temperatures.
+var whites = []struct {
+	name   string
+	kelvin int
+}{
+	{"Candle", 2000}, {"Warm white", 2700}, {"Soft white", 3000}, {"Neutral white", 4000},
+	{"Cool white", 5000}, {"Daylight", 6500}, {"Blue sky", 9000},
+}
+
+func whiteName(k int) string {
+	for _, w := range whites {
+		if w.kelvin == k {
+			return w.name
+		}
+	}
+	switch {
+	case k < 3300:
+		return "warm"
+	case k < 5000:
+		return "neutral"
+	}
+	return "cool"
+}
+
+// pickKelvin asks for a white colour temperature: presets or any value.
+func (e *Editor) pickKelvin(title string, cur int) (int, bool) {
+	items := make([]ui.Item, 0, len(whites)+1)
+	sel := 1
+	for i, w := range whites {
+		items = append(items, ui.Item{Label: w.name, Value: fmt.Sprintf("%d K", w.kelvin), Swatch: kelvinHex(w.kelvin), Icon: "light"})
+		if w.kelvin == cur {
+			sel = i
+		}
+	}
+	items = append(items, ui.Item{Label: "Other temperature…", Detail: "2000 K (warm, orange) to 9000 K (cool, blue)", Icon: "gear"})
+	e.trace("screen kelvin")
+	r := e.U.Menu(ui.MenuOpts{ID: "kelvin", Title: "White for " + title,
+		Intro: []string{"White light is the brightest these lights get. Lower numbers are warmer (yellow), higher are cooler (blue)."},
+		Items: items, Selected: sel})
+	if !r.OK {
+		return 0, false
+	}
+	if r.Index < len(whites) {
+		return whites[r.Index].kelvin, true
+	}
+	return e.U.Number(ui.NumberOpts{ID: "kelvin-value", Title: "White for " + title, Label: "Colour temperature",
+		Value: max(2000, min(9000, or0(cur, 4000))), Min: 2000, Max: 9000, Step: 100, Unit: " K"})
+}
+
+// kelvinHex approximates how a white temperature looks (for swatches).
+func kelvinHex(k int) string {
+	t := float64(k) / 100
+	var r, g, b float64
+	if t <= 66 {
+		r = 255
+		g = 99.47*math.Log(t) - 161.12
+		if t <= 19 {
+			b = 0
+		} else {
+			b = 138.52*math.Log(t-10) - 305.04
+		}
+	} else {
+		r = 329.7 * math.Pow(t-60, -0.1332)
+		g = 288.12 * math.Pow(t-60, -0.0755)
+		b = 255
+	}
+	c := func(v float64) uint8 { return uint8(math.Max(0, math.Min(255, v))) }
+	return ui.Hex(c(r), c(g), c(b))
 }

@@ -58,7 +58,7 @@ func (r *realSources) GoveeDevices(ctx context.Context) ([]editor.GoveeDevice, e
 	}
 	out := make([]editor.GoveeDevice, 0, len(devs))
 	for _, d := range devs {
-		gd := editor.GoveeDevice{Name: d.Name, ID: d.ID, Group: d.IsGroup()}
+		gd := editor.GoveeDevice{Name: d.Name, ID: d.ID, SKU: d.SKU, Group: d.IsGroup()}
 		if gd.Group {
 			out = append(out, gd) // known, but not offered; no scene lookups
 			continue

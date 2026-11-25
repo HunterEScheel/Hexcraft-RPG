@@ -90,7 +90,7 @@ Govee lights can be controlled two ways, and StreamDeck OS uses both:
 | | On your network (LAN) | Govee cloud (API key) |
 |---|---|---|
 | Needs | *LAN Control* switched on for the light in the Govee Home app | a Govee API key |
-| Can do | on/off, brightness, colour | on/off, brightness, colour, **scenes** |
+| Can do | on/off, brightness, colour, white temperature | on/off, brightness, colour, white temperature, **scenes** |
 | Speed | instant, works without internet | goes through Govee's servers |
 | Examples | H7061 flood lights, H7065 spotlights | H601A downlights, and any light without LAN control |
 
@@ -152,6 +152,8 @@ images, and the Stream Deck itself shows your changes live.
   - what it does, in order. **Lights** actions (scene, on/off, brightness, colour) let you pick a light and scene from your Govee account. **Music** actions (play a playlist, pause, next, volume) let you pick a playlist and speaker from your Spotify account. **Folders** opens another set of 15 keys. **Wait a moment** pauses between actions.
 
   Long lists filter as you type.
+- **Several lights at once:** light actions (scene, on/off, brightness, colour, white) take any number of lights, e.g. all four can lights. The light picker is a checklist: Enter or click selects and unselects, then **Done**. For a scene, only the scenes all the chosen lights share are offered. The lights are set at the same time, cloud and network lights mixed.
+- **White light (brightest):** **Set white temperature** sets a white colour temperature instead of a colour. Govee lights are noticeably brighter this way than with a colour. Pick a preset (Candle 2000 K, Warm white 2700 K, Soft white 3000 K, Neutral 4000 K, Cool white 5000 K, Daylight 6500 K, Blue sky 9000 K) or any value from 2000 to 9000 K. Add **Set brightness** in the same button for full brightness.
 - **Colours** (key colour, text colour, light colour) use a **colour wheel**: click or drag on the wheel to pick the colour and its strength, and on the bar beside it for brightness. Or pick one of 25 presets (warm white, cool white, amber, coral, sky…), or **Type a code** like `#ff8800`. Keyboard: ←→ turn the colour, ↑↓ strength, PgUp/PgDn brightness, Tab steps through the presets.
 - **Folders:** select an empty key and click **New folder here** (or press **N**). The folder gets a **‹ Back** key automatically and opens right away so you can fill it. To go into a folder while editing, **double-click** it, **press it twice** on the Stream Deck, click **Open folder**, or press **O**. **Esc** or **Back** goes up one level; the title shows where you are (*Buttons › Lights*). **Folders** lists them all (open, rename, delete, choose which one the deck starts on).
 - **Saving:** leaving a key saves it, after checking it. If something can't work, for example a Govee action with no Govee key, the editor says why and offers to undo.
@@ -180,11 +182,17 @@ left to right, top to bottom, and each action looks like this:
 | `govee_power` | `device`, `on` (`true`/`false`) |
 | `govee_brightness` | `device`, `brightness` (1–100) |
 | `govee_color` | `device`, `color` (`#rrggbb`) |
+| `govee_color_temp` | `device`, `kelvin` (2000–9000) |
 | `spotify_playlist` | `playlist` (a `spotify:` URI or an open.spotify.com link to a playlist, album or artist), optional `spotify_device`, `shuffle`, `volume` |
 | `spotify_pause` / `spotify_next` | optional `spotify_device` |
 | `spotify_volume` | `volume` (0–100), optional `spotify_device` |
 | `page` | `page` |
 | `delay` | `ms` |
+
+For the `govee_*` actions, `device` is a light's name (or its Govee device id), and
+`devices` lists more lights that get the same setting: `"device": "dnd1", "devices":
+["dnd2", "Smart LED Downlight 3", "Smart LED Downlight 4"]`. Lights on your network
+are listed in `lan_lights` (name, device id, model, last address).
 
 A button's actions run in order. If Govee fails, the Spotify actions still run.
 While a button works, its key shows a yellow border. Green means it worked; red with

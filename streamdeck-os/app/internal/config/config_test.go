@@ -30,7 +30,7 @@ func TestValidationCollectsErrors(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected errors")
 	}
-	for _, want := range []string{"#rrggbb", "needs device and scene", "used twice", `page "nope"`, "unknown action", "Govee API key missing", "Spotify login missing"} {
+	for _, want := range []string{"#rrggbb", "needs a scene", "used twice", `page "nope"`, "unknown action", "Govee API key missing", "Spotify login missing"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("missing %q in:\n%v", want, err)
 		}

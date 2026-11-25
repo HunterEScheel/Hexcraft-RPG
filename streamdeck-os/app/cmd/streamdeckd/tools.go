@@ -43,26 +43,31 @@ func runCheck(ctx context.Context, path, secrets string) error {
 						continue
 					}
 					where := fmt.Sprintf("  %s key %d %q:", page, b.Key, b.Label)
-					d, err := g.FindDevice(ctx, a.Device)
-					if err != nil {
-						fmt.Println(where, err)
-						problems++
-						continue
-					}
-					if a.Type == config.GoveeScene || a.Type == config.GoveeDIYScene {
-						opts, err := g.Scenes(ctx, d, a.Type == config.GoveeDIYScene)
+					for _, dev := range a.Lights() {
+						if _, lan := cfg.LANLight(dev); lan {
+							continue // on the network, not in the cloud
+						}
+						d, err := g.FindDevice(ctx, dev)
 						if err != nil {
 							fmt.Println(where, err)
 							problems++
 							continue
 						}
-						found := false
-						for _, o := range opts {
-							found = found || strings.EqualFold(o.Name, a.Scene)
-						}
-						if !found {
-							fmt.Printf("%s scene %q not found on %q\n", where, a.Scene, d.Name)
-							problems++
+						if a.Type == config.GoveeScene || a.Type == config.GoveeDIYScene {
+							opts, err := g.Scenes(ctx, d, a.Type == config.GoveeDIYScene)
+							if err != nil {
+								fmt.Println(where, err)
+								problems++
+								continue
+							}
+							found := false
+							for _, o := range opts {
+								found = found || strings.EqualFold(o.Name, a.Scene)
+							}
+							if !found {
+								fmt.Printf("%s scene %q not found on %q\n", where, a.Scene, d.Name)
+								problems++
+							}
 						}
 					}
 				}

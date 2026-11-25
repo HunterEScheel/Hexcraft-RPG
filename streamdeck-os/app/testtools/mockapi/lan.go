@@ -62,12 +62,28 @@ func startLAN() {
 		}
 	}()
 	for _, l := range lanLights {
-		c, err := net.ListenPacket("udp4", l.ip+":4003")
-		if err != nil {
-			log.Printf("LAN light %s: %v", l.sku, err)
-			continue
-		}
-		go func(dev string, c net.PacketConn) {
+		go func(ip, dev, sku string) {
+			// Early in boot the loopback interface may not be up yet.
+			var c net.PacketConn
+			var err error
+			for i := 0; i < 120; i++ {
+				if c, err = net.ListenPacket("udp4", ip+":4003"); err == nil {
+					break
+				}
+				time.Sleep(500 * time.Millisecond)
+			}
+			if err != nil {
+				log.Printf("LAN light %s: %v", sku, err)
+				return
+			}
+			lanServe(dev, c)
+		}(l.ip, l.device, l.sku)
+	}
+}
+
+func lanServe(dev string, c net.PacketConn) {
+	{
+		func(dev string, c net.PacketConn) {
 			buf := make([]byte, 2048)
 			for {
 				n, _, err := c.ReadFrom(buf)
@@ -76,6 +92,6 @@ func startLAN() {
 				}
 				log.Printf("LAN %s %s", dev, strings.TrimSpace(string(buf[:n])))
 			}
-		}(l.device, c)
+		}(dev, c)
 	}
 }

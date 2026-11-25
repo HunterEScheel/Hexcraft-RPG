@@ -15,6 +15,7 @@ type LAN interface {
 	Power(ctx context.Context, l config.LANLight, on bool) error
 	Brightness(ctx context.Context, l config.LANLight, pct int) error
 	Color(ctx context.Context, l config.LANLight, r, g, b uint8) error
+	ColorTemp(ctx context.Context, l config.LANLight, kelvin int) error
 }
 
 // lanClient finds each light's current address with a LAN scan (DHCP can
@@ -99,4 +100,12 @@ func (c lanClient) Color(ctx context.Context, l config.LANLight, r, g, b uint8) 
 		return err
 	}
 	return govee.LANColor(ip, r, g, b)
+}
+
+func (c lanClient) ColorTemp(ctx context.Context, l config.LANLight, kelvin int) error {
+	ip, err := c.ip(ctx, l)
+	if err != nil {
+		return err
+	}
+	return govee.LANColorTemp(ip, kelvin)
 }

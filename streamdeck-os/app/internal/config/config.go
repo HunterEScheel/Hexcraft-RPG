@@ -89,6 +89,7 @@ const (
 	GoveePower      = "govee_power"
 	GoveeBrightness = "govee_brightness"
 	GoveeColor      = "govee_color"
+	GoveeColorTemp  = "govee_color_temp"
 	SpotifyPlaylist = "spotify_playlist"
 	SpotifyPause    = "spotify_pause"
 	SpotifyNext     = "spotify_next"
@@ -102,11 +103,15 @@ type Action struct {
 	Type string `json:"type"`
 
 	// Govee: device name (as shown in the Govee app) or device id (MAC).
-	Device     string `json:"device,omitempty"`
-	Scene      string `json:"scene,omitempty"`
-	On         *bool  `json:"on,omitempty"`
-	Brightness int    `json:"brightness,omitempty"`
-	Color      string `json:"color,omitempty"`
+	Device string `json:"device,omitempty"`
+	// Devices: more lights that get the same setting (e.g. four can lights).
+	Devices    []string `json:"devices,omitempty"`
+	Scene      string   `json:"scene,omitempty"`
+	On         *bool    `json:"on,omitempty"`
+	Brightness int      `json:"brightness,omitempty"`
+	Color      string   `json:"color,omitempty"`
+	// govee_color_temp: white colour temperature in kelvin (2000-9000).
+	Kelvin int `json:"kelvin,omitempty"`
 
 	// Spotify: playlist/album/artist URI or open.spotify.com link.
 	Playlist string `json:"playlist,omitempty"`
@@ -120,6 +125,31 @@ type Action struct {
 
 	// delay: milliseconds to wait.
 	Ms int `json:"ms,omitempty"`
+}
+
+// Lights lists every light a Govee action sets (device plus devices).
+func (a Action) Lights() []string {
+	var out []string
+	if a.Device != "" {
+		out = append(out, a.Device)
+	}
+	for _, d := range a.Devices {
+		if d != "" {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+// SetLights stores the lights a Govee action sets.
+func (a *Action) SetLights(ls []string) {
+	a.Device, a.Devices = "", nil
+	if len(ls) > 0 {
+		a.Device = ls[0]
+	}
+	if len(ls) > 1 {
+		a.Devices = append([]string(nil), ls[1:]...)
+	}
 }
 
 // DefaultSecretsPath is where the on-device installer stores API credentials.
@@ -284,31 +314,45 @@ func (c *Config) Validate() error {
 			}
 			for j, a := range b.Actions {
 				aw := fmt.Sprintf("%s.actions[%d] (%s)", where, j, a.Type)
-				_, lan := c.LANLight(a.Device)
+				lights := a.Lights()
+				allLAN := len(lights) > 0
+				for _, d := range lights {
+					if _, lan := c.LANLight(d); !lan {
+						allLAN = false
+					}
+				}
+				isGovee := strings.HasPrefix(a.Type, "govee_")
+				if isGovee && len(lights) == 0 {
+					add("%s: needs a light (device)", aw)
+				}
 				switch a.Type {
 				case GoveeScene, GoveeDIYScene:
 					usesGovee = true
-					if a.Device == "" || a.Scene == "" {
-						add("%s: needs device and scene", aw)
+					if a.Scene == "" {
+						add("%s: needs a scene", aw)
 					}
-					if lan {
-						add("%s: %s is controlled on your network, and Govee's LAN control has no scenes", aw, a.Device)
+					for _, d := range lights {
+						if _, lan := c.LANLight(d); lan {
+							add("%s: %s is controlled on your network, and Govee's LAN control has no scenes", aw, d)
+						}
 					}
 				case GoveePower:
-					usesGovee = usesGovee || !lan
-					if a.Device == "" || a.On == nil {
-						add("%s: needs device and on (true/false)", aw)
+					usesGovee = usesGovee || !allLAN
+					if a.On == nil {
+						add("%s: needs on (true/false)", aw)
 					}
 				case GoveeBrightness:
-					usesGovee = usesGovee || !lan
-					if a.Device == "" || a.Brightness < 1 || a.Brightness > 100 {
-						add("%s: needs device and brightness 1-100", aw)
+					usesGovee = usesGovee || !allLAN
+					if a.Brightness < 1 || a.Brightness > 100 {
+						add("%s: needs brightness 1-100", aw)
+					}
+				case GoveeColorTemp:
+					usesGovee = usesGovee || !allLAN
+					if a.Kelvin < 2000 || a.Kelvin > 9000 {
+						add("%s: needs kelvin 2000-9000", aw)
 					}
 				case GoveeColor:
-					usesGovee = usesGovee || !lan
-					if a.Device == "" {
-						add("%s: needs device", aw)
-					}
+					usesGovee = usesGovee || !allLAN
 					if _, err := ParseColor(a.Color); err != nil {
 						add("%s: %v", aw, err)
 					}

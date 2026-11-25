@@ -130,10 +130,10 @@ func TestBuildKeyWithSceneAndPlaylist(t *testing.T) {
 	scr.Press("enter", "Party", "enter")               // label
 	scr.Press("enter")                                 // "+ Add an action" (auto-selected)
 	scr.Press("enter")                                 // "Set a scene"
-	scr.Press("down", "enter")                         // Floor Lamp
+	scr.Press("down", "enter", "down", "enter")        // Floor Lamp, Done
 	scr.Press("party", "enter")                        // filter scenes -> "Party Time"
 	scr.Press("enter")                                 // "+ Add an action" again
-	scr.Press("down", "down", "down", "down", "enter") // "Play a playlist"
+	scr.Press("down", "down", "down", "down", "down", "enter") // "Play a playlist"
 	scr.Press("down", "enter")                         // Workout
 	scr.Press("down", "enter")                         // speaker: Living Room
 	scr.Press("down", "enter")                         // shuffle
@@ -215,7 +215,7 @@ func TestPlaylistReconnect(t *testing.T) {
 	src := &fakeSrc{govee: true, spotify: true, needReconnect: true}
 	e, scr, _, tr, done := setup(t, "", src)
 	scr.Press("enter", "enter", "X", "enter", "enter") // key 1, label X, add action
-	scr.Press("down", "down", "down", "down", "enter") // Play a playlist
+	scr.Press("down", "down", "down", "down", "down", "enter") // Play a playlist
 	waitFor(t, tr, "pick-playlist 0")
 	scr.Press("enter") // Reconnect Spotify…
 	waitFor(t, tr, "pick-playlist 2")
@@ -277,7 +277,7 @@ func TestFolderActionCreatesAndOpens(t *testing.T) {
 	e, scr, _, tr, done := setup(t, "", src)
 	scr.Press("right", "enter", "down", "down", "down", "enter") // key 2: add an action (no label yet)
 	waitFor(t, tr, "screen add-action")
-	scr.Press("down", "down", "down", "down", "down", "down", "down", "down", "enter") // Open a folder
+	scr.Press("down", "down", "down", "down", "down", "down", "down", "down", "down", "enter") // Open a folder
 	waitFor(t, tr, "screen pick-folder")
 	scr.Press("enter", "Music", "enter") // + New folder…
 	waitFor(t, tr, "folder-new Music")
@@ -305,10 +305,10 @@ func TestLANLightColourFromWheel(t *testing.T) {
 	waitFor(t, tr, "screen add-action")
 	scr.Press("down", "down", "down", "enter") // Set a colour
 	waitFor(t, tr, "menu pick-light")
-	if !strings.Contains(tr.String(), "items=Flood Lights") {
+	if !strings.Contains(tr.String(), "items=Flood Lights|") {
 		t.Fatalf("LAN light not offered:\n%s", tr.String())
 	}
-	scr.Press("enter")
+	scr.Press("enter", "down", "enter") // Flood Lights, Done
 	waitFor(t, tr, "color color value=#ffffff")
 	scr.Press("up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up", "up") // full strength
 	scr.Press("right", "right", "right", "right", "right", "right")                                                                   // hue 30° (orange)
@@ -344,7 +344,7 @@ func TestRepeatedLightNamesUseIDs(t *testing.T) {
 	if !strings.Contains(tr.String(), "Smart LED Downlight · 1101|Smart LED Downlight · 2202") {
 		t.Fatalf("repeated names not told apart:\n%s", tr.String())
 	}
-	scr.Press("down", "down", "down", "enter") // the second downlight
+	scr.Press("down", "down", "down", "enter", "down", "enter") // the second downlight, Done
 	waitFor(t, tr, "menu power")
 	scr.Press("enter") // Turn on
 	waitFor(t, tr, "action govee_power")
@@ -358,5 +358,76 @@ func TestRepeatedLightNamesUseIDs(t *testing.T) {
 	l, _ := config.ReadLayout(e.LayoutPath)
 	if a := l.Pages["home"][0].Actions[0]; a.Device != "AA:BB:CC:DD:EE:FF:22:02" {
 		t.Fatalf("button stores %q, want the device id", a.Device)
+	}
+}
+
+func TestOneActionForFourCanLights(t *testing.T) {
+	can := func(name, id string) GoveeDevice {
+		return GoveeDevice{Name: name, ID: id, SKU: "H601A", Scenes: []string{"Sunset", "Movie", "Reading"}, DIY: []string{"Cozy"}}
+	}
+	src := &fakeSrc{govee: true, spotify: true, extra: []GoveeDevice{
+		can("dnd1", "C1"), can("dnd2", "C2"), can("Smart LED Downlight 3", "C3"), can("Smart LED Downlight 4", "C4"),
+	}}
+	src.extra[3].Scenes = []string{"Sunset", "Movie"} // one can light lacks "Reading"
+	e, scr, _, tr, done := setup(t, "", src)
+	scr.Press("enter", "enter", "Cans", "enter", "enter") // key 1: label, + Add an action
+	waitFor(t, tr, "screen add-action")
+	scr.Press("enter") // Set a scene
+	waitFor(t, tr, "menu pick-light")
+	if strings.Contains(tr.String(), "Quick pick") {
+		t.Fatal("quick pick rows are gone")
+	}
+	// TV Backlight, Floor Lamp, dnd1, dnd2, Downlight 3, Downlight 4, Done
+	scr.Press("down", "down", "enter", "down", "enter", "down", "enter", "down", "enter", "down", "enter")
+	waitFor(t, tr, "lights dnd1|dnd2|Smart LED Downlight 3|Smart LED Downlight 4")
+	waitFor(t, tr, "menu pick-scene")
+	if !strings.Contains(tr.String(), "items=#Scenes|Sunset|Movie|#Your DIY scenes|Cozy") {
+		t.Fatalf("scenes not limited to the ones all four have:\n%s", tr.String())
+	}
+	scr.Press("enter") // Sunset
+	waitFor(t, tr, "action govee_scene")
+	if !strings.Contains(scr.Text(), "4 lights (dnd1, dnd2…): scene “Sunset”") {
+		t.Fatalf("key menu:\n%s", scr.Text())
+	}
+	scr.Press("esc")
+	waitFor(t, tr, "saved")
+	scr.Press("esc")
+	finish(t, done)
+	l, _ := config.ReadLayout(e.LayoutPath)
+	a := l.Pages["home"][0].Actions[0]
+	if strings.Join(a.Lights(), ",") != "dnd1,dnd2,Smart LED Downlight 3,Smart LED Downlight 4" || a.Scene != "Sunset" {
+		t.Fatalf("got %+v", a)
+	}
+}
+
+func TestWhiteTemperatureForSeveralLights(t *testing.T) {
+	layout := `{"pages":{"home":[]},"lan_lights":[{"name":"Flood Lights","device":"AA:61","sku":"H7061"}]}`
+	src := &fakeSrc{govee: true, spotify: true}
+	e, scr, _, tr, done := setup(t, layout, src)
+	scr.Press("enter", "enter", "Bright", "enter", "enter") // key 1: label, + Add an action
+	waitFor(t, tr, "screen add-action")
+	scr.Press("down", "down", "down", "down", "enter") // Set white temperature (brightest)
+	waitFor(t, tr, "menu pick-light")
+	scr.Press("enter", "down", "down", "enter", "down", "enter") // TV Backlight, Flood Lights, Done
+	waitFor(t, tr, "lights TV Backlight|Flood Lights")
+	waitFor(t, tr, "menu kelvin")
+	if !strings.Contains(tr.String(), "items=Candle|Warm white|Soft white|Neutral white|Cool white|Daylight|Blue sky|Other temperature…") {
+		t.Fatalf("white presets:\n%s", tr.String())
+	}
+	scr.Press("down", "down", "down", "down", "down", "down", "enter") // Other temperature…
+	waitFor(t, tr, "number kelvin-value")
+	scr.Press("4", "5", "0", "0", "enter")
+	waitFor(t, tr, "action govee_color_temp")
+	if !strings.Contains(scr.Text(), "TV Backlight and Flood Lights: white 4500 K (neutral)") {
+		t.Fatalf("key menu:\n%s", scr.Text())
+	}
+	scr.Press("esc")
+	waitFor(t, tr, "saved")
+	scr.Press("esc")
+	finish(t, done)
+	l, _ := config.ReadLayout(e.LayoutPath)
+	a := l.Pages["home"][0].Actions[0]
+	if a.Type != config.GoveeColorTemp || a.Kelvin != 4500 || strings.Join(a.Lights(), ",") != "TV Backlight,Flood Lights" {
+		t.Fatalf("got %+v", a)
 	}
 }

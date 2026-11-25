@@ -235,6 +235,7 @@ def editor(mon, sh):
     c = choose(mon, "key", "+ Add an action", b)
     c = choose(mon, "add-action", "Set a scene", c)
     c = choose(mon, "pick-light", "Floor Lamp", c)
+    c = choose(mon, "pick-light", "Done", c)
     vmlib.menu("pick-scene", c)
     mon.type("rain", enter=False)  # type to search
     time.sleep(1)
@@ -260,6 +261,11 @@ def editor(mon, sh):
     sel, items = vmlib.menu("pick-light", c)
     check("Flood Lights" in items and "Spotlights" in items, f"light picker offers the LAN lights ({items})")
     c = choose(mon, "pick-light", "Flood Lights", c)
+    c = choose(mon, "pick-light", "Spotlights", c)
+    time.sleep(1)
+    mon.screenshot("p2-08a-pick-lights")
+    c = choose(mon, "pick-light", "Done", c)
+    wait_log(r"EDITOR: lights Spotlights\|Flood Lights", 30, c)
     wait_log(r"UI: color color value=", 30, c)
     mon.key(*(["up"] * 20))
     mon.key(*(["right"] * 6))
@@ -272,9 +278,27 @@ def editor(mon, sh):
     c = mark()
     mon.key("esc")
     wait_log(r"EDITOR: saved", 30, c)
-    check(True, "colour wheel sets #ff8000 for Flood Lights; key saved")
+    check(True, "one colour action for two lights (Spotlights and Flood Lights), #ff8000 from the colour wheel; key saved")
+    # Key 4: white light (brightest), cloud and network lights together.
     c = mark()
-    mon.key("left")
+    mon.key("right", "ret")
+    c = choose(mon, "key", "Label", c)
+    c = enter_text(mon, "label", "Bright", c)
+    c = choose(mon, "key", "+ Add an action", c)
+    c = choose(mon, "add-action", "Set white temperature", c)
+    c = choose(mon, "pick-light", "Floor Lamp", c)
+    c = choose(mon, "pick-light", "Flood Lights", c)
+    c = choose(mon, "pick-light", "Done", c)
+    c = choose(mon, "kelvin", "Daylight", c)
+    wait_log(r"EDITOR: action govee_color_temp", 30, c)
+    time.sleep(1)
+    mon.screenshot("p2-08c-white")
+    c = mark()
+    mon.key("esc")
+    wait_log(r"EDITOR: saved", 30, c)
+    check(True, "white temperature action (Daylight) for Floor Lamp and Flood Lights saved")
+    c = mark()
+    mon.key("left", "left")
     wait_log(r"UI: grid page=Lights sel=1", 30, c)
 
     c = mark()
@@ -321,9 +345,18 @@ def editor(mon, sh):
     c2 = mark()
     deck("press 2")
     wait_log(r'key 2 "Flood" done', 60, c2)
-    check(re.search(r'LAN D7:61:AA:BB:CC:DD:00:02 \{"msg":\{"cmd":"colorwc","data":\{"color":\{"b":0,"g":128,"r":255\}', log_text()[c2:]) is not None
+    orange = r' \{"msg":\{"cmd":"colorwc","data":\{"color":\{"b":0,"g":128,"r":255\}'
+    check(re.search(r'LAN D7:61:AA:BB:CC:DD:00:02' + orange, log_text()[c2:]) is not None
+          and re.search(r'LAN D7:65:AA:BB:CC:DD:00:01' + orange, log_text()[c2:]) is not None
           and "/govee/device/control" not in log_text()[c2:],
-          "Flood key sends the colour to the H7061 over the LAN (no cloud call)")
+          "Flood key sends the colour to both the H7061 and the H7065 over the LAN (no cloud call)")
+    c3 = mark()
+    deck("press 3")
+    wait_log(r'key 3 "Bright" done', 60, c3)
+    out = log_text()[c3:]
+    check(re.search(r'LAN D7:61:AA:BB:CC:DD:00:02 \{"msg":\{"cmd":"colorwc","data":\{"color":\{"b":0,"g":0,"r":0\},"colorTemInKelvin":6500\}', out) is not None
+          and re.search(r'/govee/device/control.*"instance":"colorTemperatureK".*"value":6500', out) is not None,
+          "Bright key: 6500 K white to the flood lights over the LAN and to Floor Lamp through the cloud")
     save_deck("p2-09-deck-folder")
     deck("press 0")
     wait_log(r'key 0 on "Lights": "‹ Back"', 60, c)

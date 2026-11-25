@@ -77,6 +77,10 @@ type Capability struct {
 type Parameters struct {
 	DataType string   `json:"dataType"`
 	Options  []Option `json:"options"`
+	Range    *struct {
+		Min int `json:"min"`
+		Max int `json:"max"`
+	} `json:"range,omitempty"`
 }
 
 // Option is a named scene; Value is sent back to Govee verbatim.
@@ -271,6 +275,21 @@ func (c *Client) Brightness(ctx context.Context, device string, pct int) error {
 		return err
 	}
 	return c.control(ctx, d, "devices.capabilities.range", "brightness", pct)
+}
+
+// ColorTemp sets a white colour temperature in kelvin (clamped to the
+// light's range). Lights are brightest in this mode.
+func (c *Client) ColorTemp(ctx context.Context, device string, kelvin int) error {
+	d, err := c.FindDevice(ctx, device)
+	if err != nil {
+		return err
+	}
+	for _, cp := range d.Capabilities {
+		if cp.Instance == "colorTemperatureK" && cp.Parameters.Range != nil && cp.Parameters.Range.Max > 0 {
+			kelvin = max(cp.Parameters.Range.Min, min(cp.Parameters.Range.Max, kelvin))
+		}
+	}
+	return c.control(ctx, d, "devices.capabilities.color_setting", "colorTemperatureK", kelvin)
 }
 
 func (c *Client) Color(ctx context.Context, device string, r, g, b uint8) error {

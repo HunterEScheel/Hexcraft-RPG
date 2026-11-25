@@ -30,6 +30,7 @@ const (
 type GoveeDevice struct {
 	Name   string
 	ID     string // Govee's device id; buttons use it when names repeat
+	SKU    string // model, e.g. H601A
 	Scenes []string
 	DIY    []string
 	// Group is a group of lights from the Govee app: not offered in the
@@ -600,6 +601,35 @@ func (e *Editor) showLight(govee []GoveeDevice, ref string) string {
 	return ref
 }
 
+// sameRef: two button references name the same cloud light.
+func (e *Editor) sameRef(govee []GoveeDevice, a, b string) bool {
+	for _, d := range govee {
+		if sameLight(d, a) && sameLight(d, b) {
+			return true
+		}
+	}
+	return false
+}
+
+// lightsLabel names a set of lights for titles and summaries.
+func (e *Editor) lightsLabel(refs []string) string {
+	e.mu.Lock()
+	govee := e.govee
+	e.mu.Unlock()
+	names := make([]string, len(refs))
+	for i, r := range refs {
+		names[i] = e.showLight(govee, r)
+	}
+	switch {
+	case len(names) == 0:
+		return "(no light)"
+	case len(names) <= 2:
+		return strings.Join(names, " and ")
+	default:
+		return fmt.Sprintf("%d lights (%s, %s…)", len(names), names[0], names[1])
+	}
+}
+
 // describe summarises an action; warn flags things that won't work.
 func (e *Editor) describe(a config.Action) (s, warn string) {
 	e.mu.Lock()
@@ -628,35 +658,58 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 		}
 		return name
 	}
+	lights := a.Lights()
+	who := e.lightsLabel(lights)
+	allOK := func() string {
+		for _, d := range lights {
+			if w := lightOK(d); w != "" {
+				return w
+			}
+		}
+		if len(lights) == 0 {
+			return "no light chosen"
+		}
+		return ""
+	}
 	switch a.Type {
 	case config.GoveeScene, config.GoveeDIYScene:
-		if _, lan := config.FindLANLight(e.L.LANLights, a.Device); lan {
-			return fmt.Sprintf("%s: scene “%s”", a.Device, a.Scene), a.Device + " is on your network (LAN), which has no scenes"
+		for _, d := range lights {
+			if _, lan := config.FindLANLight(e.L.LANLights, d); lan {
+				return fmt.Sprintf("%s: scene “%s”", who, a.Scene), d + " is on your network (LAN), which has no scenes"
+			}
 		}
-		warn = lightOK(a.Device)
+		warn = allOK()
 		if warn == "" && govee != nil {
-			warn = "scene " + a.Scene + " not found on " + e.showLight(govee, a.Device)
-			for _, d := range govee {
-				if sameLight(d, a.Device) {
-					for _, sc := range append(append([]string{}, d.Scenes...), d.DIY...) {
-						if strings.EqualFold(sc, a.Scene) {
-							warn = ""
+			for _, ref := range lights {
+				found := false
+				for _, d := range govee {
+					if sameLight(d, ref) {
+						for _, sc := range append(append([]string{}, d.Scenes...), d.DIY...) {
+							if strings.EqualFold(sc, a.Scene) {
+								found = true
+							}
 						}
 					}
 				}
+				if !found {
+					warn = "scene " + a.Scene + " not found on " + e.showLight(govee, ref)
+					break
+				}
 			}
 		}
-		return fmt.Sprintf("%s: scene “%s”", e.showLight(govee, a.Device), a.Scene), warn
+		return fmt.Sprintf("%s: scene “%s”", who, a.Scene), warn
 	case config.GoveePower:
 		st := "off"
 		if a.On != nil && *a.On {
 			st = "on"
 		}
-		return fmt.Sprintf("%s: turn %s", e.showLight(govee, a.Device), st), lightOK(a.Device)
+		return fmt.Sprintf("%s: turn %s", who, st), allOK()
 	case config.GoveeBrightness:
-		return fmt.Sprintf("%s: brightness %d%%", e.showLight(govee, a.Device), a.Brightness), lightOK(a.Device)
+		return fmt.Sprintf("%s: brightness %d%%", who, a.Brightness), allOK()
 	case config.GoveeColor:
-		return fmt.Sprintf("%s: colour %s", e.showLight(govee, a.Device), colorName(a.Color, "#ffffff")), lightOK(a.Device)
+		return fmt.Sprintf("%s: colour %s", who, colorName(a.Color, "#ffffff")), allOK()
+	case config.GoveeColorTemp:
+		return fmt.Sprintf("%s: white %d K (%s)", who, a.Kelvin, whiteName(a.Kelvin)), allOK()
 	case config.SpotifyPlaylist:
 		name := a.Playlist
 		if uri, err := spotify.NormalizeURI(a.Playlist); err == nil {
@@ -701,7 +754,7 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 
 func actionIcon(t string) string {
 	switch t {
-	case config.GoveeScene, config.GoveeDIYScene, config.GoveePower, config.GoveeBrightness, config.GoveeColor:
+	case config.GoveeScene, config.GoveeDIYScene, config.GoveePower, config.GoveeBrightness, config.GoveeColor, config.GoveeColorTemp:
 		return "light"
 	case config.SpotifyPlaylist, config.SpotifyPause, config.SpotifyNext, config.SpotifyVolume:
 		return "music"

@@ -194,6 +194,14 @@ func LANColor(ip string, r, g, b uint8) error {
 	}))
 }
 
+// LANColorTemp sets a white colour temperature (2000-9000 K).
+func LANColorTemp(ip string, kelvin int) error {
+	return lanSend(ip, lanPacket("colorwc", map[string]any{
+		"color":            map[string]int{"r": 0, "g": 0, "b": 0},
+		"colorTemInKelvin": max(2000, min(9000, kelvin)),
+	}))
+}
+
 // LANIdentify blinks a light so it can be told apart from the others.
 func LANIdentify(ip string) error {
 	for i := 0; i < 2; i++ {
