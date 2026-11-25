@@ -29,6 +29,7 @@ const (
 // GoveeDevice is a light with its scene names.
 type GoveeDevice struct {
 	Name   string
+	ID     string // Govee's device id; buttons use it when names repeat
 	Scenes []string
 	DIY    []string
 	// Group is a group of lights from the Govee app: not offered in the
@@ -553,6 +554,52 @@ func orDash(s string) string {
 	return s
 }
 
+// sameLight: ref (from a button) names d, by name or by device id.
+func sameLight(d GoveeDevice, ref string) bool {
+	norm := func(s string) string { return strings.ToUpper(strings.NewReplacer(":", "", "-", "").Replace(s)) }
+	return strings.EqualFold(d.Name, ref) || (d.ID != "" && norm(d.ID) == norm(ref))
+}
+
+// nameRepeats: more than one light has d's name (e.g. three
+// "Smart LED Downlight"s), so it must be told apart by its id.
+func nameRepeats(d GoveeDevice, all []GoveeDevice) bool {
+	n := 0
+	for _, x := range all {
+		if !x.Group && strings.EqualFold(x.Name, d.Name) {
+			n++
+		}
+	}
+	return n > 1 && d.ID != ""
+}
+
+// lightLabel is how a light is shown: its name, plus the end of its id
+// when names repeat.
+func lightLabel(d GoveeDevice, all []GoveeDevice) string {
+	if nameRepeats(d, all) {
+		id := strings.ReplaceAll(d.ID, ":", "")
+		return d.Name + " · " + id[max(0, len(id)-4):]
+	}
+	return d.Name
+}
+
+// lightRef is what a button stores to reach the light.
+func lightRef(d GoveeDevice, all []GoveeDevice) string {
+	if nameRepeats(d, all) {
+		return d.ID
+	}
+	return d.Name
+}
+
+// showLight turns a button's device reference into a readable name.
+func (e *Editor) showLight(govee []GoveeDevice, ref string) string {
+	for _, d := range govee {
+		if sameLight(d, ref) {
+			return lightLabel(d, govee)
+		}
+	}
+	return ref
+}
+
 // describe summarises an action; warn flags things that won't work.
 func (e *Editor) describe(a config.Action) (s, warn string) {
 	e.mu.Lock()
@@ -566,7 +613,7 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 			return ""
 		}
 		for _, d := range govee {
-			if strings.EqualFold(d.Name, name) {
+			if sameLight(d, name) {
 				return ""
 			}
 		}
@@ -588,9 +635,9 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 		}
 		warn = lightOK(a.Device)
 		if warn == "" && govee != nil {
-			warn = "scene " + a.Scene + " not found on " + a.Device
+			warn = "scene " + a.Scene + " not found on " + e.showLight(govee, a.Device)
 			for _, d := range govee {
-				if strings.EqualFold(d.Name, a.Device) {
+				if sameLight(d, a.Device) {
 					for _, sc := range append(append([]string{}, d.Scenes...), d.DIY...) {
 						if strings.EqualFold(sc, a.Scene) {
 							warn = ""
@@ -599,17 +646,17 @@ func (e *Editor) describe(a config.Action) (s, warn string) {
 				}
 			}
 		}
-		return fmt.Sprintf("%s: scene “%s”", a.Device, a.Scene), warn
+		return fmt.Sprintf("%s: scene “%s”", e.showLight(govee, a.Device), a.Scene), warn
 	case config.GoveePower:
 		st := "off"
 		if a.On != nil && *a.On {
 			st = "on"
 		}
-		return fmt.Sprintf("%s: turn %s", a.Device, st), lightOK(a.Device)
+		return fmt.Sprintf("%s: turn %s", e.showLight(govee, a.Device), st), lightOK(a.Device)
 	case config.GoveeBrightness:
-		return fmt.Sprintf("%s: brightness %d%%", a.Device, a.Brightness), lightOK(a.Device)
+		return fmt.Sprintf("%s: brightness %d%%", e.showLight(govee, a.Device), a.Brightness), lightOK(a.Device)
 	case config.GoveeColor:
-		return fmt.Sprintf("%s: colour %s", a.Device, colorName(a.Color, "#ffffff")), lightOK(a.Device)
+		return fmt.Sprintf("%s: colour %s", e.showLight(govee, a.Device), colorName(a.Color, "#ffffff")), lightOK(a.Device)
 	case config.SpotifyPlaylist:
 		name := a.Playlist
 		if uri, err := spotify.NormalizeURI(a.Playlist); err == nil {

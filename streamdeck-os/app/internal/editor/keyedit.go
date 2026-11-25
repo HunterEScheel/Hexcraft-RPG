@@ -381,8 +381,8 @@ func (e *Editor) pickLight(ctx context.Context, cur string, forScene bool) (stri
 			if _, lan := config.FindLANLight(e.L.LANLights, d.Name); lan {
 				continue // listed below, as a LAN light
 			}
-			names = append(names, d.Name)
-			items = append(items, ui.Item{Label: d.Name, Detail: fmt.Sprintf("Govee cloud · %d scenes", len(d.Scenes)+len(d.DIY)), Icon: "light"})
+			names = append(names, lightRef(d, devs))
+			items = append(items, ui.Item{Label: lightLabel(d, devs), Detail: fmt.Sprintf("Govee cloud · %d scenes", len(d.Scenes)+len(d.DIY)), Icon: "light"})
 		}
 	}
 	lanLeftOut := 0
@@ -430,7 +430,7 @@ func (e *Editor) pickScene(ctx context.Context, light, cur string) (string, bool
 	devs, _ := e.loadGovee(ctx)
 	var d GoveeDevice
 	for _, x := range devs {
-		if x.Name == light {
+		if sameLight(x, light) {
 			d = x
 		}
 	}
@@ -461,7 +461,7 @@ func (e *Editor) pickScene(ctx context.Context, light, cur string) (string, bool
 		return "", false, false
 	}
 	e.trace("screen pick-scene")
-	r := e.U.Menu(ui.MenuOpts{ID: "pick-scene", Title: "Scene for " + light, Items: items, Selected: sel, Filter: true})
+	r := e.U.Menu(ui.MenuOpts{ID: "pick-scene", Title: "Scene for " + e.showLight(devs, light), Items: items, Selected: sel, Filter: true})
 	if !r.OK {
 		return "", false, false
 	}

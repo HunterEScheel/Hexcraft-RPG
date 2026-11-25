@@ -19,6 +19,7 @@ import (
 )
 
 type fakeSrc struct {
+	extra          []GoveeDevice
 	govee, spotify bool
 	ran            [][]config.Action
 	needReconnect  bool
@@ -28,11 +29,11 @@ func (f *fakeSrc) GoveeReady() bool       { return f.govee }
 func (f *fakeSrc) SpotifyReady() bool     { return f.spotify }
 func (f *fakeSrc) DefaultSpeaker() string { return "Living Room" }
 func (f *fakeSrc) GoveeDevices(context.Context) ([]GoveeDevice, error) {
-	return []GoveeDevice{
+	return append([]GoveeDevice{
 		{Name: "TV Backlight", Scenes: []string{"Movie", "Party", "Sunset"}},
 		{Name: "Floor Lamp", Scenes: []string{"Rainbow", "Party Time", "Reading"}, DIY: []string{"My Glow"}},
 		{Name: "Living Room Lights", Group: true},
-	}, nil
+	}, f.extra...), nil
 }
 func (f *fakeSrc) SpotifyDevices(context.Context) ([]string, error) {
 	return []string{"Living Room", "Kitchen Echo"}, nil
@@ -328,4 +329,34 @@ func TestLANLightColourFromWheel(t *testing.T) {
 	waitFor(t, tr2, "message no-scene-lights")
 	scr2.Press("enter", "esc", "esc")
 	finish(t, done2)
+}
+
+func TestRepeatedLightNamesUseIDs(t *testing.T) {
+	src := &fakeSrc{govee: true, spotify: true, extra: []GoveeDevice{
+		{Name: "Smart LED Downlight", ID: "AA:BB:CC:DD:EE:FF:11:01"},
+		{Name: "Smart LED Downlight", ID: "AA:BB:CC:DD:EE:FF:22:02"},
+	}}
+	e, scr, _, tr, done := setup(t, "", src)
+	scr.Press("enter", "enter", "Down 2", "enter", "enter") // key 1: label, + Add an action
+	waitFor(t, tr, "screen add-action")
+	scr.Press("down", "enter") // Turn on or off
+	waitFor(t, tr, "menu pick-light")
+	if !strings.Contains(tr.String(), "Smart LED Downlight · 1101|Smart LED Downlight · 2202") {
+		t.Fatalf("repeated names not told apart:\n%s", tr.String())
+	}
+	scr.Press("down", "down", "down", "enter") // the second downlight
+	waitFor(t, tr, "menu power")
+	scr.Press("enter") // Turn on
+	waitFor(t, tr, "action govee_power")
+	if !strings.Contains(scr.Text(), "Smart LED Downlight · 2202: turn on") {
+		t.Fatalf("key menu:\n%s", scr.Text())
+	}
+	scr.Press("esc")
+	waitFor(t, tr, "saved")
+	scr.Press("esc")
+	finish(t, done)
+	l, _ := config.ReadLayout(e.LayoutPath)
+	if a := l.Pages["home"][0].Actions[0]; a.Device != "AA:BB:CC:DD:EE:FF:22:02" {
+		t.Fatalf("button stores %q, want the device id", a.Device)
+	}
 }

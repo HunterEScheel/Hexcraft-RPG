@@ -258,8 +258,16 @@ func (a *App) checkGovee(ctx context.Context, key string) ([]govee.Device, error
 	a.trace("govee-ok %d", len(devs))
 	lines := []string{fmt.Sprintf("Found %d light(s):", len(devs))}
 	for _, d := range devs {
-		lines = append(lines, "• "+d.Name+" ("+d.SKU+")")
+		label := d.Name + " (" + d.SKU + ")"
+		for _, x := range devs {
+			if x.ID != d.ID && strings.EqualFold(x.Name, d.Name) {
+				label += " · id " + d.ID
+				break
+			}
+		}
+		lines = append(lines, "• "+label)
 	}
+	lines = append(lines, "", "Lights added or renamed in the Govee Home app after you got this key may be missing or show old names: Govee's API keeps the list from when the key was made. Applying for a new key in the Govee Home app updates it.")
 	if len(devs) == 0 {
 		lines = []string{"The key works, but no lights on your account work with the Govee API."}
 	}

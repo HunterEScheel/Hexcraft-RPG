@@ -93,11 +93,11 @@ func TestScreens(t *testing.T) {
 	})
 	blocking("color", func() {
 		g.Color(ui.ColorOpts{ID: "color", Title: "Key colour", Value: "#6a2fb0", Presets: []ui.Swatch{
-			{"White", "#ffffff"}, {"Warm white", "#ffd6a0"}, {"Cool white", "#dbe8ff"}, {"Grey", "#6b6b6b"}, {"Charcoal", "#202020"},
-			{"Red", "#c0262d"}, {"Coral", "#ff6f5e"}, {"Orange", "#e0701b"}, {"Amber", "#ffb000"}, {"Yellow", "#e8c020"},
-			{"Lime", "#8bd400"}, {"Green", "#2f9e44"}, {"Spotify green", "#1db954"}, {"Teal", "#108a8a"}, {"Cyan", "#00c8d6"},
-			{"Sky", "#4fa3ff"}, {"Blue", "#1d5fa0"}, {"Navy", "#1b2a6b"}, {"Lavender", "#b49cff"}, {"Purple", "#6a2fb0"},
-			{"Magenta", "#d000a0"}, {"Hot pink", "#ff4fa0"}, {"Pink", "#c2185b"}, {"Brown", "#7a4a24"}, {"Black", "#000000"}}})
+			{Name: "White", Hex: "#ffffff"}, {Name: "Warm white", Hex: "#ffd6a0"}, {Name: "Cool white", Hex: "#dbe8ff"}, {Name: "Grey", Hex: "#6b6b6b"}, {Name: "Charcoal", Hex: "#202020"},
+			{Name: "Red", Hex: "#c0262d"}, {Name: "Coral", Hex: "#ff6f5e"}, {Name: "Orange", Hex: "#e0701b"}, {Name: "Amber", Hex: "#ffb000"}, {Name: "Yellow", Hex: "#e8c020"},
+			{Name: "Lime", Hex: "#8bd400"}, {Name: "Green", Hex: "#2f9e44"}, {Name: "Spotify green", Hex: "#1db954"}, {Name: "Teal", Hex: "#108a8a"}, {Name: "Cyan", Hex: "#00c8d6"},
+			{Name: "Sky", Hex: "#4fa3ff"}, {Name: "Blue", Hex: "#1d5fa0"}, {Name: "Navy", Hex: "#1b2a6b"}, {Name: "Lavender", Hex: "#b49cff"}, {Name: "Purple", Hex: "#6a2fb0"},
+			{Name: "Magenta", Hex: "#d000a0"}, {Name: "Hot pink", Hex: "#ff4fa0"}, {Name: "Pink", Hex: "#c2185b"}, {Name: "Brown", Hex: "#7a4a24"}, {Name: "Black", Hex: "#000000"}}})
 	})
 	blocking("confirm", func() {
 		g.Confirm(ui.ConfirmOpts{ID: "install-confirm", Title: "Erase nvme0n1?", Question: "EVERYTHING on nvme0n1 (256 GB, internal) will be erased, Windows included.", Yes: "Erase and install", No: "Cancel", Danger: true})
